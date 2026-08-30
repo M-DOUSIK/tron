@@ -66,6 +66,10 @@ contains official sample projects for the µT-Kernel 3.0 BSP2. Use these as the
 reference for correct `tk_cre_tsk`/`tk_cre_mbf`/etc. usage patterns on STM32 rather
 than inferring API usage from documentation alone.
 
+## Project Management Rules
+
+- **Always Create New Folders for New Sessions:** When moving to a new session (e.g., from Session 06 to Session 07), NEVER work directly in the previous session's directory. Always copy the entire working project to a new directory (e.g., copy `session_06` to `session_07`), and import the new project into STM32CubeIDE before making any modifications. This ensures that past sessions remain fully intact and functional, and provides a safe rollback point if the new session's codebase gets corrupted or encounters unrecoverable errors.
+
 ## Stale GCC Dependency Files After Folder Rename / Copy
 
 ### What Went Wrong (Session 04 & 05)

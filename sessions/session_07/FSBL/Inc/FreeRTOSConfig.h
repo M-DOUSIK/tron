@@ -45,8 +45,8 @@
 /* FreeRTOS V11 replaced configUSE_16_BIT_TICKS with this macro.              */
 #define configTICK_TYPE_WIDTH_IN_BITS    TICK_TYPE_WIDTH_32_BITS
 
-/* Cortex-M55 has MVE (Helium) — enable so the port saves/restores MVE regs. */
-#define configENABLE_MVE                 1
+/* Cortex-M55 has MVE (Helium) — disable because compiler flag is -mfpu=fpv5-d16 */
+#define configENABLE_MVE                 0
 
 /* FPU is present on Cortex-M55 (FPv5-D16, hard-float ABI) — must be 1.     */
 #define configENABLE_FPU                 1
@@ -96,6 +96,7 @@
 #define configUSE_TASK_FPU_SUPPORT          1   /* Cortex-M55 has FPU (FPv5-D16) */
 
 /* ── API Inclusion (only what ms_osal.c uses) ─────────────────────────────── */
+#define INCLUDE_xTaskGetSchedulerState      1
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_vTaskDelete                 1
 #define INCLUDE_vTaskSuspend                1

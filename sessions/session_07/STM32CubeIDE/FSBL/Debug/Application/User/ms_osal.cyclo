@@ -12,3 +12,4 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/ms_osal.c:150:6:vApp
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/ms_osal.c:159:6:vApplicationIdleHook	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/ms_osal.c:168:6:vApplicationMallocFailedHook	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/ms_osal.c:178:6:vApplicationStackOverflowHook	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/ms_osal.c:192:6:SysTick_Handler	2

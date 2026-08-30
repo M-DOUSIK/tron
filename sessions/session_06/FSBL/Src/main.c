@@ -121,7 +121,6 @@ int main(void)
   /* USER CODE BEGIN SysInit */
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_RED);
-  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
     /* UART log */
 #if USE_COM_LOG
   COM_InitTypeDef COM_Init;
@@ -157,9 +156,6 @@ int main(void)
                                 0x05, 0x06, 0x07, 0x08, 0xCA, 0xFE, 0xBA, 0xBE};
       SD_Log_Binary(dummy_face, sizeof(dummy_face));
   }
-
-  /* Initialize state machine (mascot UI) */
-  state_machine_init();
 
   LCD_Init(FRAME_WIDTH, FRAME_HEIGHT);
 
@@ -590,6 +586,39 @@ void HAL_DCMIPP_PIPE_VsyncEventCallback(DCMIPP_HandleTypeDef *hdcmipp, uint32_t 
       ISP_IncAncillaryFrameId(&hcamera_isp);
       break;
   }
+}
+
+/**
+  * @brief Peripherals Common Clock Configuration
+  * @retval None
+  */
+void PeriphCommonClock_Config(void)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
+  /** Initializes the peripherals clock
+  */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_CKPER;
+  PeriphClkInitStruct.CkperClockSelection = RCC_CLKPCLKSOURCE_HSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief SDMMC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SDMMC2_SD_Init(void)
+{
+  hsd2.Instance = SDMMC2;
+  hsd2.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  hsd2.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  hsd2.Init.BusWide = SDMMC_BUS_WIDE_4B;
+  hsd2.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+  hsd2.Init.ClockDiv = 2;
 }
 
 /* USER CODE END 4 */

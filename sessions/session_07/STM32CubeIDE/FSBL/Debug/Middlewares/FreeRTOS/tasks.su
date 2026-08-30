@@ -37,6 +37,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeR
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6621:13:prvResetNextTaskUnblockTime	4	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6645:22:xTaskGetCurrentTaskHandle	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6680:18:xTaskGetCurrentTaskHandleForCore	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6705:16:xTaskGetSchedulerState	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6745:16:xTaskPriorityInherit	32	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6848:16:xTaskPriorityDisinherit	32	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/tasks.c:6942:10:vTaskPriorityDisinheritAfterTimeout	40	static

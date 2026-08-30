@@ -4,6 +4,7 @@
 #include "ui/anime_ui.h"
 #include "stm32n6xx_hal.h"
 #include "main.h"
+#include "sd_logger.h"
 #include <stdio.h>
 
 extern LTDC_HandleTypeDef   hltdc;
@@ -84,6 +85,7 @@ void state_machine_update(void)
     /* Physical USER1 button → back to home */
     if (btn_pressed && current_state != STATE_HOME)
     {
+        SD_Log_Event("User Interaction: Pressed Hardware Back Button");
         camera_stop();
         current_state   = STATE_HOME;
         state_init_done = false;
@@ -105,6 +107,7 @@ void state_machine_update(void)
                 gui_draw_home_screen();
                 state_init_done = true;
                 printf("STATE_HOME\n");
+                SD_Log_Event("UI State: HOME");
             }
 
             anime_ui_update(HAL_GetTick());
@@ -113,11 +116,13 @@ void state_machine_update(void)
             {
                 if (check_hit(tx, ty, REG_BTN_X, REG_BTN_Y, REG_BTN_W, REG_BTN_H))
                 {
+                    SD_Log_Event("User Interaction: Pressed Register Button");
                     current_state   = STATE_INSTRUCT_REGISTER;
                     state_init_done = false;
                 }
                 else if (check_hit(tx, ty, DISP_BTN_X, DISP_BTN_Y, DISP_BTN_W, DISP_BTN_H))
                 {
+                    SD_Log_Event("User Interaction: Pressed Dispense Button");
                     current_state   = STATE_INSTRUCT_DISPENSE;
                     state_init_done = false;
                 }
@@ -137,6 +142,7 @@ void state_machine_update(void)
                 state_entry_time = HAL_GetTick(); /* start dwell timer */
                 was_touching     = true;          /* force release before new touch */
                 printf("STATE_INSTRUCT_REGISTER\n");
+                SD_Log_Event("UI State: INSTRUCT_REGISTER");
             }
 
             anime_ui_update(HAL_GetTick());
@@ -152,6 +158,7 @@ void state_machine_update(void)
                 (HAL_GetTick() - state_entry_time > 500u) &&
                 check_hit(tx, ty, READY_BTN_X, READY_BTN_Y, READY_BTN_W, READY_BTN_H))
             {
+                SD_Log_Event("User Interaction: Pressed Register READY Button");
                 current_state   = STATE_CAMERA_REGISTER;
                 state_init_done = false;
             }
@@ -165,11 +172,13 @@ void state_machine_update(void)
                 state_init_done  = true;
                 state_entry_time = HAL_GetTick();
                 printf("STATE_CAMERA_REGISTER\n");
+                SD_Log_Event("UI State: CAMERA_REGISTER");
             }
             /* Mock: 5 s then return home */
             if (HAL_GetTick() - state_entry_time > 5000u)
             {
                 printf("Registration complete (mock).\n");
+                SD_Log_Event("Action: Registration complete (mock)");
                 current_state   = STATE_HOME;
                 state_init_done = false;
             }
@@ -188,6 +197,7 @@ void state_machine_update(void)
                 state_entry_time = HAL_GetTick(); /* start dwell timer */
                 was_touching     = true;          /* force release before new touch */
                 printf("STATE_INSTRUCT_DISPENSE\n");
+                SD_Log_Event("UI State: INSTRUCT_DISPENSE");
             }
 
             anime_ui_update(HAL_GetTick());
@@ -197,6 +207,7 @@ void state_machine_update(void)
                 (HAL_GetTick() - state_entry_time > 500u) &&
                 check_hit(tx, ty, READY_BTN_X, READY_BTN_Y, READY_BTN_W, READY_BTN_H))
             {
+                SD_Log_Event("User Interaction: Pressed Dispense READY Button");
                 current_state   = STATE_CAMERA_DISPENSE;
                 state_init_done = false;
             }
@@ -210,11 +221,13 @@ void state_machine_update(void)
                 state_init_done  = true;
                 state_entry_time = HAL_GetTick();
                 printf("STATE_CAMERA_DISPENSE\n");
+                SD_Log_Event("UI State: CAMERA_DISPENSE");
             }
             /* Mock: 8 s then return home */
             if (HAL_GetTick() - state_entry_time > 8000u)
             {
                 printf("Dispense complete (mock).\n");
+                SD_Log_Event("Action: Dispense complete (mock)");
                 current_state   = STATE_HOME;
                 state_init_done = false;
             }

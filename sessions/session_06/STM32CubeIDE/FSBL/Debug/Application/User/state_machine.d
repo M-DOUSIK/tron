@@ -52,7 +52,8 @@ Application/User/state_machine.o: \
  ../../../Drivers/BSP/Components/imx335/imx335_reg.h \
  ../../../Drivers/CMSIS/Include/cmsis_compiler.h \
  ../../../Drivers/BSP/Components/Common/camera.h \
- ../../../Drivers/BSP/Components/rk050hr18/rk050hr18.h
+ ../../../Drivers/BSP/Components/rk050hr18/rk050hr18.h \
+ ../../../FSBL/Inc/sd_logger.h
 ../../../FSBL/Inc/ui/state_machine.h:
 ../../../FSBL/Inc/ui/touch_driver.h:
 ../../../FSBL/Inc/ui/gui_draw.h:
@@ -108,3 +109,4 @@ Application/User/state_machine.o: \
 ../../../Drivers/CMSIS/Include/cmsis_compiler.h:
 ../../../Drivers/BSP/Components/Common/camera.h:
 ../../../Drivers/BSP/Components/rk050hr18/rk050hr18.h:
+../../../FSBL/Inc/sd_logger.h:

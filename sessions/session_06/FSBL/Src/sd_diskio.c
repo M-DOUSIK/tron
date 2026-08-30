@@ -29,46 +29,36 @@ DSTATUS disk_status(BYTE pdrv) {
 }
 
 DRESULT disk_read(BYTE pdrv, BYTE* buff, LBA_t sector, UINT count) {
-    printf("disk_read: reading sector %lu, count %u\r\n", (unsigned long)sector, count);
     if (pdrv != 0 || (Stat & STA_NOINIT)) return RES_NOTRDY;
     
     HAL_StatusTypeDef status = HAL_SD_ReadBlocks(&hsd2, buff, sector, count, 1000);
-    printf("disk_read: HAL_SD_ReadBlocks returned %d\r\n", status);
     
     if (status == HAL_OK) {
-        printf("disk_read: waiting for transfer state...\r\n");
         uint32_t timeout = 1000000;
         while (HAL_SD_GetCardState(&hsd2) != HAL_SD_CARD_TRANSFER) {
             timeout--;
             if (timeout == 0) {
-                printf("disk_read: timeout waiting for transfer state!\r\n");
                 return RES_ERROR;
             }
         }
-        printf("disk_read: done\r\n");
         return RES_OK;
     }
     return RES_ERROR;
 }
 
 DRESULT disk_write(BYTE pdrv, const BYTE* buff, LBA_t sector, UINT count) {
-    printf("disk_write: writing sector %lu, count %u\r\n", (unsigned long)sector, count);
     if (pdrv != 0 || (Stat & STA_NOINIT)) return RES_NOTRDY;
     
     HAL_StatusTypeDef status = HAL_SD_WriteBlocks(&hsd2, (uint8_t*)buff, sector, count, 1000);
-    printf("disk_write: HAL_SD_WriteBlocks returned %d\r\n", status);
     
     if (status == HAL_OK) {
-        printf("disk_write: waiting for transfer state...\r\n");
         uint32_t timeout = 1000000;
         while (HAL_SD_GetCardState(&hsd2) != HAL_SD_CARD_TRANSFER) {
             timeout--;
             if (timeout == 0) {
-                printf("disk_write: timeout waiting for transfer state!\r\n");
                 return RES_ERROR;
             }
         }
-        printf("disk_write: done\r\n");
         return RES_OK;
     }
     return RES_ERROR;

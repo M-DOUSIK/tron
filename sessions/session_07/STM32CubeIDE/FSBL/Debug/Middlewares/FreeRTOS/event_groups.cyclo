@@ -1,6 +1,6 @@
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:145:28:xEventGroupCreate	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:185:17:xEventGroupSync	9
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:312:17:xEventGroupWaitBits	14
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:185:17:xEventGroupSync	12
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:312:17:xEventGroupWaitBits	17
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:472:17:xEventGroupClearBits	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:524:17:xEventGroupGetBitsFromISR	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c:547:17:xEventGroupSetBits	9

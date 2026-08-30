@@ -482,7 +482,7 @@ void vPortExitCritical( void ) PRIVILEGED_FUNCTION;
 /**
  * @brief SysTick handler.
  */
-void SysTick_Handler( void ) PRIVILEGED_FUNCTION;
+void xPortSysTickHandler( void ) PRIVILEGED_FUNCTION;
 
 /**
  * @brief C part of SVC handler.
@@ -1074,7 +1074,7 @@ void vPortYield( void ) /* PRIVILEGED_FUNCTION */
 #endif /* configNUMBER_OF_CORES == 1 */
 /*-----------------------------------------------------------*/
 
-void SysTick_Handler( void ) /* PRIVILEGED_FUNCTION */
+void xPortSysTickHandler( void ) /* PRIVILEGED_FUNCTION */
 {
     uint32_t ulPreviousMask;
 

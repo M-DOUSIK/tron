@@ -149,7 +149,7 @@ void osal_delay_ms(uint32_t ms)
  */
 void vApplicationTickHook(void)
 {
-    HAL_IncTick();
+    /* Nothing — HAL_IncTick() is now handled directly by SysTick_Handler. */
 }
 
 /**
@@ -183,17 +183,21 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
- * SysTick Handler — FreeRTOS V11 Note
+ * SysTick Handler
  *
- * In FreeRTOS Kernel V11.x, port.c (ARM_CM55_NTZ) directly defines
- * SysTick_Handler as a strong symbol. We do NOT define it here.
- *
- * The call chain is:
- *   SysTick_Handler() [in port.c]
- *     → vApplicationTickHook() [below — we define this]
- *         → HAL_IncTick()    [so HAL_GetTick() still works]
- *     → FreeRTOS tick bookkeeping
- *
- * stm32n6xx_it.c already has SysTick_Handler commented out (Session 07
- * changes). No further action needed here.
+ * We modified FreeRTOS port.c to rename its handler to xPortSysTickHandler.
+ * This allows us to define SysTick_Handler here. We must only call FreeRTOS's
+ * tick handler IF the scheduler is actually running, otherwise FreeRTOS crashes.
  * ════════════════════════════════════════════════════════════════════════════ */
+void SysTick_Handler(void)
+{
+    /* Always increment the HAL tick for HAL_Delay() to work */
+    HAL_IncTick();
+
+    /* Only increment FreeRTOS tick if the scheduler has been started */
+    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+    {
+        extern void xPortSysTickHandler(void);
+        xPortSysTickHandler();
+    }
+}
