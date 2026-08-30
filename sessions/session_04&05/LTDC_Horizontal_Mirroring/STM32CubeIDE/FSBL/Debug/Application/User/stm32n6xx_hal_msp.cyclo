@@ -1,0 +1,6 @@
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1407:22:LL_AHB4_GRP1_EnableClock	1
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3639:22:LL_APB5_GRP1_EnableClock	1
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3683:22:LL_APB5_GRP1_DisableClock	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/LTDC_Horizontal_Mirroring/FSBL/Src/stm32n6xx_hal_msp.c:63:6:HAL_MspInit	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/LTDC_Horizontal_Mirroring/FSBL/Src/stm32n6xx_hal_msp.c:85:6:HAL_LTDC_MspInit	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/LTDC_Horizontal_Mirroring/FSBL/Src/stm32n6xx_hal_msp.c:229:6:HAL_LTDC_MspDeInit	2

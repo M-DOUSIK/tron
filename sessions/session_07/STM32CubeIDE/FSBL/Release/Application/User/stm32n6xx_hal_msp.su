@@ -1,0 +1,11 @@
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1407:22:LL_AHB4_GRP1_EnableClock	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:63:6:HAL_MspInit	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:83:6:HAL_DCMIPP_MspInit	488	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:202:6:HAL_LTDC_MspInit	456	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:346:6:HAL_DCMIPP_MspDeInit	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:385:6:HAL_DMA2D_MspInit	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:400:6:HAL_DMA2D_MspDeInit	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:417:6:HAL_SD_MspInit	448	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:491:6:HAL_SD_MspDeInit	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:517:6:HAL_UART_MspInit	432	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/stm32n6xx_hal_msp.c:555:6:HAL_UART_MspDeInit	0	static

@@ -1,0 +1,11 @@
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:679:22:LL_MEM_EnableClock	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1165:22:LL_AHB3_GRP1_EnableClock	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1407:22:LL_AHB4_GRP1_EnableClock	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3639:22:LL_APB5_GRP1_EnableClock	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3683:22:LL_APB5_GRP1_DisableClock	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3703:22:LL_APB5_GRP1_ForceReset	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:3723:22:LL_APB5_GRP1_ReleaseReset	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Projects/STM32N6570-DK/Applications/DCMIPP/DCMIPP_ContinuousMode/FSBL/Src/stm32n6xx_hal_msp.c:63:6:HAL_MspInit	1
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Projects/STM32N6570-DK/Applications/DCMIPP/DCMIPP_ContinuousMode/FSBL/Src/stm32n6xx_hal_msp.c:83:6:HAL_DCMIPP_MspInit	4
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Projects/STM32N6570-DK/Applications/DCMIPP/DCMIPP_ContinuousMode/FSBL/Src/stm32n6xx_hal_msp.c:202:6:HAL_LTDC_MspInit	3
+C:/Users/Dousik/STM32Cube/Repository/STM32Cube_FW_N6_V1.4.0/Projects/STM32N6570-DK/Applications/DCMIPP/DCMIPP_ContinuousMode/FSBL/Src/stm32n6xx_hal_msp.c:346:6:HAL_DCMIPP_MspDeInit	2

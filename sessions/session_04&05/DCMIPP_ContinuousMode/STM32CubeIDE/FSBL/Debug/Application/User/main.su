@@ -1,0 +1,14 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:89:5:main	80	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:218:6:SystemClock_Config	224	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:312:13:MX_DCMIPP_Init	72	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:386:13:LCD_Init	72	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:442:13:IMX335_Probe	48	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:495:26:GetSensorInfoHelper	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:505:26:SetSensorGainHelper	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:516:26:GetSensorGainHelper	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:527:26:SetSensorExposureHelper	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:538:26:GetSensorExposureHelper	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:545:6:HAL_DCMIPP_PIPE_FrameEventCallback	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:556:6:HAL_DCMIPP_PIPE_VsyncEventCallback	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:581:6:Error_Handler	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_04&05/DCMIPP_ContinuousMode/FSBL/Src/main.c:601:6:assert_failed	16	static

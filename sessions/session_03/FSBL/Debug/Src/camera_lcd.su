@@ -1,0 +1,10 @@
+../Src/camera_lcd.c:22:13:IMX335_Probe	48	static
+../Src/camera_lcd.c:49:26:GetSensorInfoHelper	16	static
+../Src/camera_lcd.c:55:26:SetSensorGainHelper	16	static
+../Src/camera_lcd.c:62:26:GetSensorGainHelper	16	static
+../Src/camera_lcd.c:69:26:SetSensorExposureHelper	16	static
+../Src/camera_lcd.c:76:26:GetSensorExposureHelper	16	static
+../Src/camera_lcd.c:83:13:MX_DCMIPP_Init	72	static
+../Src/camera_lcd.c:120:13:LCD_Init	72	static
+../Src/camera_lcd.c:163:6:camera_lcd_init	8	static
+../Src/camera_lcd.c:174:6:camera_lcd_start	56	static

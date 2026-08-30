@@ -1,0 +1,9 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:130:10:vRestoreContextOfFirstTask	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:187:12:xIsPrivileged	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:204:6:vRaisePrivilege	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:219:6:vResetPrivilege	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:234:6:vStartFirstTask	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:255:10:ulSetInterruptMask	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:272:6:vClearInterruptMask	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:418:10:PendSV_Handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_07/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:560:10:SVC_Handler	1
