@@ -1,0 +1,6 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:25:13:camera_stop	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:29:13:camera_start	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:35:13:switch_ltdc_buffer	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:41:13:check_hit	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:66:6:state_machine_init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ui/state_machine.c:86:6:state_machine_update	32	static

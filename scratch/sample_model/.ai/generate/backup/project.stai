@@ -1,0 +1,17 @@
+{
+  "toolchain": "STM32CubeIDE",
+  "variant": "ApplicationTemplate",
+  "fromMx": false,
+  "isGenerated": false,
+  "name": "sample_model",
+  "createdAt": 1788095450057,
+  "lastModified": 1788107100303,
+  "lastAccessed": 1788107100302,
+  "path": "C:\\Users\\Dousik\\Workspace\\TRON\\scratch",
+  "board": "STM32N6570-DK",
+  "mcu": "",
+  "type": "BYOM",
+  "context": "FSBL",
+  "contextProject": "FullSecure",
+  "lastGenerationRunId": "run-1"
+}

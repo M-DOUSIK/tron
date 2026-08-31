@@ -118,3 +118,43 @@ Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclip
 
 !ENTRY org.eclipse.cdt.core 1 0 2026-08-30 17:45:10.675
 !MESSAGE Indexed 'MedSight_Session06_FSBL' (47 sources, 143 headers) in 18 sec: 19,868 declarations; 156,555 references; 0 unresolved inclusions; 1 syntax errors; 52 unresolved names (0.029%)
+!SESSION 2026-08-30 19:00:39.243 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -build MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data C:\Users\Dousik\Workspace\TRON -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -build MedSight_Session08A_FSBL
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-30 19:00:57.873
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (57 sources, 163 headers) in 15 sec: 21,543 declarations; 167,102 references; 0 unresolved inclusions; 1 syntax errors; 52 unresolved names (0.028%)
+!SESSION 2026-08-30 19:14:05.347 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -cleanBuild MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data C:\Users\Dousik\Workspace\TRON -cleanBuild MedSight_Session08A_FSBL
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-30 19:14:51.803
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (90 sources, 271 headers) in 34.1 sec: 36,476 declarations; 227,546 references; 0 unresolved inclusions; 1 syntax errors; 188 unresolved names (0.071%)
+!SESSION 2026-08-30 19:16:51.541 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -cleanBuild MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data C:\Users\Dousik\Workspace\TRON -cleanBuild MedSight_Session08A_FSBL
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-30 19:17:36.185
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (90 sources, 272 headers) in 29.1 sec: 36,513 declarations; 227,698 references; 0 unresolved inclusions; 1 syntax errors; 202 unresolved names (0.076%)
+!SESSION 2026-08-30 19:18:57.575 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -cleanBuild MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -data C:\Users\Dousik\Workspace\TRON -cleanBuild MedSight_Session08A_FSBL
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-30 19:19:40.558
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (90 sources, 272 headers) in 30.5 sec: 36,513 declarations; 227,698 references; 0 unresolved inclusions; 1 syntax errors; 202 unresolved names (0.076%)

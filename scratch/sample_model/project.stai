@@ -1,0 +1,22 @@
+{
+  "toolchain": "STM32CubeIDE",
+  "variant": "ApplicationTemplate",
+  "fromMx": false,
+  "isGenerated": true,
+  "name": "sample_model",
+  "createdAt": 1788095450057,
+  "lastModified": 1788107187141,
+  "lastAccessed": 1788107187140,
+  "path": "C:\\Users\\Dousik\\Workspace\\TRON\\scratch",
+  "board": "STM32N6570-DK",
+  "mcu": "",
+  "type": "BYOM",
+  "context": "Appli",
+  "contextProject": "FullSecure",
+  "lastGenerationRunId": "run-1",
+  "uartInstance": {
+    "usart": "USART1",
+    "txpin": "PE5",
+    "rxpin": "PE6"
+  }
+}

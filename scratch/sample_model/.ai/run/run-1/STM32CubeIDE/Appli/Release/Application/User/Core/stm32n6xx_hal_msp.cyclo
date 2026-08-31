@@ -1,0 +1,5 @@
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/Core/Src/stm32n6xx_hal_msp.c:62:6:HAL_MspInit	1
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/Core/Src/stm32n6xx_hal_msp.c:90:6:HAL_CACHEAXI_MspInit	2
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/Core/Src/stm32n6xx_hal_msp.c:113:6:HAL_CACHEAXI_MspDeInit	2
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/Core/Src/stm32n6xx_hal_msp.c:135:6:HAL_UART_MspInit	3
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/Core/Src/stm32n6xx_hal_msp.c:190:6:HAL_UART_MspDeInit	2

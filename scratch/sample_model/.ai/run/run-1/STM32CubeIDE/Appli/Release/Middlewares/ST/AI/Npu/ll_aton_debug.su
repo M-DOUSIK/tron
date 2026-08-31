@@ -1,0 +1,15 @@
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:68:37:__get_buffer	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:104:14:Q_to_floating.isra	0	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_NN_interface.h:524:26:LL_Buffer_bits.isra	0	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_NN_interface.h:504:32:LL_Buffer_addr_start	0	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:94:13:__set_all_buffers	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:63:20:LL_ATON_physical_to_virtual	0	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:850:13:__dump_buffer.part.0	112	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:928:13:__dump_epoch_buffers	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:941:7:get_buffer	24	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:955:5:get_buffer_info	24	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:969:6:set_all_buffers	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:979:6:dump_buffer	8	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:986:6:dump_all_buffers	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:998:6:dump_epoch_buffers	16	static
+C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Middlewares/ST/AI/Npu/ll_aton_debug.c:1007:14:get_params_len	8	static
