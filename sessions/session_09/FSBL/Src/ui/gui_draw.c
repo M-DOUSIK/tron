@@ -237,6 +237,10 @@ static void flush_rows(uint16_t y_start, uint16_t y_end)
     SCB_CleanDCache_by_Addr((uint32_t *)start, (int32_t)size);
 }
 
+/* Public wrappers — see gui_draw.h for why other modules need these. */
+void gui_draw_flush(void) { flush_all(); }
+void gui_draw_flush_rows(uint16_t y_start, uint16_t y_end) { flush_rows(y_start, y_end); }
+
 /* ── HOME SCREEN ─────────────────────────────────────────────────────────── */
 void gui_draw_home_screen(void)
 {

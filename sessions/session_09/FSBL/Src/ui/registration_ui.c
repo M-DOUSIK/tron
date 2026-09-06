@@ -98,6 +98,11 @@ static void draw_name_box(void)
     char display[PATIENT_NAME_MAX + 2];
     snprintf(display, sizeof(display), "%s_", s_name);
     gui_draw_text((uint16_t)(NAME_BOX_X + 14), (uint16_t)(NAME_BOX_Y + 16), display, COLOR_DLG_TEXT, 3);
+
+    /* Flush this region's own cache lines — draw_name_box() is called
+     * standalone on every keypress (not just from the initial full-screen
+     * draw), so it must flush itself rather than relying on a caller. */
+    gui_draw_flush_rows(NAME_BOX_Y, (uint16_t)(NAME_BOX_Y + NAME_BOX_H));
 }
 
 void registration_ui_draw_keyboard(void)
@@ -147,6 +152,8 @@ void registration_ui_draw_keyboard(void)
         draw_btn((uint16_t)(x + 260 + KEY_GAP), KB_ROW4_Y, 130, KEY_H, COLOR_BTN_DIS, "DEL", 2);
         draw_btn((uint16_t)(x + 260 + KEY_GAP + 130 + KEY_GAP), KB_ROW4_Y, 148, KEY_H, COLOR_BTN_READY, "DONE", 2);
     }
+
+    gui_draw_flush();
 }
 
 bool registration_ui_handle_keyboard_touch(uint32_t tx, uint32_t ty)
@@ -240,25 +247,78 @@ bool registration_ui_handle_keyboard_touch(uint32_t tx, uint32_t ty)
 
 /* ══════════════════════════════════════════════════════════════════════════
  * PILL COUNT screen
+ *
+ * Design note (per user feedback after first hardware test): no +/- buttons
+ * — instead a tappable pill-capsule icon that adds one pill per tap (a
+ * "+1" badge on the icon signals this), plus a RESET button in the top
+ * corner to zero back to the minimum in one tap rather than tapping "-"
+ * repeatedly.
  * ══════════════════════════════════════════════════════════════════════════ */
 
-#define PC_MINUS_X  120u
-#define PC_PLUS_X   580u
-#define PC_BTN_Y    150u
-#define PC_BTN_SIZE 120u
-#define PC_NEXT_Y   340u
-#define PC_NEXT_X   250u
-#define PC_NEXT_W   300u
-#define PC_NEXT_H   90u
+#define PILL_ICON_X   280u
+#define PILL_ICON_Y   130u
+#define PILL_ICON_W   240u
+#define PILL_ICON_H   110u
+
+#define BADGE_SIZE    60u
+#define BADGE_X       (PILL_ICON_X + PILL_ICON_W - BADGE_SIZE - 8u)
+#define BADGE_Y       (PILL_ICON_Y + 8u)
+
+#define RESET_BTN_X   630u
+#define RESET_BTN_Y   16u
+#define RESET_BTN_W   140u
+#define RESET_BTN_H   50u
+
+#define PC_NUM_Y      255u
+#define PC_NUM_H       90u
+
+#define PC_NEXT_Y     360u
+#define PC_NEXT_X     250u
+#define PC_NEXT_W     300u
+#define PC_NEXT_H      90u
+
+/* Two-tone capsule icon, corner-cut rounded (same technique as draw_btn),
+ * with a small "+1" badge in its top-right corner. Drawn once — only the
+ * number below it needs to redraw on tap. */
+static void draw_pill_icon(void)
+{
+    uint16_t x = PILL_ICON_X, y = PILL_ICON_Y, w = PILL_ICON_W, h = PILL_ICON_H;
+    uint16_t p = 28; /* corner radius for the stadium-shaped ends */
+
+    gui_draw_rect(x, y, (uint16_t)(w / 2u), h, COLOR_BTN_REG);
+    gui_draw_rect((uint16_t)(x + w / 2u), y, (uint16_t)(w - w / 2u), h, COLOR_WHITE);
+
+    /* Round the four outer corners. */
+    gui_draw_rect(x,                 y,                 p, p, COLOR_BG);
+    gui_draw_rect((uint16_t)(x+w-p), y,                 p, p, COLOR_BG);
+    gui_draw_rect(x,                 (uint16_t)(y+h-p), p, p, COLOR_BG);
+    gui_draw_rect((uint16_t)(x+w-p), (uint16_t)(y+h-p), p, p, COLOR_BG);
+
+    /* Center seam, like a real two-piece capsule. */
+    gui_draw_rect((uint16_t)(x + w/2u - 2u), y, 4, h, COLOR_BTN_SHADOW);
+
+    /* Outer top/bottom border for a bit of definition. */
+    gui_draw_rect(x, y, w, 3, COLOR_BTN_BORDER);
+    gui_draw_rect(x, (uint16_t)(y+h-3), w, 3, COLOR_BTN_SHADOW);
+
+    /* "+1" badge — drawn last so it sits cleanly on top of the corner-cut. */
+    gui_draw_rect(BADGE_X, BADGE_Y, BADGE_SIZE, BADGE_SIZE, COLOR_BTN_DIS);
+    gui_draw_rect(BADGE_X, BADGE_Y, BADGE_SIZE, 3, COLOR_BTN_BORDER);
+    gui_draw_text((uint16_t)(BADGE_X + 6), (uint16_t)(BADGE_Y + 18), "+1", COLOR_WHITE, 2);
+}
 
 static void draw_pillcount_number(void)
 {
     /* Clear just the number area, then redraw. */
-    gui_draw_rect(340, 150, 120, 120, COLOR_BG);
+    gui_draw_rect(300, PC_NUM_Y, 200, PC_NUM_H, COLOR_BG);
     char buf[4];
     snprintf(buf, sizeof(buf), "%u", (unsigned)s_pill_count);
-    /* Scale 8: ~72px tall digit, large and legible for elderly users. */
-    gui_draw_text((uint16_t)(s_pill_count >= 10 ? 350 : 375), 175, buf, COLOR_TITLE, 8);
+    /* Scale 8: ~64px tall digit, large and legible for elderly users. */
+    gui_draw_text((uint16_t)(s_pill_count >= 10 ? 350 : 375),
+                  (uint16_t)(PC_NUM_Y + 5), buf, COLOR_TITLE, 8);
+
+    /* Standalone function (also called on every pill/reset tap) — flush itself. */
+    gui_draw_flush_rows(PC_NUM_Y, (uint16_t)(PC_NUM_Y + PC_NUM_H));
 }
 
 void registration_ui_draw_pillcount(void)
@@ -267,25 +327,25 @@ void registration_ui_draw_pillcount(void)
     gui_draw_text(60, 16, "HOW MANY PILLS PER DAY?", COLOR_TITLE, 2);
     gui_draw_text(100, 60, s_name, COLOR_DLG_TEXT, 2);
 
-    draw_btn(PC_MINUS_X, PC_BTN_Y, PC_BTN_SIZE, PC_BTN_SIZE, COLOR_BTN_DIS, "-", 6);
-    draw_btn(PC_PLUS_X,  PC_BTN_Y, PC_BTN_SIZE, PC_BTN_SIZE, COLOR_BTN_REG, "+", 6);
+    draw_btn(RESET_BTN_X, RESET_BTN_Y, RESET_BTN_W, RESET_BTN_H, COLOR_BTN_DIS, "RESET", 2);
+
+    draw_pill_icon();
     draw_pillcount_number();
 
     draw_btn(PC_NEXT_X, PC_NEXT_Y, PC_NEXT_W, PC_NEXT_H, COLOR_BTN_READY, "NEXT", 3);
+
+    gui_draw_flush();
 }
 
 bool registration_ui_handle_pillcount_touch(uint32_t tx, uint32_t ty)
 {
-    if (hit(tx, ty, PC_MINUS_X, PC_BTN_Y, PC_BTN_SIZE, PC_BTN_SIZE))
+    if (hit(tx, ty, RESET_BTN_X, RESET_BTN_Y, RESET_BTN_W, RESET_BTN_H))
     {
-        if (s_pill_count > PILLCOUNT_MIN)
-        {
-            s_pill_count--;
-            draw_pillcount_number();
-        }
+        s_pill_count = PILLCOUNT_MIN;
+        draw_pillcount_number();
         return false;
     }
-    if (hit(tx, ty, PC_PLUS_X, PC_BTN_Y, PC_BTN_SIZE, PC_BTN_SIZE))
+    if (hit(tx, ty, PILL_ICON_X, PILL_ICON_Y, PILL_ICON_W, PILL_ICON_H))
     {
         if (s_pill_count < PILLCOUNT_MAX)
         {
@@ -305,8 +365,19 @@ bool registration_ui_handle_pillcount_touch(uint32_t tx, uint32_t ty)
  * CONFIRM screen
  * ══════════════════════════════════════════════════════════════════════════ */
 
-/* Reuse the home screen's two-button geometry (gui_draw.h) for a familiar,
- * consistently-sized pair of large touch targets. */
+/* Dedicated, screen-centered geometry for this screen's two buttons.
+ * REG_BTN_X/DISP_BTN_X (gui_draw.h) are deliberately left-aligned to leave
+ * room for the mascot on the home screen's right side — reusing them here
+ * (as an earlier version of this screen did) left CONFIRM/RETRY pinned to
+ * the top-left instead of centered, since this screen has no mascot to
+ * make room for. Fixed per user feedback after the first hardware test. */
+#define CONFIRM_BTN_Y    240u
+#define CONFIRM_BTN_W    260u
+#define CONFIRM_BTN_H    180u
+#define CONFIRM_BTN_GAP   40u
+#define CONFIRM_LEFT_X   ((800u - (2u * CONFIRM_BTN_W + CONFIRM_BTN_GAP)) / 2u)
+#define CONFIRM_RIGHT_X  (CONFIRM_LEFT_X + CONFIRM_BTN_W + CONFIRM_BTN_GAP)
+
 void registration_ui_draw_confirm(void)
 {
     gui_draw_rect(0, 0, 800, 480, COLOR_BG);
@@ -321,13 +392,15 @@ void registration_ui_draw_confirm(void)
     snprintf(line, sizeof(line), "%u", (unsigned)s_pill_count);
     gui_draw_text(340, 140, line, COLOR_DLG_TEXT, 3);
 
-    draw_btn(REG_BTN_X, REG_BTN_Y, REG_BTN_W, REG_BTN_H, COLOR_BTN_REG, "CONFIRM", 3);
-    draw_btn(DISP_BTN_X, DISP_BTN_Y, DISP_BTN_W, DISP_BTN_H, COLOR_BTN_DIS, "RETRY", 3);
+    draw_btn(CONFIRM_LEFT_X, CONFIRM_BTN_Y, CONFIRM_BTN_W, CONFIRM_BTN_H, COLOR_BTN_REG, "CONFIRM", 3);
+    draw_btn(CONFIRM_RIGHT_X, CONFIRM_BTN_Y, CONFIRM_BTN_W, CONFIRM_BTN_H, COLOR_BTN_DIS, "RETRY", 3);
+
+    gui_draw_flush();
 }
 
 reg_confirm_result_t registration_ui_handle_confirm_touch(uint32_t tx, uint32_t ty)
 {
-    if (hit(tx, ty, REG_BTN_X, REG_BTN_Y, REG_BTN_W, REG_BTN_H))
+    if (hit(tx, ty, CONFIRM_LEFT_X, CONFIRM_BTN_Y, CONFIRM_BTN_W, CONFIRM_BTN_H))
     {
         int slot = gallery_add_patient(s_name, s_embedding, (int)s_pill_count);
         if (slot < 0)
@@ -338,7 +411,7 @@ reg_confirm_result_t registration_ui_handle_confirm_touch(uint32_t tx, uint32_t 
         printf("registration_ui: patient '%s' saved to slot %d.\r\n", s_name, slot);
         return REG_CONFIRM_SAVED;
     }
-    if (hit(tx, ty, DISP_BTN_X, DISP_BTN_Y, DISP_BTN_W, DISP_BTN_H))
+    if (hit(tx, ty, CONFIRM_RIGHT_X, CONFIRM_BTN_Y, CONFIRM_BTN_W, CONFIRM_BTN_H))
     {
         return REG_CONFIRM_RETRY;
     }

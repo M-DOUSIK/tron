@@ -1,5 +1,17 @@
 # MECHANICAL_DESIGN.md — MedSight Dispensing Mechanism
 
+> **STATUS: DESIGN INTENT ONLY — NOT BUILT, NOT WIRED TO FIRMWARE.** Everything below
+> describes the dispensing mechanism a real, future MedSight product would use. It was
+> originally scoped to be physically built (2–3 hoppers) for the contest demo; that
+> physical-build plan was **cut entirely** — see `MASTER_PROJECT_PLAN.md`'s Changelog
+> and `prompts/session_10.md`'s "Hardware decision (FINAL): No physical motors/
+> servos/IR sensors are interfaced." The contest-submitted prototype dispenses via an
+> on-screen simulation only (Session 10). This document is retained as submission
+> material — illustrated via `RAGNAR_CAD_PROMPT.md`'s 3D renders and referenced from
+> Session 13's `DESIGN_PROTOTYPE.md` deliverable — explaining the design intent, not
+> as instructions for anything actually built in this project. Read it as "here is
+> what we'd build next," not "here is what Session 10 does."
+
 ## 1. Scope Change: Multi-Hopper, Multi-Patient Device
 
 MedSight is a **shared device serving multiple people, each on multiple
@@ -29,11 +41,14 @@ IR break-beam sensor. Modules stack vertically (or arrange side-by-side if verti
 stacking doesn't suit your enclosure), each dropping into a **shared collection
 chute/tray** at the bottom.
 
-This directly matches the firmware abstraction already in place: `dispenser.c`
-(Session 10) exposes `dispense_dose(hopper_id, count)` rather than hardcoding one
-mechanism, so adding a physical hopper module later is a hardware task plus a config
-entry, not a firmware rewrite. See `SOFTWARE_ARCHITECTURE.md` §3 for the module
-boundary this enforces.
+**Note (not current firmware):** an earlier revision of this plan expected a
+`dispenser.c` module exposing `dispense_dose(hopper_id, count)`, so that adding a
+physical hopper module later would be a hardware task plus a config entry, not a
+firmware rewrite. That module was never built — Session 10's actual dispense flow is
+software-simulated (see `SOFTWARE_ARCHITECTURE.md` §7) and has no hopper concept at
+all. If this design is ever actually built, `dispense_dose(hopper_id, count)` (or
+equivalent) would still be the right abstraction point — it just doesn't exist in
+this project's real firmware today.
 
 ### Why stacked independent modules over one bigger carousel
 

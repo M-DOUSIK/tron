@@ -17,54 +17,41 @@ This board alone covers camera, display, **touch input**, storage, and debug —
 separate dev board or added touch hardware needed for the electronics core. The touch
 panel is a driver/software task (Session 05), not a wiring task.
 
-## 2. Added Peripherals (not on the DK board)
+## 2. Dispensing Hardware: NOT Built — Design Intent Only
 
-MedSight is a multi-hopper, shared device (see `MECHANICAL_DESIGN.md` §1) — build 2–3
-hopper modules for the contest demo, with the electronics pattern below repeated
-identically per hopper so scaling to 6–8 later is a wiring/BOM task, not a redesign.
+**This section previously specified real BOM items (stepper motors, ULN2003 driver
+boards, IR break-beam sensors, a shared motor power rail) to be physically wired to
+the DK board.** That physical-build plan was cut entirely — see
+`MASTER_PROJECT_PLAN.md`'s Changelog and `prompts/session_10.md`'s "Hardware decision
+(FINAL): No physical motors/servos/IR sensors are interfaced." The contest-submitted
+prototype dispenses via an on-screen simulation only. **None of the hardware in the
+table below is purchased, wired, or driven by firmware in this project — it documents
+the mechanism a real future product would use**, kept here (and in
+`MECHANICAL_DESIGN.md`, illustrated via `RAGNAR_CAD_PROMPT.md`'s 3D renders) purely as
+submission material explaining the design intent.
+
+| Component (not built) | Would be used for | Would interface via |
+|---|---|---|
+| 28BYJ-48 unipolar stepper + ULN2003 driver board, one pair per hopper | Drives that hopper's turntable, singulating and counting loose pills — direct duplicate of the Mr Innovative/UPV reference design (see `MECHANICAL_DESIGN.md` §3) | 4 GPIO lines per hopper to the ULN2003 board (direct coil-sequence drive, not STEP/DIR) |
+| IR break-beam sensor (emitter + receiver pair), one per hopper | Confirms and counts pills dropping from that specific hopper | GPIO EXTI (interrupt on beam break) per hopper |
+| Shared 5V/6V motor power rail | Motors would draw current spikes the board's own regulator shouldn't supply | Separate buck supply or battery pack, grounds tied to the DK board ground |
+
+The only peripheral actually added to the DK board for this project is:
 
 | Component | Purpose | Interface | Notes |
 |---|---|---|---|
-| 28BYJ-48 unipolar stepper + ULN2003 driver board, one pair per hopper (2–3 for the demo build) | Drives that hopper's turntable, singulating and counting loose pills — direct duplicate of the Mr Innovative/UPV reference design (see `MECHANICAL_DESIGN.md` §3) | 4 GPIO lines per hopper to the ULN2003 board (direct coil-sequence drive, not STEP/DIR) | Cheap, well-documented, easy to duplicate identically across hoppers; bench-test each hopper's actual pill/guide fit under load before Session 10's full integration |
-| IR break-beam sensor (emitter + receiver pair), one per hopper — **not shared across hoppers** | Confirms and counts pills dropping from that specific hopper | GPIO EXTI (interrupt on beam break) per hopper | Needs debounce logic (Session 10) — mechanical pill edges can cause multiple rapid triggers; break-beam specifically (not reflective IR) to avoid pill-color false negatives |
-| Shared 5V/6V motor power rail | Motors draw current spikes the board's own regulator shouldn't supply | Separate buck supply or battery pack, **grounds tied to the DK board ground**, sized for however many motors may actuate concurrently | Never power motors from the DK's own 3.3V/5V logic rail directly — do this on the bench before Session 10, this is a "you" task, not Antigravity's |
 | microSD card | Local-only event/log/face-data storage (see `COMPLIANCE_PRIVACY_POSTURE.md`) | On-board SDMMC | Already on the DK board — just needs a card inserted |
-
-**GPIO/pin budget note:** each hopper needs 4 GPIO lines to its ULN2003 driver board
-(direct coil-sequence drive for the 28BYJ-48) + 1 IR EXTI input — 5 pins/hopper. For a
-2–3 hopper demo (10–15 pins) this fits comfortably on the Arduino/STMod+ headers; if
-you scale toward 6–8 hoppers later (30–40 pins), you'll need a GPIO expander (e.g. an
-I2C port expander) rather than running out of native pins — note this now so it isn't
-a surprise when the hopper count grows, but it's not a Session 10 concern for the
-2–3-hopper demo build.
-
-**Power note:** 28BYJ-48 steppers draw modestly (well under 1A each at 5V), so the
-shared motor rail sizing is less demanding than it would be for larger motors — but
-still size it for the worst case of 2–3 hoppers stepping concurrently, and still keep
-grounds tied to the DK board per the wiring notes below; don't assume the on-board
-5V rail can carry this without checking its actual current budget first.
 
 ## 3. Explicitly Not Used
 
 - Ethernet (on-board but never initialized — zero-network requirement)
 - USB Host/Device data functions beyond ST-LINK debug/flash
 - Any wireless module — none is added to this BOM
+- Any dispensing actuator hardware (motors, servos, IR sensors) — see §2 above; this
+  is a firm decision, not a "not yet," and no future session in this project's plan
+  (Sessions 01-13, the full current plan) adds it back
 
-## 4. Wiring / Power Safety Notes (for your bench work — Antigravity cannot verify these)
-
-- Common ground between DK board and the shared motor supply is mandatory before any
-  ULN2003 driver board is connected — floating grounds will produce erratic stepper
-  behavior or damage the GPIO.
-- Confirm each IR sensor's logic-level output matches STM32 GPIO input voltage (most
-  break-beam modules are 3.3V/5V tolerant, but check the specific part before wiring).
-- Route each hopper's motor-driver control lines and IR EXTI input to documented,
-  free pins on the Arduino/STMod+ headers — pins will be finalized and recorded in
-  `SOFTWARE_ARCHITECTURE.md`'s pin map once Session 10 assigns them per hopper (don't
-  guess ahead of that session).
-- Size the shared motor power rail for the worst case of multiple hoppers actuating
-  in the same dose event, not just one hopper in isolation.
-
-## 5. Debug Interface
+## 4. Debug Interface
 
 On-board STLINK-V3EC handles both flashing and a USB virtual COM port for the UART
 debug log introduced in Session 02 — no external debug probe required.

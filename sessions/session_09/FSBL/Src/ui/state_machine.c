@@ -220,12 +220,25 @@ void state_machine_update(void)
                 SD_Log_Event_Async("STATE: CAMERA_REGISTER");
 
                 /* Session 09: real one-shot face capture, mirroring
-                 * STATE_CAMERA_DISPENSE's proven pattern exactly — brief
-                 * live-preview window, then freeze camera DMA for the NPU
-                 * pass, 3-retry loop, resume camera. The captured embedding
-                 * is only HELD here (registration_ui's static buffer) —
-                 * nothing is saved to the gallery until the user has typed
-                 * a name and pill count and tapped Confirm. */
+                 * STATE_CAMERA_DISPENSE's proven camera_stop()/retry-loop
+                 * pattern for the capture itself — brief live-preview
+                 * window, then freeze camera DMA for the NPU pass, 3-retry
+                 * loop. The captured embedding is only HELD here
+                 * (registration_ui's static buffer) — nothing is saved to
+                 * the gallery until the user has typed a name and pill
+                 * count and tapped Confirm.
+                 *
+                 * UNLIKE STATE_CAMERA_DISPENSE, the camera is deliberately
+                 * NOT resumed after the capture attempt (found on real
+                 * hardware: resuming it here left the DCMIPP DMA
+                 * continuously overwriting BUFFER_ADDRESS, which raced and
+                 * wiped out both the keyboard screen drawn on success and
+                 * the error dialog drawn on failure — DISPENSE never hit
+                 * this because it never draws anything over its live
+                 * preview). Every state from here on (STATE_KEYBOARD_
+                 * REGISTER, STATE_PILLCOUNT_REGISTER, STATE_CONFIRM_
+                 * REGISTER, and this state's own failure dialog) is static
+                 * UI, not a camera preview, so the camera must stay off. */
                 osal_delay_ms(1500u);
 
                 g_isp_suspend = true;
@@ -242,8 +255,8 @@ void state_machine_update(void)
                     }
                 }
 
-                camera_start();
                 g_isp_suspend = false;
+                /* Camera intentionally left stopped — see note above. */
 
                 if (got_face)
                 {

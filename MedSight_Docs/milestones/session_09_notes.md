@@ -168,6 +168,119 @@ logging call added this session.
       by code review as above; a real-hardware grep of the serial capture
       is the actual verification the project's compliance rules ask for)
 
+## Addendum — two bugs found during real hardware bring-up, both fixed
+
+The "verified locally" build claim above only proved the code compiles and
+links via the command-line toolchain — it did not catch either of these,
+which only surfaced once you actually flashed and ran the device. Both are
+now fixed and re-verified with a clean rebuild.
+
+### Bug 1 — STM32CubeIDE silently dropped `registration_ui.c` from its own build
+
+Building from the IDE (not the command line) failed with `undefined
+reference to registration_ui_reset` and six similar linker errors, even
+though my command-line build had succeeded. Root cause: this project maps
+each `FSBL/Src/ui/*.c` file into the IDE's virtual `Application/User` folder
+via an explicit per-file `<link>` entry in `STM32CubeIDE/FSBL/.project` —
+it is **not** a folder-level scan. `registration_ui.c` was created directly
+on disk (via a file-write tool) without a matching `<link>` entry, so
+Eclipse's own project model never knew it existed. When built from the IDE,
+Eclipse regenerated `subdir.mk` from that (incomplete) model, silently
+excluding the file and overwriting my earlier manual `subdir.mk` patch —
+which is exactly why the command-line build I'd verified earlier looked
+clean: it used my hand-edited `subdir.mk`, not the one the IDE actually
+generates.
+
+**Fix:** added the missing `<link>` entry for `registration_ui.c` to
+`.project` (matching the existing entries for `touch_driver.c`,
+`gui_draw.c`, etc.), then confirmed via `arm-none-eabi-nm` that all eight
+`registration_ui_*` symbols are present and defined in the rebuilt `.elf`.
+**Lesson for future sessions:** any time a new `.c` file is added to
+`Application/User` outside the IDE (including by an AI coding agent), it
+needs a corresponding `<link>` entry in `.project`, not just physical
+presence on disk — a plain workspace refresh is not guaranteed to be enough
+if Eclipse has the project open with a stale in-memory model; closing and
+reopening the project forces a full reparse.
+
+### Bug 2 — live camera DMA overwrote the keyboard screen (found from your hardware log)
+
+Your UART log showed `STATE_CAMERA_REGISTER` → face captured → `STATE:
+KEYBOARD_REGISTER` logged correctly, but the LCD kept showing the live
+camera feed instead of the keyboard. Root cause: `STATE_CAMERA_REGISTER`
+copied `STATE_CAMERA_DISPENSE`'s pattern of calling `camera_start()` to
+resume the live preview immediately after the NPU capture attempt — but
+`STATE_CAMERA_DISPENSE` never draws anything over that live feed, so it
+never surfaced this. Here, the DCMIPP DMA was left continuously writing
+fresh camera frames into `BUFFER_ADDRESS` (the same physical framebuffer
+`registration_ui_draw_keyboard()` draws into), so every frame the DMA wrote
+(~30/sec) immediately erased whatever the keyboard/dialog drawing had just
+put there. The state machine itself was working correctly the whole time —
+this was a display race, not a logic bug, which is why the UART log looked
+completely normal.
+
+**Fix:** removed the `camera_start()` call after the capture retry loop in
+`STATE_CAMERA_REGISTER` — the camera now stays stopped for the rest of that
+state (both the success path into `STATE_KEYBOARD_REGISTER` and the
+failure-dialog path), since every screen from that point on is static UI,
+not a camera preview. Re-verified with a clean rebuild (0 errors).
+**Confirmed fixed on real hardware** — you flashed this and the full flow
+worked: face capture → keyboard → pill count → confirm → "DOUSIK" saved to
+gallery slot 0 → home. State-machine logging matched exactly step for step.
+
+### Bug 3 — keyboard/number text looked "glitchy", pixels not settling (found on the same hardware run)
+
+Even with Bug 2 fixed and the flow working end-to-end, you reported the
+keyboard and pill-count text looked glitchy/hard to read — not a wrong
+result, a display artifact. Root cause: `registration_ui.c` draws pixels
+via `gui_draw_rect()`/`gui_draw_text()`, which are plain CPU writes that go
+through the Cortex-M55's D-Cache. The LTDC display controller reads the
+framebuffer directly over the bus, bypassing that cache entirely. Every
+*other* screen in this project (`gui_draw_home_screen()`,
+`gui_draw_ready_screen()`, `gui_draw_dialog_text()`) already calls
+`SCB_CleanDCache_by_Addr()` after drawing for exactly this reason — but
+that flush helper (`flush_all()`/`flush_rows()` in `gui_draw.c`) was
+`static`, so `registration_ui.c` had no way to call it. Without a flush,
+the LTDC could show a stale or partially-written mix of old and new pixel
+data — cosmetically "glitchy," not a logic bug (the state machine and
+touch handling were both working correctly the whole time, which matches
+what you saw: it "did work" but was hard to read).
+
+**Fix:** exposed two new public functions in `gui_draw.h`/`.c` —
+`gui_draw_flush()` (whole buffer) and `gui_draw_flush_rows(y0, y1)`
+(row range) — thin wrappers around the existing private `flush_all()`/
+`flush_rows()`. Added a flush call to the end of every `registration_ui.c`
+draw function: `registration_ui_draw_keyboard()` and `draw_name_box()`
+(the latter also flushes itself since it's re-invoked standalone on every
+keypress), `registration_ui_draw_pillcount()` and `draw_pillcount_number()`
+(same standalone-reinvocation reasoning for the +/- taps), and
+`registration_ui_draw_confirm()`. Re-verified with a clean rebuild (0
+errors). **Not yet re-verified on hardware** — that's the next thing to
+check; expect the keyboard and pill-count screens to render cleanly now.
+
+## Addendum — two UI adjustments requested after the working hardware test
+
+With the flow fully working end-to-end (registration, keyboard, pill count,
+confirm, save, and the display glitches from Bug 3 fixed), you asked for
+two design changes to the pill-count and confirm screens:
+
+1. **Confirm/Retry buttons re-centered.** They previously reused
+   `gui_draw.h`'s `REG_BTN_X`/`DISP_BTN_X` home-screen geometry, which is
+   deliberately left-aligned there to leave room for the mascot on the
+   right — with no mascot on the confirm screen, this left the two buttons
+   pinned to the top-left instead of centered. Gave this screen its own
+   geometry (`CONFIRM_LEFT_X`/`CONFIRM_RIGHT_X`, computed to center both
+   260px-wide buttons with a 40px gap across the 800px screen width).
+2. **Pill-count input redesigned**: removed the "-"/"+" square buttons per
+   your request. Replaced with a tappable two-tone pill-capsule icon (each
+   tap adds one pill, signposted by a small "+1" badge in its corner) and a
+   RESET button in the screen's top-right corner that returns the count to
+   1 in one tap. Range (1-10) and the big center number display are
+   unchanged.
+
+Re-verified with a clean rebuild (0 errors) and checked all new screen
+coordinates by hand for centering and non-overlap. **Not yet re-verified on
+hardware** — that's the next thing to check.
+
 ## Not done this session (out of scope, per the briefing)
 
 - No changes to the AI models or `ai_vision.c`'s pipeline itself

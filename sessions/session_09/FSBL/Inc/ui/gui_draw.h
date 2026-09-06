@@ -82,6 +82,16 @@ void gui_draw_dialog_text(const char *text);
 void gui_draw_ready_screen(const char *dialog_msg);
 void gui_draw_mascot_bg(void);   /* no-op; kept for API compatibility */
 
+/* Clean the D-Cache over the drawn framebuffer region so the LTDC (which
+ * reads the framebuffer directly, bypassing the CPU cache) actually sees
+ * what was just drawn. gui_draw_home_screen()/_ready_screen()/_dialog_text()
+ * already call this internally — any OTHER module (e.g. registration_ui.c)
+ * that draws directly via gui_draw_rect()/gui_draw_text() must call one of
+ * these itself after each visible frame, or the LTDC can show stale/
+ * partially-updated pixels. */
+void gui_draw_flush(void);
+void gui_draw_flush_rows(uint16_t y_start, uint16_t y_end);
+
 #ifdef __cplusplus
 }
 #endif

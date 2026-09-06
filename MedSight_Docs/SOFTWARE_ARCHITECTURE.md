@@ -3,8 +3,18 @@
 ## 1. Firmware Lifecycle Strategy
 
 Bare-metal (Sessions 01–06) → FreeRTOS behind an OS Abstraction Layer, OSAL
-(Sessions 07–11) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 12) →
-hardening/polish (Sessions 13–14) → optional stretch (Session 15).
+(Sessions 07–10) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 11) →
+hardening (Session 12) → final polish/demo packaging (Session 13). Session 13 is
+the last planned session — see `MASTER_PROJECT_PLAN.md`'s Changelog for the
+renumbering history (this used to run through Session 16 with optional stretch
+sessions; those were dropped along with the physical-hardware cut below).
+
+**Physical dispensing hardware was cut from this project entirely** (decision
+recorded in `MASTER_PROJECT_PLAN.md`'s Changelog, first reflected in
+`prompts/session_10.md`). No `dispenser.c` module exists, no hopper concept exists
+in the patient data model, and no GPIO/motor/IR pins are assigned. Everywhere this
+document previously described hopper hardware, it now describes the software-only
+simulated dispense flow instead.
 
 The OSAL is the whole point of this staging: FreeRTOS lets you build and debug quickly
 with a mature, well-documented API, while guaranteeing the final TRON-mandated swap to
@@ -32,13 +42,17 @@ Core/
                                         medicine/quantity/time selection)
     sd_logger.c/.h                  -- Session 06 (event log), extended Session 09
                                         (patient-profile read/write/list/delete)
-    ai_vision.c/.h                  -- Sessions 08A-C (toolchain proof, one-shot face
-                                        recognition + gallery matching, action/
-                                        consumption recognition)
-    dispenser.c/.h                  -- Session 10 (multi-hopper stepper motor control +
-                                        per-hopper IR sensors)
-    schedule_time_source.c/.h       -- Session 11 (swappable fast-timer/RTC abstraction)
-    state_machine.c/.h              -- Session 11 (dispense-flow orchestration)
+    ai_vision.c/.h                  -- Sessions 08A-B (toolchain proof, one-shot face
+                                        recognition + gallery matching). Action/
+                                        consumption recognition (originally planned
+                                        as Session 08C) was dropped before it was
+                                        ever built — no session_08C.md exists, and
+                                        no second model runs on the NPU. Consumption
+                                        is confirmed by a manual "I Took It" button
+                                        instead (Session 10).
+    schedule_time_source.c/.h       -- Session 10 (swappable fast-timer/RTC abstraction)
+    state_machine.c/.h              -- Session 10 (dispense-flow orchestration —
+                                        simulated dispense only, see §7)
   Inc/
     patient_profile.h               -- Session 09 (shared patient-record struct)
 docs/                               -- this documentation set, kept current
@@ -47,9 +61,9 @@ docs/                               -- this documentation set, kept current
 ## 3. Module Boundary Rules
 
 - `camera_lcd`, `anime_ui`, `touch_driver`, `interactive_gui`, `registration_ui`,
-  `sd_logger`, `ai_vision`, `dispenser` never call OS primitives directly — only
-  through `ms_osal.h`. This is what makes the Session 12 migration mechanical rather
-  than a rewrite.
+  `sd_logger`, `ai_vision` never call OS primitives directly — only through
+  `ms_osal.h`. This is what makes the Session 11 µT-Kernel migration mechanical
+  rather than a rewrite.
 - `state_machine` is the only module allowed to orchestrate calls across the other
   functional modules — individual modules don't call each other directly. (Session 09's
   `registration_ui` is a partial, deliberate exception: it directly calls `ai_vision`'s
@@ -63,14 +77,11 @@ docs/                               -- this documentation set, kept current
 - No module outside `touch_driver.c` touches the touch controller's I2C2 bus directly —
   `interactive_gui.c` and `registration_ui.c` consume touch events through
   `touch_driver.h`'s API only.
-- No module outside `dispenser.c` issues raw motor-driver/GPIO calls — everything
-  else calls the single abstracted `dispense_dose(hopper_id, count)` entry point (see
-  `MECHANICAL_DESIGN.md` for the abstraction rationale).
 - No module outside `schedule_time_source.c` reads the fast-timer/RTC directly —
   `state_machine.c` asks "what's due now" through this module's API only, which is
   what makes the prototype-timer/real-RTC swap a single-file change later.
 
-## 4. OSAL API Surface (defined Session 07, remapped Session 12)
+## 4. OSAL API Surface (defined Session 07, remapped Session 11)
 
 Minimum surface needed, mapped to both backends:
 
@@ -83,9 +94,9 @@ Minimum surface needed, mapped to both backends:
 
 No application code calls `osThreadNew`, `osDelay`, etc. directly — enforce this in code
 review during every session from 07 onward. See `ENGINEERING_LESSONS.md` for the
-`mtk3bsp2_samples` reference used to validate correct µT-Kernel API usage in Session 12.
+`mtk3bsp2_samples` reference used to validate correct µT-Kernel API usage in Session 11.
 
-## 5. Mascot State Enum (introduced Session 05, driven by real events from Session 11)
+## 5. Mascot State Enum (introduced Session 05, driven by real events from Session 10)
 
 ```c
 typedef enum {
@@ -97,65 +108,73 @@ typedef enum {
 ```
 
 `interactive_gui.c` and `registration_ui.c` own state transitions triggered by touch;
-`state_machine.c` (from Session 11 onward) owns state transitions triggered by system
-events (face-match results, action-recognition results, dispense/jam results). All
-funnel through the same OSAL queue into `anime_ui.c`'s renderer — `anime_ui.c` itself
-never decides *why* the state changed, only *how* to render it.
+`state_machine.c` (from Session 10 onward) owns state transitions triggered by system
+events (face-match results, simulated-dispense/OK-confirmation results). All funnel
+through the same OSAL queue into `anime_ui.c`'s renderer — `anime_ui.c` itself never
+decides *why* the state changed, only *how* to render it.
 
-## 6. Patient Profile Data Model (Session 09)
+## 6. Patient Profile Data Model (Session 09, as actually implemented)
 
 ```c
-typedef struct {
-    uint32_t patient_id;
-    uint8_t  face_embedding[EMBEDDING_SIZE];   // from ai_vision.c, Session 08B
-    char     name[NAME_MAX_LEN];
-    char     phone_number[PHONE_MAX_LEN];      // stored, never transmitted — see
-                                                 // COMPLIANCE_PRIVACY_POSTURE.md §4
-    medicine_schedule_entry_t schedule[MAX_MEDICINES_PER_PATIENT];
-    uint8_t  schedule_count;
-} patient_profile_t;
+/* ai_vision.h — the real, shipped struct. Simpler than an earlier draft of this
+ * doc's patient_profile_t (which had a per-medicine hopper_id schedule array and
+ * a phone_number field) — that draft assumed physical multi-hopper hardware and a
+ * phone-notification feature, both since cut (see MASTER_PROJECT_PLAN.md's
+ * Changelog). With no hopper to map a schedule entry to, "one daily pill count per
+ * patient" is all the data model needs. */
+#define EMBEDDING_SIZE    128
+#define MAX_PATIENTS      10
+#define PATIENT_NAME_MAX  32
 
 typedef struct {
-    uint8_t hopper_id;      // maps to a physical hopper, wired in Session 10
-    uint8_t quantity;
-    // time representation intentionally left to Session 09/11's schedule_time_source
-    // design — don't hardcode a format here ahead of that decision
-} medicine_schedule_entry_t;
+    uint8_t   valid;
+    char      name[PATIENT_NAME_MAX];
+    int8_t    embedding[EMBEDDING_SIZE];   // from ai_vision.c, Session 08B
+    uint8_t   pill_count;                  // daily pill count, set at registration
+    uint8_t   pills_remaining;             // decremented per confirmed dose (Session 10+)
+} PatientRecord;
 ```
 
-Defined once in `patient_profile.h` so `sd_logger.c` (storage), `ai_vision.c`
-(embedding shape), `registration_ui.c` (population), and `state_machine.c` (Session 11,
-consumption) all agree on its shape without duplicating the definition.
+Defined once in `ai_vision.h` so `sd_logger.c` (storage, via `gallery_save()`/
+`gallery_init()`), `ai_vision.c` (embedding shape, gallery matching), and
+`registration_ui.c`/`state_machine.c` (population and consumption, Session 09/10)
+all agree on its shape without duplicating the definition.
 
-## 7. State Machine (Session 11)
+## 7. State Machine (Session 10 — simulated dispense, no physical actuators)
+
+Per `prompts/session_10.md`'s "Hardware decision (FINAL)": no motors, servos, or IR
+sensors are interfaced, at any session. "Dispensing" is an on-screen animation, and
+consumption is confirmed by the patient tapping a button — not by any sensor or a
+second NPU model (action recognition was evaluated and dropped, see
+`MASTER_PROJECT_PLAN.md` §8).
 
 ```
-IDLE (camera OFF, main screen shown)
+STATE_HOME (camera OFF, main screen shown)
   -> user taps "Dispense Medicine"
-IDLE -> CAMERA_ON_FACE_CHECK
-  -> match against enrolled gallery (Session 08B/09 data)
-CAMERA_ON_FACE_CHECK -> INTRUDER_ALERT (no match)      -> local alert, log, camera OFF, IDLE
-CAMERA_ON_FACE_CHECK -> DISPENSING (match found)
-DISPENSING -> AWAITING_CONSUMPTION_CONFIRMATION
-  -> requires BOTH action-recognition detection AND a manual Confirm tap
-AWAITING_CONSUMPTION_CONFIRMATION -> SUCCESS   (both satisfied within timeout)
-AWAITING_CONSUMPTION_CONFIRMATION -> MISSED_CONFIRMATION (timeout)
-SUCCESS / INTRUDER_ALERT / MISSED_CONFIRMATION -> camera OFF, log, IDLE
+STATE_INSTRUCT_DISPENSE -> STATE_CAMERA_DISPENSE
+  -> run ai_vision_run_pipeline(), match against enrolled gallery (Session 08B/09 data)
+STATE_CAMERA_DISPENSE -> (no match / no face) -> local alert, log, camera OFF, STATE_HOME
+STATE_CAMERA_DISPENSE -> STATE_DISPENSING (match found)
+  -> show patient name + pill count, ~2-3s animated countdown (simulates the
+     mechanical action), log "DISPENSE: <name> <count> pills"
+STATE_DISPENSING -> STATE_CONFIRM_TAKEN
+  -> large "✓ I Took It" button; a smaller "Skip" button is available for
+     caretaker use and returns home without logging a confirmation
+STATE_CONFIRM_TAKEN -> (button tapped) -> log "CONFIRMED: <name> took pills",
+  decrement and re-save pills_remaining, camera OFF, STATE_HOME
+STATE_CONFIRM_TAKEN -> (timeout, no tap) -> MASCOT_ERROR, SD log, camera OFF, STATE_HOME
 ```
 
 Edge cases (handled explicitly, not as afterthoughts), each driving `mascot_state_t`
 above to `MASCOT_ERROR` unless noted:
 - Missed dose (fast-timer/RTC schedule window elapses with no Dispense Medicine tap) →
-  `MASCOT_ERROR` + SD log, remain IDLE.
+  `MASCOT_ERROR` + SD log, remain `STATE_HOME`.
 - Unrecognized/no face at the face-check step → `MASCOT_ERROR`, local alert (LCD +
   buzzer, not a phone push — see `MASTER_PROJECT_PLAN.md` §7), SD log, no dispense,
-  camera OFF, return to IDLE.
-- Possible jam on a specific hopper (IR beam never confirms the expected count) → see
-  `MECHANICAL_DESIGN.md` §7; scoped to that hopper only, `MASCOT_ERROR`, log and
-  surface to UI rather than silently retrying or halting other hoppers in the same
-  dose event.
-- Missed consumption confirmation (action recognition and/or the manual Confirm tap
-  don't both complete within a timeout) → `MASCOT_ERROR` + SD log, camera OFF, IDLE.
+  camera OFF, return to `STATE_HOME`.
+- Missed consumption confirmation (neither "I Took It" nor "Skip" tapped within a
+  timeout) → `MASCOT_ERROR` + SD log, camera OFF, `STATE_HOME`. There is no jam/sensor
+  edge case — that only existed under the physical-hopper design and no longer applies.
 - Successful cycle → `MASCOT_SUCCESS`, SD log, camera OFF, then back to `MASCOT_IDLE`.
 
 ## 8. Pin Map
@@ -165,8 +184,8 @@ above to `MASCOT_ERROR` unless noted:
 | Debug UART | USART1, via ST-LINK VCP | Session 02 | |
 | Camera / LCD | DCMIPP + LTDC (RGB888 parallel bus across PA, PB, PD, PE, PG, PH), PSRAM framebuffers | Session 03 | Based on jpcano/STM32N6-digits reference. Hardware ISP configured in camera_lcd.c. |
 | Touch controller (GT911) | I2C2 — PD14 (SCL), PD4 (SDA), FSBL context in `.ioc` | Session 05 | Confirmed via real prior bring-up on this board, not guessed — see `ENGINEERING_LESSONS.md` |
-| Per-hopper stepper (28BYJ-48) | 4 GPIO per hopper to its ULN2003 board, repeated per hopper | Session 10 | See `HARDWARE_ARCHITECTURE.md` §2 for the GPIO-expander note once hopper count grows past ~3 |
-| Per-hopper IR break-beam | 1 EXTI input per hopper | Session 10 | Not shared across hoppers |
 
 This table stays a living document — record actual pin assignments here as each
 session finalizes them, don't write speculative pin numbers ahead of the hardware work.
+No dispenser-actuator pins are listed here because none are built — see §1's note on
+the physical-hardware cut.
