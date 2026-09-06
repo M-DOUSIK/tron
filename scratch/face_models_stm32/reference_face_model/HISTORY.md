@@ -1,0 +1,318 @@
+# Face Embedding Models for Grove Vision AI V2
+
+> **⚠️ Currently deployed model (read this first).**
+> The face embedding model in production for `sscma_face` is
+> **[`qat_distill_v2_relu6_128d/`](qat_distill_v2_relu6_128d/README.md)** — a QAT
+> distill_v2 ReLU6 MobileFaceNet (112×112×3 int8 in, 128D int8 out, flashed to
+> `0x510000`). It is a drop-in replacement for the old `qat_distilled_128d`
+> (w600k-line PCA) model and pushes stranger/impostor similarity to ~0.
+> Accuracy (int8): LFW 99.33% / CFP-FP 94.26%; on-device impostor ~0.045.
+> **The host-side cosine match threshold is now ~0.30 (was ~0.4).**
+>
+> The production training/export flow lives in **`qat_pipeline/`**.
+>
+> Everything below (w600k / foamliu / GhostFaceNet / S2-student / projection
+> experiments) is historical exploration that led to the current model and is
+> **outdated** — many of those scripts now live under **`archive/`**. Keep them for
+> context, but do not treat their conclusions (e.g. "keep w600k", "keep tpair_hn_a",
+> the 0.4/0.5 thresholds) as current.
+
+Face detection (SCRFD) + Face embedding (GhostFaceNet/MobileFaceNet) for Ethos-U55 NPU.
+
+## Final Models (Ready to Flash)
+
+| Model | File | Size | Flash Address |
+|-------|------|------|---------------|
+| SCRFD-500M-KPS | `scrfd/models/scrfd_500m_kps_int8_vela.tflite` | 701 KB | 0x400000 |
+| GhostFaceNet-0.5 | `ghostfacenet/models/ghostfacenet_fixed_int8_vela.tflite` | 849 KB | 0x510000 |
+
+## Model Specifications
+
+### SCRFD-500M-KPS (Face Detection)
+- Input: [1, 160, 160, 3] INT8
+- Output: Multi-scale detection (bounding boxes + 5-point landmarks)
+- SRAM: ~201 KB
+- Inference: ~4.4ms @ 500MHz
+
+### GhostFaceNet-0.5 (Face Embedding)
+- Input: [1, 112, 112, 3] INT8
+- Output: [1, 512] INT8 (512-dimensional embedding)
+- SRAM: ~245 KB
+- Inference: ~17ms @ 500MHz
+
+## Directory Structure
+
+```
+tflm_face_embedding/
+├── scrfd/                           # SCRFD Face Detection
+│   ├── models/                      # Model files
+│   │   ├── scrfd_500m_kps_int8_vela.tflite  # Final model (flash to 0x400000)
+│   │   ├── scrfd_500m_kps_int8.tflite       # INT8 quantized
+│   │   ├── scrfd_500m_kps.onnx              # Original ONNX
+│   │   └── scrfd_500m_kps.pth               # PyTorch weights
+│   ├── scripts/                     # Conversion scripts
+│   │   ├── convert_scrfd.py         # PTQ conversion
+│   │   ├── convert_scrfd_enhanced.py # Enhanced conversion
+│   │   └── scrfd_model.py           # Model definition
+│   └── quantization/                # QAT training
+│       ├── qat_scrfd_enhanced.py    # Main QAT training script
+│       ├── run_qat_enhanced.sh      # Training runner
+│       ├── export_from_checkpoint.py # Export trained model
+│       ├── validate_quantization.py # Validation script
+│       └── README.md                # QAT documentation
+│
+├── ghostfacenet/                    # GhostFaceNet Face Embedding
+│   ├── models/                      # Model files
+│   │   ├── ghostfacenet_fixed_int8_vela.tflite  # Final model (flash to 0x510000)
+│   │   ├── ghostfacenet_fixed_int8.tflite       # INT8 quantized
+│   │   ├── ghostfacenet_float32.onnx            # Float ONNX
+│   │   └── GN_W0.5_S2_ArcFace_epoch16.h5        # Original H5
+│   └── scripts/                     # Conversion scripts
+│       ├── convert_ghostfacenet.py  # Main conversion script
+│       ├── qat_ghostfacenet.py      # QAT training
+│       └── fix_ghostfacenet_overlap.py  # Memory overlap fix
+│
+├── calibration_data/                # Calibration data for INT8 quantization
+│   ├── fd_160/                      # Face detection calibration (160x160)
+│   ├── emb_112/                     # Embedding calibration (112x112)
+│   └── lfw/                         # LFW dataset for validation
+│
+├── foamliu_mobilefacenet_128d/      # MobileFaceNet alternative
+│
+├── prepare_calibration_data.py      # Generate calibration images
+├── download_datasets.py             # Download training datasets
+├── analyze_*.py                     # Analysis scripts
+├── SCRFD_DECODING.md               # SCRFD output format documentation
+└── pyproject.toml                   # Python dependencies
+```
+
+## Quick Start
+
+```bash
+# Setup environment
+cd model_zoo/tflm_face_embedding
+uv sync
+
+# Convert GhostFaceNet (PTQ)
+cd ghostfacenet/scripts
+uv run python convert_ghostfacenet.py
+
+# Convert SCRFD (PTQ)
+cd ../../scrfd/scripts
+uv run python convert_scrfd.py
+
+# SCRFD QAT Training (for better accuracy)
+cd ../quantization
+./run_qat_enhanced.sh
+```
+
+## Evaluation Scripts
+
+Use these from `model_zoo/tflm_face_embedding` with `uv run python ...`.
+
+| Script | Purpose |
+|--------|---------|
+| `_device_compare.py` | Simulates firmware-side preprocessing and embedding extraction. Use this when checking whether PC results match device behavior, including the `pixel - 129` INT8 input path. |
+| `run_full_comparison.py` | Full LFW + CFP-FP model comparison. Reports same-person vs different-person separation, best threshold accuracy, same mean, and diff mean across BASELINE/TTA/CENTER variants. |
+| `run_cfp_only.py` | CFP-FP-only stress test for frontal/profile face pairs. Use this after LFW or when checking harder pose variation. |
+| `evaluate_w600k_compression.py` | PC-side 512D to 128D post-embedding compression check for `official_mobilefacenet/w600k_mbf_int8.tflite`. Compares baseline 512D, truncation, random projection, and PCA projection. This does not reduce Ethos-U tensor arena SRAM by itself. |
+| `train_w600k_projection_128d.py` | Trains a 512D to 128D projection from cached w600k teacher embeddings. Produces `outputs/w600k_projection_128d.npz` with float32 and int8 projection weights for later integration experiments. |
+| `train_mfn_student_distill.py` | Trains a compact MobileFaceNet-style 128D student from w600k teacher embeddings. Use this for SRAM-reduction experiments; it supports width scaling, checkpoint continuation, weighted pairwise loss, and hard-negative margin loss. |
+| `train_mfn_student_pair_finetune.py` | Fine-tunes an S2 student with LFW DevTrain matched/mismatched pairs while retaining a configurable w600k projection distillation loss. It can optionally add CFP-FP train splits with `--cfp-splits`; reserve split 01 for evaluation. |
+| `download_glint360k_subset.py` | Downloads a bounded aligned Glint360K WebDataset subset from Hugging Face into `datasets/glint360k_subset_112/<identity>/*.jpg`. Use for internal/research training unless dataset licensing is cleared for product use. |
+| `run_s2_w1_pairft_conservative_remote.sh` | WSL2 remote sweep for conservative S2 pair fine-tuning. It reuses aligned/teacher caches, runs two higher-distillation 8-epoch variants, and is intended to test CFP retention before downloading larger face datasets. |
+| `run_s2_w1_pairft_score_sweep_remote.sh` | WSL2 remote sweep that continues from the balanced checkpoint and tries higher-distillation settings against the balanced single-threshold metric. |
+| `run_s2_w1_pairft_cfp_score_remote.sh` | WSL2 remote sweep that adds CFP-FP splits 02-10 as training pairs while leaving split 01 for evaluation. Use this only as a controlled cross-pose experiment. |
+| `run_s2_w1_pairft_cfp_fallback_remote.sh` | WSL2 remote sweep after enabling cropped-face fallback. Trains with CFP-FP splits 02-10 and reuses the generated fallback aligned/teacher caches. |
+| `run_s2_w1_pairft_threshold_remote.sh` | WSL2 remote sweep that continues from `cfp_fb_b` and adds threshold-aware hinge loss around the deployment threshold. |
+| `run_s2_w1_pairft_teacher_hn_remote.sh` | WSL2 remote sweep that continues from `thr_a`, adds teacher 512D pair-similarity loss, and mines high-similarity different-identity hard negatives. |
+| `run_s2_w1_pairft_arcface_remote.sh` | WSL2 remote sweep that continues from `tpair_hn_a` and adds a training-only ArcFace identity head. The exported TFLite still contains only the compact embedding model. |
+| `run_s2_w1_pairft_glint_arcface_remote.sh` | WSL2 remote run that downloads a Glint360K aligned subset and adds external identity images to ArcFace training. |
+| `evaluate_embedding_models.py` | Compares multiple pre-Vela embedding models on the same local LFW/CFP pairs. Use this before considering a lower-SRAM model swap. |
+| `compute_embedding.py` | Shared PC-side SCRFD + alignment + embedding pipeline used by the evaluation scripts. Also useful for one-off image pair checks. |
+
+Important notes:
+- The `models` dictionaries in these scripts may need to be updated before each experiment; older entries point to `mobilefacenet_no_bn_*` or `mobilefacenet_qat_*`.
+- Vela models with the `ethos-u` custom op cannot run directly in PC TFLite. Evaluate the pre-Vela INT8 model for accuracy, then use Vela summary/output for device memory and NPU coverage.
+- The current best-discriminating baseline found during recent testing was the original w600k quantized model: `official_mobilefacenet/w600k_mbf_int8.tflite`.
+- To evaluate a trained projection, pass it to `evaluate_w600k_compression.py`, for example: `uv run python evaluate_w600k_compression.py --projection outputs/w600k_projection_128d.npz`.
+- `evaluate_embedding_models.py` also prints a balanced single-threshold table. Use that table for model selection because firmware normally needs one recognition threshold across scenes. The table reports the shared threshold, LFW/CFP-FP accuracy at that threshold, `Floor=min(LFW, CFP-FP)`, `Gap=abs(LFW-CFP-FP)`, and `Score=harmonic_mean(LFW, CFP-FP) - 0.25 * Gap`.
+- `evaluate_embedding_models.py` also prints production-oriented verification metrics: EER, TAR@FAR10%, TAR@FAR5%, TAR@FAR1%, and FAR/FRR at the balanced shared threshold. Use these for production feasibility and false-accept risk; the balanced score alone is not a production safety metric.
+- `compute_embedding.py` keeps firmware-equivalent SCRFD alignment by default. `evaluate_embedding_models.py` and `train_mfn_student_pair_finetune.py` enable an opt-in center-crop fallback for already-cropped benchmark faces when SCRFD detects no face. This makes CFP-FP profile evaluation/training complete instead of dropping hard profile crops.
+
+Recent 128D projection result:
+- Trained on WSL2 `wsl2-local` from 1196 valid w600k teacher embeddings with `train_w600k_projection_128d.py --num-train 1200 --steps 1000`.
+- Output: `outputs/w600k_projection_128d.npz`, including float32 projection weights and int8 projection weights.
+- Matrix size: 256 KiB float32, 64 KiB int8.
+- Local evaluation command: `uv run python evaluate_w600k_compression.py --max-pairs 120 --num-calib 800 --projection outputs/w600k_projection_128d.npz`.
+- LFW: 512D baseline `sep=0.5560 acc=97.8%`; 128D trained projection `sep=0.6008 acc=97.8%`.
+- CFP-FP: 512D baseline `sep=0.1110 acc=78.0%`; 128D trained projection `sep=0.1593 acc=79.7%`.
+- This projection is suitable for 128D matching experiments after w600k inference, but it does not reduce the w600k Ethos-U tensor arena peak SRAM.
+
+Recent S2 student compression result:
+- Training ran on WSL2 `wsl2-local` with ``uv``; TensorFlow used RTX 3060 GPU.
+- `official_mobilefacenet/student_distill_w1_margin/mfn_w1_distill_128d.int8.tflite`: width `1.0`, 128D, 60 epochs, weighted pairwise + hard-negative distillation. Vela: `599.84 KiB` SRAM, `1057.14 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- `official_mobilefacenet/student_distill_w1_hardneg/mfn_w1_distill_128d.int8.tflite`: 24 more epochs from the width `1.0` checkpoint with lower LR and stricter negative margin. Vela: `599.84 KiB` SRAM, `1056.83 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Best hard-negative local evaluation command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model w600k-512d=official_mobilefacenet/w600k_mbf_int8.tflite --model s2-w1-hardneg-i8=official_mobilefacenet/student_distill_w1_hardneg/mfn_w1_distill_128d.int8.tflite`.
+- Hard-negative S2 result: LFW `sep=0.1462 acc=73.9%`; CFP-FP `sep=0.1104 acc=78.0%`.
+- Conclusion: the S2 architecture meets the SRAM target, and CFP-FP is close to w600k, but LFW is still far below the w600k baseline (`sep=0.5560 acc=97.8%`). Do not replace w600k with this student yet. The next useful path is supervised identity or pair-based fine-tuning from aligned LFW/CFP or a larger labeled face dataset, not S3.
+
+Recent S2 pair fine-tune result:
+- `official_mobilefacenet/student_distill_w1_pairft/mfn_w1_pairft_128d.int8.tflite`: LFW improved to `sep=0.3231 acc=81.1%`, but CFP-FP regressed to `sep=0.0754 acc=74.6%`.
+- `official_mobilefacenet/student_distill_w1_pairft_balanced/mfn_w1_pairft_128d.int8.tflite`: balanced loss (`distill=1.0`, lower positive weight, stronger negative weight) gave LFW `sep=0.2510 acc=81.7%` and CFP-FP `sep=0.0813 acc=76.3%`.
+- Vela for the balanced pair fine-tune: `599.84 KiB` SRAM, `1056.28 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Conclusion: supervised pair loss improves LFW without increasing SRAM, but current local LFW-only supervision hurts cross-pose CFP-FP versus the hard-negative distillation model. Width `1.0` is not the immediate bottleneck; widening should wait until there is broader labeled training data or a better validation split.
+
+Recent conservative S2 pair fine-tune sweep:
+- Remote command: `bash <repo-root>/run_s2_w1_pairft_conservative_remote.sh` on WSL2 `wsl2-local` with ``uv``; TensorFlow created `GPU:0` on RTX 3060.
+- `official_mobilefacenet/student_distill_w1_pairft_distill2/mfn_w1_pairft_128d.int8.tflite`: 8 epochs from hard-negative weights, `distill=2.0`, `positive=0.4`, `negative=8.0`, `margin=0.03`. LFW `sep=0.1667 acc=77.8%`; CFP-FP `sep=0.1038 acc=79.7%`. Vela: `599.84 KiB` SRAM, `1057.09 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- `official_mobilefacenet/student_distill_w1_pairft_distill3/mfn_w1_pairft_128d.int8.tflite`: 8 epochs from hard-negative weights, `distill=3.0`, `positive=0.25`, `negative=8.0`, `margin=0.02`. LFW `sep=0.1642 acc=78.3%`; CFP-FP `sep=0.0977 acc=81.4%`. Vela: `599.84 KiB` SRAM, `1057.22 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Conclusion: higher teacher retention avoids the CFP-FP regression seen in LFW-heavy pair fine-tuning, but it cannot recover w600k-like LFW discrimination. Do not download more pair-only validation data first. If more data is needed, prioritize identity-labeled, multi-pose face training data and an ArcFace-style identity objective, then distill into the S2 architecture. The current local LFW pair supervision is useful for diagnosis but too narrow to be the main training signal.
+
+Balanced single-threshold S2 selection:
+- Command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model hardneg=official_mobilefacenet/student_distill_w1_hardneg/mfn_w1_distill_128d.int8.tflite --model balanced=official_mobilefacenet/student_distill_w1_pairft_balanced/mfn_w1_pairft_128d.int8.tflite --model distill2=official_mobilefacenet/student_distill_w1_pairft_distill2/mfn_w1_pairft_128d.int8.tflite --model distill3=official_mobilefacenet/student_distill_w1_pairft_distill3/mfn_w1_pairft_128d.int8.tflite`.
+- Current ranking by `Score=harmonic_mean(LFW@Thr, CFP@Thr) - 0.25 * Gap`: `balanced` score `0.762`, shared threshold `0.1589`, LFW `76.1%`, CFP-FP `76.3%`; `distill2` score `0.753`; `distill3` score `0.751`; `hardneg` score `0.713`.
+- Use the balanced single-threshold table for deployment candidate selection. Use the per-dataset best-threshold tables only for diagnosis, because they hide threshold-transfer risk.
+
+Score-directed S2 training attempts:
+- Continuing from `balanced` with higher distillation (`score_a/b/c`) improved LFW best-threshold accuracy to `82.8%`, but lowered the single-threshold score to `0.720-0.724`. This shifts the similarity distribution and is worse for deployment.
+- Adding CFP-FP train splits 02-10 (`cfp_score_a`) improved best-threshold LFW/CFP to `82.8%/78.0%`, but the shared-threshold score dropped to `0.719` with threshold `0.0138`. Current SCRFD alignment also rejects many CFP profile images, so cross-pose training is partly bottlenecked by detection/alignment.
+- Conclusion: keep `student_distill_w1_pairft_balanced` as the current S2 deployment candidate. Further improvement should optimize the single-threshold objective directly and/or fix profile-face alignment before more pair fine-tuning.
+
+Profile fallback S2 result:
+- Enabling cropped-face fallback changed CFP-FP evaluation from partial `44s/15d` to full `120s/60d`; each evaluated model used `72` fallback images and had `0` failures.
+- New full CFP-FP baseline: `w600k` score `0.705` (`LFW@Thr=81.1%`, `CFP@Thr=67.8%`, gap `13.3%`); `student_distill_w1_pairft_balanced` score `0.690` (`68.9%/69.4%`, gap `0.6%`).
+- `official_mobilefacenet/student_distill_w1_pairft_cfp_fb_b/mfn_w1_pairft_128d.int8.tflite`: trained from `balanced` with fallback-aligned LFW + CFP-FP splits 02-10, `distill=0.8`, `positive=1.0`, `negative=12.0`, `margin=0.03`. Full evaluation: LFW `sep=0.2621 acc=81.7%`; CFP-FP `sep=0.0973 acc=73.3%`; single-threshold score `0.700`, threshold `0.0138`, LFW@Thr `69.4%`, CFP@Thr `71.7%`, gap `2.2%`.
+- Vela for `cfp_fb_b`: `599.83 KiB` SRAM, `1056.80 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Conclusion: `cfp_fb_b` is the best current 128D/SRAM candidate under the complete CFP-FP fallback evaluation. It is slightly below w600k score but much more balanced across LFW/CFP and remains well under 1 MiB SRAM.
+
+Threshold-aware S2 result:
+- `train_mfn_student_pair_finetune.py` supports `--threshold-weight`, `--threshold`, and `--threshold-margin`. This adds a hinge loss that pushes positive pairs above `threshold + margin` and negative pairs below `threshold - margin`.
+- `official_mobilefacenet/student_distill_w1_pairft_thr_a/mfn_w1_pairft_128d.int8.tflite`: continued from `cfp_fb_b` for 6 epochs with fallback-aligned LFW + CFP-FP splits 02-10, `threshold_weight=0.5`, `threshold=0.02`, `threshold_margin=0.04`, `distill=0.8`, `positive=1.0`, `negative=12.0`, `margin=0.03`. Full evaluation: LFW `sep=0.2821 acc=83.3%`; CFP-FP `sep=0.0965 acc=72.8%`; single-threshold score `0.714`, threshold `0.0463`, LFW@Thr `71.1%`, CFP@Thr `72.2%`, gap `1.1%`.
+- Vela for `thr_a`: `599.83 KiB` SRAM, `1056.88 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Current ranking under complete fallback evaluation: `thr_a` score `0.714`; w600k score `0.705`; `cfp_fb_b` score `0.700`. `thr_a` is the best current 128D candidate.
+
+Teacher-pair + hard-negative S2 result:
+- `train_mfn_student_pair_finetune.py` supports `--teacher-pair-weight` to match w600k 512D pair similarities and `--mine-hard-negatives` to append high-similarity different-identity pairs mined from the initial student. In this run, mining selected `1200` negatives with student similarity from `0.8238` down to `0.7003`.
+- `official_mobilefacenet/student_distill_w1_pairft_tpair_hn_a/mfn_w1_pairft_128d.int8.tflite`: continued from `thr_a` for 6 epochs with `teacher_pair_weight=0.5`, `mine_hard_negatives=1200`, threshold-aware loss unchanged. Full evaluation: LFW `sep=0.2066 acc=81.1%`; CFP-FP `sep=0.0831 acc=71.7%`; single-threshold score `0.725`, threshold `0.1064`, LFW@Thr `73.3%`, CFP@Thr `72.2%`, gap `1.1%`.
+- Vela for `tpair_hn_a`: `599.84 KiB` SRAM, `1056.86 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Current ranking under complete fallback evaluation: `tpair_hn_a` score `0.725`; `thr_a` score `0.714`; w600k score `0.705`. `tpair_hn_a` is the best current 128D candidate.
+
+ArcFace fine-tuning path:
+- `train_mfn_student_pair_finetune.py` supports a training-only ArcFace identity head via `--arcface-weight`, `--arcface-scale`, `--arcface-margin`, and `--arcface-min-images`. Identities are inferred from LFW/CFP paths; identities with fewer than `--arcface-min-images` aligned images are ignored by the ArcFace loss.
+- The ArcFace classifier weights are not part of the exported model. They are used only to shape the student embedding space during training, so exported SRAM/flash should remain governed by the same compact student backbone.
+- `run_s2_w1_pairft_arcface_remote.sh` continues from `tpair_hn_a` and tries conservative ArcFace weights.
+- Result: ArcFace trained correctly but did not improve this local benchmark. `arc_a` used `arcface_weight=0.05`, `margin=0.25`; `arc_b` used `arcface_weight=0.10`, `margin=0.35`. Both used `1046` ArcFace classes and `3636/5103` aligned images. Losses decreased across 8 epochs for both runs.
+- Full evaluation command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model w600k=official_mobilefacenet/w600k_mbf_int8.tflite --model tpair_hn=official_mobilefacenet/student_distill_w1_pairft_tpair_hn_a/mfn_w1_pairft_128d.int8.tflite --model arc_a=official_mobilefacenet/student_distill_w1_pairft_arc_a/mfn_w1_pairft_128d.int8.tflite --model arc_b=official_mobilefacenet/student_distill_w1_pairft_arc_b/mfn_w1_pairft_128d.int8.tflite`.
+- `arc_a`: LFW `sep=0.2034 acc=80.6%`; CFP-FP `sep=0.0735 acc=70.6%`; single-threshold score `0.681`; LFW EER `23.3%`; CFP-FP EER `41.7%`.
+- `arc_b`: LFW `sep=0.2061 acc=80.0%`; CFP-FP `sep=0.0728 acc=72.2%`; single-threshold score `0.684`; LFW EER `23.3%`; CFP-FP EER `40.0%`.
+- Vela: both ArcFace exports remain `599.84 KiB` SRAM, `CPU ops=0`, `NPU=100%`; flash is `1056.25 KiB` for `arc_a` and `1055.92 KiB` for `arc_b`.
+- Conclusion: keep `tpair_hn_a` as the current best 128D candidate. ArcFace is wired into the pipeline, but with the current small/narrow LFW+CFP identity set it shifts the similarity distribution in the wrong direction. Use ArcFace again only with broader identity-labeled training data or a stronger teacher-generated identity/pseudo-label set.
+
+Glint360K subset experiment:
+- Download command used by `run_s2_w1_pairft_glint_arcface_remote.sh`: `uv run python download_glint360k_subset.py --output-dir datasets/glint360k_subset_112 --start-shard 0 --num-shards 8 --max-images 50000 --max-images-per-id 20`. This produced `50000` aligned images across `39574` identities on WSL2.
+- The first 50k-image training attempt generated a `2.0 GiB` aligned cache and `108 MiB` teacher cache, then exited around GPU initialization. This is now fixed: `train_mfn_student_pair_finetune.py` keeps only pair-loss images in the aligned/teacher caches and streams external identity images from file paths for ArcFace-only steps.
+- `official_mobilefacenet/student_distill_w1_pairft_glint_arc_c/mfn_w1_pairft_128d.int8.tflite`: trained from `tpair_hn_a` with `10000` Glint images, plus LFW + CFP-FP train splits 02-10. It used `15103` total images, `1562` ArcFace classes, and `4710/15103` images eligible for ArcFace (`min_images=2`). Training loss decreased from `3.81251` to `2.61406`; identity ArcFace loss decreased from `18.83940` to `16.91416`.
+- `official_mobilefacenet/student_distill_w1_pairft_glint_arc_stream_a/mfn_w1_pairft_128d.int8.tflite`: 50k streaming run from `tpair_hn_a`. It uses `5103` cached pair images, `50000` streaming Glint identity paths, `8498` ArcFace classes, and `17878/50000` Glint images eligible for streaming ArcFace (`min_images=2`). This run validates that 50k identity data no longer enters the large `x_tf` image constant. Training loss decreased from `3.70730` to `2.36125`; identity ArcFace loss decreased from `20.53532` to `17.39129`.
+- `official_mobilefacenet/student_distill_w1_pairft_glint_arc_bal200k_a/mfn_w1_pairft_128d.int8.tflite`: balanced 200k attempt using `64` Glint shards, `min_images_per_id=4`, `max_images_per_id=16`, and the same streaming ArcFace path. The download script now supports `--balanced-two-pass` to scan identities before extraction; WSL2 needed `HTTP_PROXY`/`HTTPS_PROXY` configured to reach the dataset mirrors. Training/export completed in `729s`.
+- `official_mobilefacenet/student_distill_w1_pairft_glint_arc_bal200k_b/mfn_w1_pairft_128d.int8.tflite`: conservative 200k attempt after fixing Glint identity parsing for directories named `glint360k_*`. Before the fix, balanced external images had `stream_valid=0/200000`; after the fix, the same dataset had `stream_valid=186456/200000`.
+- Evaluation command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model w600k=official_mobilefacenet/w600k_mbf_int8.tflite --model tpair_hn=official_mobilefacenet/student_distill_w1_pairft_tpair_hn_a/mfn_w1_pairft_128d.int8.tflite --model glint_arc_c=official_mobilefacenet/student_distill_w1_pairft_glint_arc_c/mfn_w1_pairft_128d.int8.tflite`.
+- `glint_arc_c` local metrics: LFW `sep=0.2215 acc=77.2%`; CFP-FP `sep=0.0719 acc=70.6%`; single-threshold score `0.712` versus `tpair_hn_a` score `0.725`.
+- `glint_arc_stream_a` local metrics: LFW `sep=0.2259 acc=79.4%`; CFP-FP `sep=0.0876 acc=72.8%`; single-threshold score `0.705`. Low-FAR versus `tpair_hn_a`: LFW TAR@FAR1 improved `29.2% -> 51.7%`, LFW TAR@FAR5 improved `52.5% -> 55.0%`; CFP-FP TAR@FAR5 is roughly unchanged at `12.5% -> 13.3%`.
+- `glint_arc_bal200k_a` local metrics: LFW `sep=0.2064 acc=80.6%`; CFP-FP `sep=0.0734 acc=72.2%`; single-threshold score `0.699`. Low-FAR versus `tpair_hn_a`: LFW TAR@FAR1 improved `29.2% -> 35.8%`, but LFW TAR@FAR5 regressed `52.5% -> 45.8%`; CFP-FP TAR@FAR5 stayed `12.5%`.
+- `glint_arc_bal200k_b` local metrics: LFW `sep=0.2016 acc=78.9%`; CFP-FP `sep=0.0670 acc=71.1%`; single-threshold score `0.701`. Low-FAR versus `tpair_hn_a`: LFW TAR@FAR1 improved `29.2% -> 40.0%`, but LFW TAR@FAR5 regressed `52.5% -> 48.3%`; CFP-FP TAR@FAR5 improved `12.5% -> 15.0%`.
+- Vela for `glint_arc_c`: `599.84 KiB` SRAM, `1055.95 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Vela for `glint_arc_stream_a`: `599.84 KiB` SRAM, `1055.91 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Vela for `glint_arc_bal200k_a`: `599.84 KiB` SRAM, `1056.23 KiB` flash, `CPU ops=0`, `NPU=100%`.
+- Conclusion: neither Glint ArcFace run replaces `tpair_hn_a` for the balanced shared-threshold experience yet. The 50k streaming run is useful because it fixes the memory blocker and improves some low-FAR/LFW indicators, but its shared threshold shifts too low and increases FAR. The balanced 200k run confirms that simply adding more ArcFace identity data can push the distribution in the wrong direction; continue from this code path by lowering ArcFace pressure and adding an explicit FAR/hard-negative penalty, not by reverting to larger in-memory caches.
+
+Threshold/hard-negative refinement from `thr_a`:
+- `official_mobilefacenet/student_distill_w1_pairft_thr_refine_a/mfn_w1_pairft_128d.int8.tflite`: trained on WSL2 `wsl2-local` from `thr_a` for 10 epochs, with stronger threshold loss, teacher pair loss, and 2500 mined hard negatives. TensorFlow used RTX 3060 GPU; training plus export took `406s`.
+- Local evaluation command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model w600k=official_mobilefacenet/w600k_mbf_int8.tflite --model thr_a=official_mobilefacenet/student_distill_w1_pairft_thr_a/mfn_w1_pairft_128d.int8.tflite --model tpair_hn=official_mobilefacenet/student_distill_w1_pairft_tpair_hn_a/mfn_w1_pairft_128d.int8.tflite --model thr_refine=official_mobilefacenet/student_distill_w1_pairft_thr_refine_a/mfn_w1_pairft_128d.int8.tflite`.
+- Result: `thr_refine_a` regressed versus both useful candidates. LFW `sep=0.1706 acc=80.6%`; CFP-FP `sep=0.0730 acc=70.0%`; single-threshold score `0.700`, below `tpair_hn_a=0.725` and `thr_a=0.714`. LFW TAR@FAR5 fell to `43.3%`; CFP-FP TAR@FAR5 was `14.2%`.
+- Conclusion: do not use `thr_refine_a` as a candidate. It over-regularizes the threshold/hard-negative objective and reduces the useful separation. Keep `tpair_hn_a` as the best balanced-experience candidate, and `thr_a` as the better low-FAR tradeoff candidate.
+- Evaluation location note: WSL2 is appropriate for training and fast smoke checks. Final model selection should currently use the local evaluation data because the WSL2 LFW copy has previously shown missing/mismatched pairs; sync the full local LFW/CFP evaluation tree before trusting WSL2 final metrics.
+
+Follow-up optimization sweep:
+- `official_mobilefacenet/student_distill_w1_pairft_thr_mild_a/mfn_w1_pairft_128d.int8.tflite`: mild continuation from `thr_a` with fewer mined hard negatives and lower threshold pressure. It slightly improves the shared score over `thr_a`: LFW `sep=0.2626 acc=83.3%`; CFP-FP `sep=0.0919 acc=73.9%`; single-threshold score `0.715`; LFW TAR@FAR5 `65.0%`; CFP-FP TAR@FAR5 `18.3%`.
+- `official_mobilefacenet/student_distill_w1_pairft_thr_mild_b/mfn_w1_pairft_128d.int8.tflite`: more teacher retention from `thr_a`. It has the best LFW TAR@FAR5 among the new 128D variants (`68.3%`) but lower shared score (`0.710`).
+- `official_mobilefacenet/student_distill_w1_pairft_cfp160_a/mfn_w1_pairft_128d.int8.tflite`: doubled CFP train-pair coverage to 160 same/diff per train split. It did not improve selection metrics: score `0.707`, LFW TAR@FAR5 `62.5%`, CFP-FP TAR@FAR5 `16.7%`.
+- `official_mobilefacenet/student_distill_w1_pairft_tpair_repair_a/mfn_w1_pairft_128d.int8.tflite`: mild low-FAR repair from `tpair_hn_a`. It improves `tpair_hn_a` LFW TAR@FAR5 from `52.5%` to `57.5%`, but drops shared score from `0.725` to `0.714`.
+- 256D experiment: `outputs/w600k_projection_256d.npz` plus `official_mobilefacenet/student_distill_w1_256d/mfn_w1_distill_256d.int8.tflite` and `official_mobilefacenet/student_distill_w1_pairft_256d_mild_a/mfn_w1_pairft_256d.int8.tflite`. Vela stays within the SRAM budget (`599.84 KiB`, NPU `100%`), but accuracy is worse than 128D: the pair-finetuned 256D model scores `0.668`, with LFW `sep=0.1343 acc=71.7%` and CFP-FP `sep=0.0455 acc=66.7%`.
+- Current selection after this sweep: keep `tpair_hn_a` for best balanced experience (`score=0.725`), use `thr_a`/`mild_a` if low-FAR behavior matters more than the balanced score, and do not continue the 256D path without changing the training recipe or backbone.
+
+Top-k hard-pair loss:
+- `train_mfn_student_pair_finetune.py` supports `--hard-positive-fraction` and `--hard-negative-fraction`. When set, positive/negative pair and threshold losses are computed from the worst-scoring fraction of each batch instead of the full pair average.
+- `official_mobilefacenet/student_distill_w1_pairft_topk_thr_a/mfn_w1_pairft_128d.int8.tflite`: continued from `thr_a` with top-k loss. This is the best low-FAR 128D variant so far: LFW TAR@FAR1 `65.8%`, LFW TAR@FAR5 `70.0%`, CFP-FP TAR@FAR5 `18.3%`; shared score `0.712`.
+- `official_mobilefacenet/student_distill_w1_pairft_topk_thr_b/mfn_w1_pairft_128d.int8.tflite`: reduced top-k pressure and increased teacher retention from `topk_thr_a`. It restores CFP-FP best-threshold accuracy to `73.3%`, but low-FAR regresses; shared score remains `0.712`.
+- `official_mobilefacenet/student_distill_w1_pairft_topk_tpair_a/mfn_w1_pairft_128d.int8.tflite`: continued from `tpair_hn_a`; it improves LFW TAR@FAR5 to `54.2%` versus `52.5%`, but drops shared score to `0.707`.
+- Conclusion: top-k loss is useful for low-FAR tuning but still does not beat `tpair_hn_a` on balanced shared-threshold score. The next meaningful accuracy jump likely needs a stronger backbone/teacher recipe or a product-like validation/training set, not more small loss-weight sweeps.
+
+Production feasibility metrics:
+- Command: `uv run python evaluate_embedding_models.py --max-pairs 120 --model w600k=official_mobilefacenet/w600k_mbf_int8.tflite --model thr_a=official_mobilefacenet/student_distill_w1_pairft_thr_a/mfn_w1_pairft_128d.int8.tflite --model tpair_hn=official_mobilefacenet/student_distill_w1_pairft_tpair_hn_a/mfn_w1_pairft_128d.int8.tflite`.
+- LFW verification: w600k EER `3.3%`, TAR@FAR5 `96.7%`; `thr_a` EER `20.0%`, TAR@FAR5 `67.5%`; `tpair_hn_a` EER `22.9%`, TAR@FAR5 `52.5%`.
+- CFP-FP verification: w600k EER `36.7%`, TAR@FAR5 `26.7%`; `thr_a` EER `38.3%`, TAR@FAR5 `24.2%`; `tpair_hn_a` EER `35.0%`, TAR@FAR5 `12.5%`.
+- At the balanced shared threshold, false-accept rates are high for all tested models: `tpair_hn_a` LFW FAR `75.0%`, CFP-FP FAR `55.0%`; w600k LFW FAR `56.7%`, CFP-FP FAR `63.3%`.
+- Feasibility conclusion: `tpair_hn_a` is useful as a low-SRAM balanced-experience candidate, but it is not production-ready for low-FAR/security-sensitive recognition. The next production gate needs a real business validation set and explicit FAR targets; the current local LFW/CFP subsets show that balanced accuracy can improve while false-accept risk remains too high.
+
+InsightFace w600k identity-distill V2 branches:
+- Evaluation command: `uv run python evaluate_embedding_models.py --max-pairs 120 --cfp-splits 1-10 --model w600k=official_mobilefacenet/w600k_mbf_int8.tflite --model iddistill=official_mobilefacenet/student_distill_w1_pairft_glint_iddistill50k_a/mfn_w1_pairft_128d.int8.tflite --model v2lfw=official_mobilefacenet/iddistill_v2_lfw/mfn_w1_pairft_128d.int8.tflite --model v2lfw2=official_mobilefacenet/iddistill_v2_lfw2/mfn_w1_pairft_128d.int8.tflite`.
+- `official_mobilefacenet/iddistill_v2_lfw/mfn_w1_pairft_128d.int8.tflite`: LFW-biased continuation from the original identity-distill model, with no CFP training pairs. It keeps SRAM at `599.83 KiB`, flash at about `1056.23 KiB`, `CPU ops=0`, `NPU=100%`. Local metrics: LFW TAR@FAR5/FAR1 `66.7%/50.8%`; CFP-FP 1-10 TAR@FAR5/FAR1 `67.3%/41.3%`; balanced score `0.803`.
+- `official_mobilefacenet/iddistill_v2_lfw2/mfn_w1_pairft_128d.int8.tflite`: continued from `v2_lfw` with stronger LFW hard-negative and threshold pressure. Vela remains `599.83 KiB` SRAM, `1056.27 KiB` flash, `CPU ops=0`, `NPU=100%`. Local metrics: LFW TAR@FAR5/FAR1 `65.0%/57.5%`; CFP-FP 1-10 TAR@FAR5/FAR1 `65.3%/36.6%`; balanced score `0.802`.
+- Current selection: `v2_lfw2` is better when strict LFW FAR1 matters because it restores LFW TAR@FAR1 to the original `iddistill` level (`57.5%`) while keeping the improved V2 shared-threshold behavior. `v2_lfw` is better when CFP-FP/side-pose recall matters more. Neither closes the gap to official w600k on LFW (`96.7%` TAR@FAR1), so production gating still needs product-like validation data and explicit FAR targets.
+
+Teacher hard-negative and persistent ArcFace follow-up:
+- `train_mfn_student_pair_finetune.py` now supports `--mine-teacher-hard-negatives`, `--arcface-head-in`, and `--arcface-head-out`. Teacher hard negatives are mined from w600k/teacher embeddings; the ArcFace classifier head is saved separately as `.npz` so future runs can continue the same class head instead of restarting it from random weights. The ArcFace head is training-only and is not exported into the TFLite model, so SRAM/flash are unchanged.
+- `official_mobilefacenet/iddistill_v2_lfw3/mfn_w1_pairft_128d.int8.tflite`: continued from `v2_lfw2` with `5000` teacher hard negatives and saved ArcFace head. Vela: `599.83 KiB` SRAM, `1056.20 KiB` flash, `CPU ops=0`, `NPU=100%`. It improved balanced shared-threshold score to `0.815`, but hurt strict LFW: LFW TAR@FAR5/FAR1 `65.8%/45.8%`; CFP-FP TAR@FAR5/FAR1 `63.4%/34.0%`.
+- `official_mobilefacenet/iddistill_v2_lfw4/mfn_w1_pairft_128d.int8.tflite`: restarted from `v2_lfw2`, loaded the `v2_lfw3` ArcFace head, and reduced teacher hard negatives to `1000`. Vela: `599.83 KiB` SRAM, `1056.20 KiB` flash, `CPU ops=0`, `NPU=100%`. It improved CFP-FP to `68.5%/40.8%`, but LFW strict metrics regressed to `62.5%/40.0%`; balanced score `0.800`.
+- Current V2 selection after these follow-ups: use `v2_lfw2` when LFW FAR1/strict low-FAR matters, `v2_lfw3` for best single shared-threshold balance, and `v2_lfw` or `v2_lfw4` when CFP-FP/side-pose recall matters. Teacher hard-negative mining is useful but too much of it shifts the model away from strict LFW; further work should use a real validation set and teacher-ranked identity data, not only LFW/CFP pair tuning.
+- `official_mobilefacenet/iddistill_v2_lfw5/mfn_w1_pairft_128d.int8.tflite`: restarted from `v2_lfw2` with no teacher hard negatives, fewer student hard negatives (`1500`), stronger hard-positive/identity-distill pressure, and a fresh saved ArcFace head. Vela: `599.84 KiB` SRAM, `1056.25 KiB` flash, `CPU ops=0`, `NPU=100%`. It improved LFW separation (`0.2252` vs `0.2168`) and shared score (`0.805` vs `0.802`), but did not beat `v2_lfw2` on the strict target: LFW TAR@FAR5/FAR1 `61.7%/55.8%`; CFP-FP TAR@FAR5/FAR1 `66.8%/38.2%`.
+- `official_mobilefacenet/iddistill_v2_lfw6/mfn_w1_pairft_128d.int8.tflite`: added explicit hard-positive oversampling via `--mine-hard-positives 800` from `v2_lfw2`, kept teacher hard negatives disabled, and used `1200` student hard negatives. Vela: `599.83 KiB` SRAM, `1056.22 KiB` flash, `CPU ops=0`, `NPU=100%`. It is the best strict-LFW variant so far: LFW TAR@FAR5/FAR1 `62.5%/58.3%`; CFP-FP TAR@FAR5/FAR1 `65.4%/40.7%`; balanced score `0.806`.
+- LFW-specific conclusion: explicit hard-positive oversampling finally moved LFW FAR1 above the previous `57.5%` ceiling, but only slightly. Keep `v2_lfw6` as the current strict-LFW candidate. The next LFW improvement attempt should either tune the hard-positive replay amount (`400/1200/1600`) or try a slightly wider student within the `<750 KiB` SRAM budget.
+- Width probe: `width=1.05` stayed at about `599.84 KiB` SRAM due to channel rounding; `width=1.10` and `width=1.15` both compiled to about `702.09 KiB`; `width=1.20` compiled to about `754.12 KiB`, which fits only if the budget is relaxed to `<760 KiB`.
+- `official_mobilefacenet/iddistill_v2_w115_lfw1/mfn_w1.15_pairft_128d.int8.tflite`: trained a wider `width=1.15` student from scratch with 50-epoch projection distillation, then the same LFW hard-positive + Glint identity-distill fine-tune recipe. Vela: `702.08 KiB` SRAM, `1394.48 KiB` flash, `CPU ops=0`, `NPU=100%`. Accuracy regressed badly versus `v2_lfw6`: LFW TAR@FAR5/FAR1 `40.0%/25.8%`; CFP-FP TAR@FAR5/FAR1 `6.8%/1.4%`; balanced score `0.667`.
+- Width conclusion: simply widening the student does not currently solve the accuracy gap. The `w1.15` run has much higher different-person similarity after distillation/fine-tune, so the next attempt should change the training recipe, not just run `width=1.20` with the same settings.
+
+## SCRFD QAT Training
+
+For improved SCRFD detection accuracy, use Quantization-Aware Training:
+
+```bash
+cd scrfd/quantization
+
+# Quick test (10 min)
+NUM_IMAGES=5000 EPOCHS=5 ./run_qat_enhanced.sh
+
+# Standard training (45 min, recommended)
+NUM_IMAGES=30000 EPOCHS=10 ./run_qat_enhanced.sh
+
+# Full training (2 hours)
+NUM_IMAGES=50000 EPOCHS=15 ./run_qat_enhanced.sh
+```
+
+See `scrfd/quantization/README.md` for detailed QAT documentation.
+
+## Flashing Models
+
+```bash
+# Flash with the complete firmware image and models.
+# Use output.img for bootloader full-image flashing; cm55m_s_application.img
+# is an intermediate application-partition artifact.
+./build_and_flash.sh
+
+# Or manually:
+python3 xmodem/xmodem_send.py \
+  --port=/dev/tty.usbmodem* \
+  --baudrate=921600 \
+  --file=we2_image_gen_local/output_case1_sec_wlcsp/output.img \
+  --model="model_zoo/tflm_face_embedding/scrfd/models/scrfd_500m_kps_int8_vela.tflite 0x400000 0x0" \
+  --model="model_zoo/tflm_face_embedding/ghostfacenet/models/ghostfacenet_fixed_int8_vela.tflite 0x510000 0x0"
+```
+
+## Troubleshooting
+
+See `scrfd/quantization/README.md` for common issues:
+- Q1: Calibration data format requirements
+- Q2: ONNX opset version compatibility
+- Q3: Input value range normalization
+- Q4-Q10: Various conversion and quantization issues

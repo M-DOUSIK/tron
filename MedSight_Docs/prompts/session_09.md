@@ -1,166 +1,228 @@
-# Session 09 — Registration Flow (Enrollment UI + SD Profile Storage)
+# Session 09 — Patient Registration Flow
 
-## Prompt for Antigravity (copy-paste as-is)
+## How to Start This Session
 
-```
-OBJECTIVE
-Implement the patient registration flow: from the main screen's "Register" button,
-capture one photo for one-shot face enrollment, collect name via an
-on-screen keyboard, let the user select which configured medicine(s), quantity, and
-time from the device's medicine catalog, and persist all of it to the SD card as a
-patient profile.
+Hello! We are starting Session 09 for the MedSight project — the real
+patient registration flow, building on Session 08B's now-working AI vision
+pipeline.
 
-BACKGROUND AND CONTEXT
-Building on tron/session_08C/ (AI toolchain, face recognition, and action recognition
-all proven working individually). MedSight is a shared device for multiple people —
-this session is what actually creates the patient records that later sessions (the
-multi-hopper dispenser in Session 10, the full dispense flow in Session 11) depend on.
-Per COMPLIANCE_PRIVACY_POSTURE.md, all of this data — face embedding, name, phone
-number, schedule — is written only to the local SD card, never transmitted anywhere.
+**Before writing any code or taking any action**, acquire full context:
 
-RELEVANT PROJECT FILES AND FOLDERS
-- FSBL/Src/ui/ (extend interactive_gui.c, or add a new registration_ui.c/.h — your
-  call based on how large the existing interactive_gui.c has grown)
-- FSBL/Src/ai_vision.c/.h (Session 08B's face embedding capture, reused here for
-  enrollment)
-- FSBL/Src/sd_logger.c/.h (extend with patient-profile read/write, distinct from the
-  event-log API already there)
-- COMPLIANCE_PRIVACY_POSTURE.md (data handling rules — apply the same "never over
-  UART" rule to name/phone number too, not just face data)
-- MASCOT_UI_DESIGN.md (main screen button labels: "Register" / "Dispense Medicine")
-- tron/session_08C/ as the base
+1. **READ ALL DOCUMENTATION**: every markdown file in `MedSight_Docs/` —
+   especially `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`,
+   `HARDWARE_ARCHITECTURE.md`, `ENGINEERING_LESSONS.md`, `AI_LESSONS.md`,
+   `AI_PIPELINE.md`, and `COMPLIANCE_PRIVACY_POSTURE.md`.
 
-REQUIRED INPUTS
-- A configured medicine catalog: for this session, a simple hardcoded or config-file
-  list of {hopper_id, medicine_name} pairs is sufficient — this is a data model only;
-  the physical hoppers themselves aren't built until Session 10, and that's fine,
-  since this session doesn't need to actually dispense anything.
+2. **READ PAST SESSION PROMPTS**: `session_01.md` through `session_08A.md`
+   in `MedSight_Docs/prompts/`, to understand what's already built.
 
-EXPECTED OUTPUTS
-- Main screen updated to show "Register" and "Dispense Medicine" as the two primary
-  buttons (superseding the earlier placeholder button labels from Session 05).
-- Tapping "Register" starts a guided flow:
-  1. Camera captures a single photo; Session 08B's face embedding extraction runs on
-     it once (one-shot, not a live continuous scan — this should feel like a phone's
-     "look at the camera" face-unlock capture, a single deliberate shot, not a
-     multi-second live preview requiring the user to hold still).
-  2. On-screen keyboard for name entry.
-  3. On-screen keyboard (numeric) for phone number entry.
-  4. Medicine selection screen listing the configured catalog; user selects one or
-     more medicines, and for each selected medicine, a quantity and a time (using the
-     prototype's simple time input — an actual RTC-based time picker isn't required
-     yet, a simple numeric/scroll input tied to the schedule format Session 11 will
-     define is fine; don't over-build this ahead of Session 11).
-  5. Confirmation screen summarizing what was entered, then save.
-- All of the above persisted as one patient-profile record on the SD card: face
-  embedding (binary), name, phone number, and the medicine/quantity/time selections —
-  extend sd_logger.c's API with a distinct profile read/write function set (separate
-  from the append-only event log already there, since profiles need to be
-  updated/deleted, not just appended).
-- Multiple patients must be enrollable and distinguishable — store profiles keyed by
-  a generated patient ID, not overwritten by the next registration.
+3. **READ `MedSight_Docs/milestones/session_08B_notes.md` IN FULL.** This is
+   not optional background — it documents five hard-won hardware bugs found
+   and fixed during Session 08B's actual bring-up (a stale-flash boot
+   assertion, a *second* undiscovered NPU weight pool at a separate flash
+   address, a self-test methodology bug, and — the big one — a whole
+   external PSRAM chip that had to be brought up because the FaceID
+   embedder silently hung/crashed without it). None of the docs written
+   *before* 08B knew about these; the notes are the ground truth for what
+   the AI pipeline actually needs to keep working. In particular:
+   - `ai_vision.c` has a documented **memory hazard**: both NPU networks'
+     activation scratch overlaps `BUFFER_ADDRESS` (the live camera
+     framebuffer) and part of `GUI_BUFFER_ADDRESS`. `ai_vision_run_pipeline()`
+     already handles this correctly (snapshots what it needs before
+     touching the NPU) — do not "simplify" that code without re-reading why
+     it's structured that way.
+   - Never `printf` face embeddings or other biometric bytes — this was a
+     hard rule in 08B and stays one here (`COMPLIANCE_PRIVACY_POSTURE.md`).
+   - There's a known, deferred cosmetic issue: the LCD briefly (a few ms)
+     shows corrupted pixels during NPU inference before self-healing when
+     the camera resumes. Documented as intentionally deferred to Session 11
+     — don't attempt to fix it in this session unless it's trivial; it
+     isn't blocking.
 
-CONSTRAINTS
-- No copyrighted character assets in any new UI screens — same rule as
-  MASCOT_UI_DESIGN.md §2, applies to every new screen this session adds.
-- Face embeddings, names, and phone numbers must never be logged over the UART debug
-  channel — SD card only, same rule as Session 06/08C for face data, now extended to
-  cover name/phone as well (also personal data).
-- On-screen keyboard input must not block the camera/mascot rendering pipeline — same
-  non-blocking rule carried from Session 04/05.
-- This session does not implement the actual dispense flow or hopper hardware — it
-  only defines the medicine catalog data model and captures what each patient wants;
-  Session 10 (dispenser) and Session 11 (integration) consume this data later.
+4. **READ THE ACTUAL WORKING CODE** in `sessions/session_08B/FSBL/`
+   (not just the docs) before writing anything — specifically:
+   - `Inc/ai_vision.h` — the real, current API: `ai_vision_run_pipeline()`,
+     `gallery_add_patient()`, `gallery_find_best_match()`, the
+     `PatientRecord` struct (`name`, `embedding[128]`, `pill_count`,
+     `pills_remaining`), `MAX_PATIENTS` (10), `PATIENT_NAME_MAX` (32).
+   - `Src/ui/state_machine.c` — the real current state machine
+     (`STATE_HOME`, `STATE_INSTRUCT_REGISTER`, `STATE_CAMERA_REGISTER`,
+     `STATE_INSTRUCT_DISPENSE`, `STATE_CAMERA_DISPENSE`), including how
+     `STATE_CAMERA_DISPENSE` already calls `ai_vision_run_pipeline()` with
+     a 3-retry loop and `camera_stop()`/`camera_start()` bracketing —
+     `STATE_CAMERA_REGISTER` is **still session_08A's untouched 5-second
+     mock timer**. This session replaces that mock with the real flow,
+     following the same camera-freeze pattern already proven working in
+     the dispense state.
+   - `Src/ui/gui_draw.c` / `Inc/ui/gui_draw.h` — existing screen-drawing
+     primitives (`gui_draw_rect`, `gui_draw_text`, `gui_draw_ready_screen`,
+     the elderly-friendly color palette) to build new screens from,
+     consistent with the existing visual style.
+   - `Src/sd_logger.c` / `Inc/sd_logger.h` — note `SD_Write_File`/
+     `SD_Read_File` (generic named-file helpers added in 08B) already exist
+     if you need SD access beyond what `gallery_add_patient()` covers.
 
-CODING STANDARDS
-- Registration flow as a clear multi-step state machine of its own (capture -> name ->
-  phone -> medicine select -> confirm -> save), not a tangle of boolean flags in
-  interactive_gui.c.
-- Patient profile struct defined once in a shared header so sd_logger.c,
-  ai_vision.c (for embeddings), and later state_machine.c (Session 11) all agree on
-  its shape.
+---
 
-FOLDER STRUCTURE TO FOLLOW
-- FSBL/Src/ui/registration_ui.c (if split out separately)
-- FSBL/Inc/ui/registration_ui.h
-- FSBL/Inc/patient_profile.h (shared struct definition)
+## Project Rules (non-negotiable, carried forward)
 
-FILES TO CREATE
-- FSBL/Src/ui/registration_ui.c
-- FSBL/Inc/ui/registration_ui.h
-- FSBL/Inc/patient_profile.h
+| Rule | Detail |
+|---|---|
+| No `.ioc` files | Manual HAL only. Never use STM32CubeMX. |
+| No new hardware | No physical motors, servos, or IR LEDs. The dispenser is 100% software-simulated for this prototype — a design model/render only, no actuator interfacing, ever. |
+| No embeddings over UART | Never `printf`/log raw face embedding bytes. Names, indices, and confidence scores are fine to log. |
+| OSAL-safe | Use `ms_osal.h` only. No direct FreeRTOS API calls anywhere. |
+| DCache discipline | Any new code touching camera/NPU buffers follows the same clean-before-input / invalidate-after-output pattern already used in `ai_vision.c` — read that file's comments before adding anything similar. |
+| New session = new folder | Copy `sessions/session_09B` (at the time this session started; that folder has since been renamed to `sessions/session_08B` — see `ENGINEERING_LESSONS.md`) → `sessions/session_09` (drops the stale "B" suffix from the do-over naming — Session 09 in `MASTER_PROJECT_PLAN.md`'s numbering is genuinely this Registration session, not a variant of 08B). Work happens in `session_09/`; the source folder (now `session_08B`) stays as the last-known-good rollback point. |
 
-FILES TO MODIFY
-- FSBL/Src/ui/interactive_gui.c (main screen buttons, launch registration flow)
-- FSBL/Src/ai_vision.c/.h (expose a clean one-shot embedding-capture function if not
-  already factored that way from Session 08B)
-- FSBL/Src/sd_logger.c/.h (patient-profile read/write/list functions)
+---
 
-DOCUMENTATION TO UPDATE
-- docs/milestones/session_09_notes.md: patient-profile SD storage format, medicine
-  catalog config format used, on-screen keyboard implementation notes.
-- COMPLIANCE_PRIVACY_POSTURE.md §4: extend to explicitly cover name/phone-number
-  handling alongside face data, since this session introduces that.
+## Your First Action — Create the Working Folder
 
-VALIDATION AND TESTING REQUIREMENTS
-- Build cleanly.
-- (Manual) Complete a full registration for at least two different test patients;
-  confirm both profiles exist distinctly on the SD card afterward (pull the card,
-  inspect on a PC) with correct face embeddings, names, phone numbers, and
-  medicine/quantity/time selections for each.
+**Editorial note (post-session):** this section is kept as a historical record of what
+was actually run — the source folder was named `session_09B` at the time and has since
+been renamed to `session_08B` (see `ENGINEERING_LESSONS.md`); a reader following this
+repo today should substitute `session_08B` for `session_09B` below.
 
-COMPLETION CHECKLIST
-- [ ] Main screen shows Register / Dispense Medicine buttons
-- [ ] One-shot face capture integrated into the registration flow
-- [ ] On-screen keyboard implemented for name and phone number entry
-- [ ] Medicine catalog selection (medicine + quantity + time) implemented
-- [ ] Patient profiles persisted to SD, keyed by patient ID, multiple patients
-      distinguishable
-- [ ] No personal data (face, name, phone) ever logged over UART (grep-verified)
-- [ ] session_09_notes.md written; COMPLIANCE_PRIVACY_POSTURE.md §4 extended
+```powershell
+Copy-Item -Path "C:\Users\Dousik\Workspace\TRON\sessions\session_09B" `
+          -Destination "C:\Users\Dousik\Workspace\TRON\sessions\session_09" -Recurse
 
-COMMON PITFALLS
-- Building a full custom virtual keyboard from scratch when a simple, large-button
-  on-screen keyboard would serve elderly users (the actual end users of registration,
-  likely caretakers per the project's target users) better than a cramped
-  phone-style keyboard — keep touch targets large, consistent with the
-  elderly-friendly design goal already established for the mascot buttons.
-- Treating "one-shot" face capture as literally a single opportunity with no retry —
-  allow a retake if the capture clearly failed (e.g. no face detected in the photo),
-  rather than silently enrolling a bad embedding.
-- Overwriting an existing patient's profile by accident if the same person registers
-  twice — decide and document whether that's treated as "update existing" or "create
-  duplicate," don't leave it undefined.
-- Hardcoding the medicine catalog in a way that Session 10 can't cleanly map to real
-  hopper_id values later — keep the {hopper_id, medicine_name} pairing simple and
-  centralized so Session 10 just wires real hardware behind IDs that already exist.
-
-DEFINITION OF DONE
-At least two distinct patients can be fully registered end-to-end (face, name, phone,
-medicine/quantity/time), with correct, distinguishable profiles verifiable on the SD
-card afterward, and no personal data ever appearing in UART output.
-
-SELF-REVIEW BEFORE DECLARING COMPLETE
-Grep the entire diff for any DEBUG_LOG call near name/phone/embedding variables.
-Confirm two separately registered test patients produce two separate, non-overwritten
-profile records on the SD card.
+# Delete stale .d files so make doesn't fail
+Get-ChildItem -Path "C:\Users\Dousik\Workspace\TRON\sessions\session_09" `
+              -Recurse -Filter "*.d" | Remove-Item -Force
 ```
 
-## Expected Deliverables
-`registration_ui.c/.h`, `patient_profile.h`, extended `sd_logger.c` profile API, main
-screen with Register/Dispense Medicine buttons, session notes.
+**Then fix stale absolute paths** — every generated `subdir.mk`/`makefile`
+under `STM32CubeIDE/` has `session_09B` baked into absolute source paths
+from the copy. This bit Session 08B hard (silently compiling the *old*
+folder's code). Before building anything:
 
-## Manual Verification Steps
-1. Register a first test patient end-to-end: photo, name, phone, medicine selection.
-2. Register a second, different test patient the same way.
-3. Pull the SD card, inspect on a PC, confirm both profiles are present, correct, and
-   distinct.
-4. Confirm no personal data appears in a UART capture taken during either
-   registration.
+```powershell
+Get-ChildItem -Path "C:\Users\Dousik\Workspace\TRON\sessions\session_09\STM32CubeIDE" `
+              -Recurse -Include "subdir.mk","makefile" | ForEach-Object {
+  (Get-Content $_.FullName) -replace 'session_09B', 'session_09' | Set-Content $_.FullName
+}
+```
 
-## Acceptance Criteria
-Two distinct, correctly-persisted patient profiles after two separate registration
-runs; zero personal data over UART.
+Also update the `.project` file's `<name>` tag and, optionally, rename the
+build artifact (`MedSight_Session08B_FSBL` → `MedSight_Session09_FSBL`) in
+`Debug/makefile` and `Release/makefile` for a clean identity — not required
+for the build to work, just for clarity when you have multiple session
+folders' `.elf` files around.
 
-## Next Prompt
-Copy to `tron/session_09/`, proceed to `session_10.md`.
+**No external NPU flash re-flashing is needed for this session** — Session
+09 doesn't add or change any AI model files, so the OSPI weight data
+flashed during 08B (documented in `session_08B_notes.md`) carries over
+unchanged. A normal Debug/Run from STM32CubeIDE (internal-RAM-only reflash)
+is all that's needed to test each change.
+
+---
+
+## What `session_08B` (the working base, named `session_09B` at the time) Gives You
+
+- Working camera + LTDC + touch UI + FreeRTOS tasks (all prior sessions).
+- **Working NPU face pipeline** — `ai_vision_run_pipeline()` reliably
+  detects a face, extracts a 128-D int8 embedding, and
+  `gallery_find_best_match()` correctly matches or rejects it. Proven on
+  real hardware (see `session_08B_notes.md` Addendum 5).
+- `gallery_add_patient(name, embedding, pill_count)` already exists and
+  already persists to `patients.dat` on the SD card via `sd_logger.c` — the
+  storage half of registration is *done*. This session is about building
+  the **UI flow** that collects a name and pill count from the user and
+  calls it, replacing `STATE_CAMERA_REGISTER`'s mock timer.
+- `STATE_CAMERA_DISPENSE` is a working reference implementation of "freeze
+  camera → run AI → resume camera" to model the new `STATE_CAMERA_REGISTER`
+  after.
+
+---
+
+## Objective
+
+Replace the mock `STATE_INSTRUCT_REGISTER` → `STATE_CAMERA_REGISTER` flow
+with a complete, real registration flow: camera capture → face embedding →
+name entry (on-screen keyboard) → pill count entry → confirm → save to the
+gallery.
+
+## Step-by-Step Implementation Plan
+
+### Step 1 — Real face capture in `STATE_CAMERA_REGISTER`
+
+Mirror `STATE_CAMERA_DISPENSE`'s pattern exactly: `camera_stop()`, 3-retry
+`ai_vision_run_pipeline()` loop with a short delay between attempts,
+`camera_start()`. On success, **hold the embedding in a session-scoped
+static buffer** (not yet saved — the user hasn't entered a name or pill
+count yet). On failure after 3 attempts, show a clear error and return to
+`STATE_HOME` (don't silently fail).
+
+### Step 2 — New state: `STATE_KEYBOARD_REGISTER`
+
+An on-screen QWERTY keyboard (new file:
+`ui/registration_ui.c`/`registration_ui.h`, per `SOFTWARE_ARCHITECTURE.md`
+§3's already-documented exception — this module is allowed to call
+`ai_vision`'s embedding-capture and `sd_logger`'s profile-write functions
+directly, unlike other UI modules which only go through `state_machine.c`).
+Cap input at `PATIENT_NAME_MAX - 1` characters. A "Done"/checkmark button
+advances to pill count; a backspace/clear key is required — elderly users
+mistype.
+
+### Step 3 — New state: `STATE_PILLCOUNT_REGISTER`
+
+Large +/- buttons (matching the existing elderly-friendly, high-contrast,
+large-touch-target style in `gui_draw.h`) to set a daily pill count, 1–10.
+Big legible number in the center.
+
+### Step 4 — New state: `STATE_CONFIRM_REGISTER`
+
+Summary screen: name + pill count. "Confirm" calls
+`gallery_add_patient(name, embedding, pill_count)`, shows a clear
+"Registered!" success message, then returns to `STATE_HOME`. "Retry"
+discards the captured embedding and returns to `STATE_CAMERA_REGISTER`.
+
+### Step 5 — Handle a full gallery
+
+`gallery_add_patient()` returns `-1` if `MAX_PATIENTS` (10) is already
+full. Show a clear "gallery full" message on that path instead of silently
+failing or crashing.
+
+### Step 6 — Build and verify
+
+```powershell
+$env:PATH += ";C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.win32_1.0.100.202602081740\tools\bin"
+C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.make.win32_2.2.100.202601091506\tools\bin\make.exe -j12 -C C:\Users\Dousik\Workspace\TRON\sessions\session_09\STM32CubeIDE\FSBL\Debug all 2>&1
+```
+Zero errors, zero warnings before declaring anything done.
+
+---
+
+## Definition of Done
+
+- [ ] `session_09` folder created from `session_08B` (named `session_09B` at the time), stale paths fixed
+- [ ] Build is 100% clean — zero errors, zero warnings
+- [ ] `registration_ui.c/.h` created per the documented architecture exception
+- [ ] Full flow works on hardware: tap Register → face capture (reusing the
+      proven 08B pipeline) → type a name on-screen → set pill count →
+      confirm → "Registered!" → home
+- [ ] The newly registered patient is then correctly **recognized** by
+      Dispense (tests the whole loop: register someone, then dispense and
+      confirm it's no longer "intruder" but shows their name)
+- [ ] Gallery-full case shows a clear message, doesn't crash
+- [ ] No face embedding bytes ever appear in UART output
+- [ ] `MedSight_Docs/milestones/session_09_notes.md` written: what states
+      were added, any deviations from this plan, and the actual hardware
+      test result of the register-then-dispense end-to-end check above
+
+---
+
+## What This Session Does NOT Do
+
+- No physical motors, servos, or IR hardware (still fully software-only)
+- No changes to the AI models themselves (`ai_vision.c`'s pipeline,
+  `fd.c`/`faceid.c`, and the flashed OSPI weight data all carry over
+  unchanged from Session 08B — don't touch them unless something is
+  actually broken)
+- No fix for the known transient LCD glitch during inference — deferred to
+  Session 11 per `session_08B_notes.md`
+- No delete-patient / edit-patient UI (not asked for; `gallery` already
+  has no delete function — add one only if this session's scope needs it,
+  and note it explicitly in the session notes if you do)

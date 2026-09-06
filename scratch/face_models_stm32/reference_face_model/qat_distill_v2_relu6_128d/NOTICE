@@ -1,0 +1,16 @@
+NON-COMMERCIAL RESEARCH USE ONLY
+
+The weight files in this directory were trained by this project, but their
+training inputs carry upstream restrictions:
+
+  Teacher       InsightFace glint360k_r100   non-commercial research only
+  Training data ms1m-retinaface-t1 (MS1MV3)  research use; MS-Celeb-1M derivative
+
+Running the teacher to generate distillation targets is a use of that model, so
+these weights are treated as carrying the same restriction.
+
+The pipeline in ../qat_pipeline/ is teacher- and dataset-agnostic. Substituting
+permissively licensed inputs and re-running it yields weights without this
+restriction. See ../MODEL_LICENSE.md.
+
+The Apache-2.0 license at the repository root does NOT cover these files.

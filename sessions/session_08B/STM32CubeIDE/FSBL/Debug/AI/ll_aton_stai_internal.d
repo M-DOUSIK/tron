@@ -1,0 +1,127 @@
+AI/ll_aton_stai_internal.o: \
+ C:/Users/Dousik/Workspace/TRON/sessions/session_08B/FSBL/Src/ai/ll_aton_stai_internal.c \
+ ../../../FSBL/Inc/stai_debug.h ../../../FSBL/Inc/stai.h \
+ ../../../FSBL/Inc/ll_aton_caches_interface.h \
+ ../../../FSBL/Inc/ll_aton_attributes.h ../../../FSBL/Inc/ll_aton_osal.h \
+ ../../../FSBL/Inc/ll_aton_config.h ../../../FSBL/Inc/ll_aton_platform.h \
+ ../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/stm32n6xx.h \
+ ../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/stm32n657xx.h \
+ ../../../Drivers/CMSIS/Include/core_cm55.h \
+ ../../../Drivers/CMSIS/Include/cmsis_version.h \
+ ../../../Drivers/CMSIS/Include/cmsis_compiler.h \
+ ../../../Drivers/CMSIS/Include/cmsis_gcc.h \
+ ../../../Drivers/CMSIS/Include/m-profile/armv8m_mpu.h \
+ ../../../Drivers/CMSIS/Include/m-profile/armv8m_pmu.h \
+ ../../../Drivers/CMSIS/Include/m-profile/armv7m_cachel1.h \
+ ../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/system_stm32n6xx.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal.h \
+ ../../../FSBL/Inc/stm32n6xx_hal_conf.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rcc.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_def.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_rcc.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rcc_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_gpio.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_gpio_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rif.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_cortex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dcmipp.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma2d.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_exti.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_i2c.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_i2c_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_icache.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_cacheaxi.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ltdc.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ltdc_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_pwr.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_pwr_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ramcfg.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_sd.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_sdmmc.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_dlyb.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_sd_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_uart.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_uart_ex.h \
+ ../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_xspi.h \
+ ../../../FSBL/Inc/ATON.h ../../../FSBL/Inc/ATON-idxs.h \
+ ../../../FSBL/Inc/ll_aton_rcompat.h ../../../FSBL/Inc/ll_aton_util.h \
+ ../../../FSBL/Inc/mcu_cache.h ../../../FSBL/Inc/npu_cache.h \
+ ../../../FSBL/Inc/ll_aton_rt_user_api.h \
+ ../../../FSBL/Inc/ll_aton_NN_interface.h \
+ ../../../FSBL/Inc/ll_aton_cipher.h \
+ ../../../FSBL/Inc/ll_aton_caches_interface.h \
+ ../../../FSBL/Inc/ll_aton_runtime.h \
+ ../../../FSBL/Inc/ll_aton_rt_user_api.h \
+ ../../../FSBL/Inc/ll_aton_stai_internal.h \
+ ../../../FSBL/Inc/stai_aton_common.h ../../../FSBL/Inc/stai_debug.h \
+ ../../../FSBL/Inc/ll_aton_version.h
+../../../FSBL/Inc/stai_debug.h:
+../../../FSBL/Inc/stai.h:
+../../../FSBL/Inc/ll_aton_caches_interface.h:
+../../../FSBL/Inc/ll_aton_attributes.h:
+../../../FSBL/Inc/ll_aton_osal.h:
+../../../FSBL/Inc/ll_aton_config.h:
+../../../FSBL/Inc/ll_aton_platform.h:
+../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/stm32n6xx.h:
+../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/stm32n657xx.h:
+../../../Drivers/CMSIS/Include/core_cm55.h:
+../../../Drivers/CMSIS/Include/cmsis_version.h:
+../../../Drivers/CMSIS/Include/cmsis_compiler.h:
+../../../Drivers/CMSIS/Include/cmsis_gcc.h:
+../../../Drivers/CMSIS/Include/m-profile/armv8m_mpu.h:
+../../../Drivers/CMSIS/Include/m-profile/armv8m_pmu.h:
+../../../Drivers/CMSIS/Include/m-profile/armv7m_cachel1.h:
+../../../Drivers/CMSIS/Device/ST/STM32N6xx/Include/system_stm32n6xx.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal.h:
+../../../FSBL/Inc/stm32n6xx_hal_conf.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rcc.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_def.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_rcc.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rcc_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_gpio.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_gpio_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_rif.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_cortex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dcmipp.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_dma2d.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_exti.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_i2c.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_i2c_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_icache.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_cacheaxi.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ltdc.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ltdc_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_pwr.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_pwr_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_ramcfg.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_sd.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_sdmmc.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_dlyb.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_sd_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_uart.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_uart_ex.h:
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_hal_xspi.h:
+../../../FSBL/Inc/ATON.h:
+../../../FSBL/Inc/ATON-idxs.h:
+../../../FSBL/Inc/ll_aton_rcompat.h:
+../../../FSBL/Inc/ll_aton_util.h:
+../../../FSBL/Inc/mcu_cache.h:
+../../../FSBL/Inc/npu_cache.h:
+../../../FSBL/Inc/ll_aton_rt_user_api.h:
+../../../FSBL/Inc/ll_aton_NN_interface.h:
+../../../FSBL/Inc/ll_aton_cipher.h:
+../../../FSBL/Inc/ll_aton_caches_interface.h:
+../../../FSBL/Inc/ll_aton_runtime.h:
+../../../FSBL/Inc/ll_aton_rt_user_api.h:
+../../../FSBL/Inc/ll_aton_stai_internal.h:
+../../../FSBL/Inc/stai_aton_common.h:
+../../../FSBL/Inc/stai_debug.h:
+../../../FSBL/Inc/ll_aton_version.h:
