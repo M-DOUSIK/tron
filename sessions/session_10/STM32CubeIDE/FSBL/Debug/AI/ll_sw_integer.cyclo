@@ -1,0 +1,17 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:45:12:helper_emit_shape_index_axis	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:66:6:ll_sw_forward_qlinearmatmul	8
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:179:6:ll_sw_forward_gemm_integer	8
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:288:6:ll_sw_forward_quantizelinear	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:333:6:ll_sw_forward_dequantizelinear	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:380:6:ll_sw_forward_requantizelinear	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:439:6:ll_sw_forward_conv_integer	14
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:620:6:ll_sw_forward_eltwise_integer	15
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:739:6:ll_sw_forward_pool_integer	7
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:821:6:ll_sw_forward_global_pool_integer	7
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:901:6:ll_sw_forward_softmax_integer	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:973:6:ll_sw_forward_activ_integer	11
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:1109:6:ll_sw_forward_resize_integer	9
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:1219:6:ll_sw_forward_argmax_integer	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:1251:6:ll_sw_forward_argmin_integer	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:1283:6:ll_sw_forward_tile_integer	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_10/FSBL/Src/ai/ll_sw_integer.c:1321:6:ll_sw_forward_gather_integer	1
