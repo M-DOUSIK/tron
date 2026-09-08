@@ -61,10 +61,64 @@ but it de-risks the LCD half of that session significantly.
 
 ## Reference Repository — µT-Kernel 3.0 BSP Samples
 
-For Session 12 (µT-Kernel 3.0 migration): **https://github.com/tron-forum/mtk3bsp2_samples**
-contains official sample projects for the µT-Kernel 3.0 BSP2. Use these as the
-reference for correct `tk_cre_tsk`/`tk_cre_mbf`/etc. usage patterns on STM32 rather
-than inferring API usage from documentation alone.
+For Session 11 (µT-Kernel 3.0 migration — this repo's `Session 12` was the
+pre-renumbering name; see `MASTER_PROJECT_PLAN.md`'s v8 Changelog):
+**https://github.com/tron-forum/mtk3bsp2_samples** contains official sample
+projects for the µT-Kernel 3.0 BSP2. Its `Examples/prj_stm32n6_cam` targets
+this exact board (STM32N6570-DK / STM32N657X0) with a working camera+LCD
+demo — Session 11 vendored that project's entire `mtk3_bsp2/` source tree
+and its own proven `Debug/mtk3_bsp2/**/subdir.mk` build config wholesale
+into `FSBL/mtk3_bsp2/` rather than hand-porting the BSP or re-deriving which
+files a from-scratch STM32N6 config would need — see
+`milestones/session_11_notes.md` for the full integration story, including
+a real structural gotcha this repo's sample surfaced: µT-Kernel's
+`tk_cre_tsk`/`tk_cre_mbf`/`tk_cre_mtx` can only be called once the kernel is
+already running (inside its `usermain()`), which doesn't fit this project's
+existing "create every task/queue in `main()`, then start the scheduler"
+FreeRTOS-era flow without an explicit deferred-creation bridge in
+`ms_osal.c`.
+
+## Restoring a File From an Older Source Silently Skips the Rebuild (Session 11)
+
+### What went wrong
+
+Session 11 needed to strip temporary debug instrumentation out of five vendored
+`mtk3_bsp2/` files by restoring them from the original upstream copy in
+`scratch/mtk3bsp2_samples/`. The restore itself was correct. The rebuild was not:
+the resulting `.elf` still contained every single probe.
+
+**Why:** `Copy-Item` on Windows (and `cp -p` on POSIX) sets the destination's
+modification time to the **source's** — and the pristine upstream files are older
+than the `.o` files that had been built from the instrumented versions. `make`
+compared timestamps, concluded the sources were older than their objects, and
+skipped them entirely. There was no error, no warning, and the `.elf` even shrank
+slightly (from unrelated relinking), so the build looked like it had worked.
+
+### Hard rule
+
+After restoring, reverting, or copying any source file from an older location,
+either `touch` the restored files or delete the corresponding objects before
+building — and then **verify the compiled artifact, not the build log**:
+
+```bash
+# force the rebuild
+touch path/to/restored_file.c
+
+# then prove it actually took, against the .elf
+arm-none-eabi-nm  Debug/<Project>.elf | grep -i <symbol_that_should_be_gone>
+strings           Debug/<Project>.elf | grep -c "<format string that should be gone>"
+```
+
+### Why this belongs next to the stale-`.d`-file rule
+
+It is the same failure family: make's timestamp model quietly doing the wrong
+thing after a file operation that originated outside the build system. The `.d`
+rule above covers *renaming or moving* a project folder; this one covers
+*restoring an older file in place*. Both produce a build that succeeds while
+compiling something other than what is on disk, which is far more expensive to
+diagnose than an outright error — in Session 11's case it would have meant
+flashing the board with a binary that still had the exact instrumentation the
+rebuild was supposed to remove.
 
 ## Project Management Rules
 

@@ -1,0 +1,23 @@
+!SESSION 2026-08-31 08:44:27.106 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -build MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -build MedSight_Session08A_FSBL -data C:\Users\Dousik\Workspace\TRON\sessions\session_08A\temp_workspace3
+
+!ENTRY org.eclipse.core.resources 2 10035 2026-08-31 08:44:35.553
+!MESSAGE The workspace exited with unsaved changes in the previous session; refreshing workspace to recover changes.
+!SESSION 2026-08-31 08:44:00.002 -----------------------------------------------
+eclipse.buildId=Version 2.2.0
+java.version=21.0.10
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_IN
+Framework arguments:  -application org.eclipse.cdt.managedbuilder.core.headlessbuild -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -cleanBuild MedSight_Session08A_FSBL
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -application org.eclipse.cdt.managedbuilder.core.headlessbuild -import C:\Users\Dousik\Workspace\TRON\sessions\session_08A\STM32CubeIDE\FSBL -cleanBuild MedSight_Session08A_FSBL -data C:\Users\Dousik\Workspace\TRON\sessions\session_08A\temp_workspace3
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-31 08:44:44.563
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (95 sources, 278 headers) in 30.8 sec: 37,440 declarations; 233,838 references; 0 unresolved inclusions; 1 syntax errors; 1,516 unresolved names (0.56%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2026-08-31 08:45:00.588
+!MESSAGE Indexed 'MedSight_Session08A_FSBL' (95 sources, 278 headers) in 16 sec: 37,440 declarations; 233,838 references; 0 unresolved inclusions; 1 syntax errors; 1,516 unresolved names (0.56%)

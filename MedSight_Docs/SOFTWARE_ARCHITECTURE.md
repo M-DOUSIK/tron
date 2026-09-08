@@ -3,11 +3,13 @@
 ## 1. Firmware Lifecycle Strategy
 
 Bare-metal (Sessions 01–06) → FreeRTOS behind an OS Abstraction Layer, OSAL
-(Sessions 07–10) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 11) →
-hardening (Session 12) → final polish/demo packaging (Session 13). Session 13 is
-the last planned session — see `MASTER_PROJECT_PLAN.md`'s Changelog for the
-renumbering history (this used to run through Session 16 with optional stretch
-sessions; those were dropped along with the physical-hardware cut below).
+(Sessions 07–10) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 11,
+done and hardware-verified — see `milestones/session_11_notes.md`) →
+µT-Kernel-idiomatic integration, power saving and hardening (Session 12) →
+final polish/demo packaging (Session 13). Session 13 is the last planned session —
+see `MASTER_PROJECT_PLAN.md`'s Changelog for the renumbering history (this
+used to run through Session 16 with optional stretch sessions; those were
+dropped along with the physical-hardware cut below).
 
 **Physical dispensing hardware was cut from this project entirely** (decision
 recorded in `MASTER_PROJECT_PLAN.md`'s Changelog, first reflected in
@@ -92,9 +94,34 @@ Minimum surface needed, mapped to both backends:
 | `osal_mutex_create` / lock / unlock | FreeRTOS mutex API | µT-Kernel semaphore/mutex API |
 | `osal_delay_ms` | `osDelay` | `tk_dly_tsk` |
 
+**Session 12 widens this surface deliberately.** The four primitives above were
+chosen as the lowest common denominator between the two backends, precisely so
+the Session 11 swap would be mechanical. That worked — but it also means the
+finished firmware uses µT-Kernel only through primitives every RTOS has, which
+scores weakly against TRON Contest rule 1.4's "high degree of relevance to
+µT-Kernel 3.0". Session 12 adds an event-flag primitive
+(`osal_flag_create`/`set`/`clear`/`wait`, backed by `tk_cre_flg`/`tk_set_flg`/
+`tk_wai_flg` with `TWF_ANDW`/`TWF_ORW`) for the genuine multi-condition waits in
+the dispense flow, and evaluates a fixed-size memory pool (`tk_cre_mpf`) against
+real allocation sites. There is no FreeRTOS column for these — FreeRTOS was
+removed in Session 11 — so the table above is now a historical record of the
+migration mapping, not a live two-backend contract. See `prompts/session_12.md`
+for the scope and the explicit instruction to skip any idiom that has no real
+consumer rather than force it.
+
 No application code calls `osThreadNew`, `osDelay`, etc. directly — enforce this in code
 review during every session from 07 onward. See `ENGINEERING_LESSONS.md` for the
 `mtk3bsp2_samples` reference used to validate correct µT-Kernel API usage in Session 11.
+
+**Session 11 addendum (done — see `milestones/session_11_notes.md`):** the
+table above describes the steady-state mapping once the kernel is running.
+µT-Kernel's object-creation calls (`tk_cre_tsk`, `tk_cre_mbf`, `tk_cre_mtx`)
+can only be issued after the kernel itself has started — but every
+`osal_*_create()` call in this codebase happens in `main()` *before*
+`osal_scheduler_start()`. `ms_osal.c`'s µT-Kernel backend bridges this by
+deferring real object creation to its own `usermain()` (called by the kernel
+once it's up, before any application task runs). This is purely an
+`ms_osal.c`-internal detail — the OSAL API and every caller are unaffected.
 
 ## 5. Mascot State Enum (introduced Session 05, driven by real events from Session 10)
 

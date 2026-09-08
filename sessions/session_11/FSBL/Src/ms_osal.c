@@ -1,0 +1,509 @@
+/* ms_osal.c — MedSight OS Abstraction Layer (µT-Kernel 3.0 backend)
+ *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║  THIS IS THE ONLY FILE IN THE PROJECT THAT MAY CALL µT-KERNEL API.      ║
+ * ║  Session 07/10: FreeRTOS backend. Session 11: swapped to µT-Kernel 3.0. ║
+ * ║  The public API in ms_osal.h has NOT changed between sessions.         ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ *
+ * BSP: mtk3_bsp2 (TRON Forum reference BSP2 for STM32N6570-DK), vendored
+ *      unmodified under FSBL/mtk3_bsp2/ — see session_11_notes.md for where
+ *      it came from and how it was integrated.
+ *
+ * ── Why this file is not a 1:1 API transliteration ─────────────────────────
+ *
+ * µT-Kernel object-creation syscalls (tk_cre_tsk/tk_cre_mbf/tk_cre_mtx) can
+ * only be called once the kernel itself is initialised — which happens
+ * inside knl_start_mtkernel() (called from osal_scheduler_start(), below),
+ * which never returns to its caller. The kernel then calls this file's
+ * usermain() (via mtk3_bsp2's inittask) once it is ready.
+ *
+ * But main.c — unchanged, per this session's constraint — creates every
+ * task/queue and THEN calls osal_scheduler_start() as the last thing it
+ * does. So osal_task_create()/osal_queue_create()/osal_mutex_create() are
+ * always called *before* the kernel exists to create anything.
+ *
+ * This file bridges that mismatch: creation calls made before the kernel is
+ * running just record their parameters into a small static pool and hand
+ * back a stable pointer into that pool as the "handle" — exactly what
+ * main.c/sd_logger.c already expect to receive and hold onto. usermain()
+ * (called by the kernel once it's alive, before any of our tasks run) then
+ * walks that pool and performs the real tk_cre_mbf/tk_cre_mtx/tk_cre_tsk
+ * calls, patching each slot's real object ID in place. Any application code
+ * that runs after that point (i.e. every task body) only ever sees a fully
+ * "real" object — the ordering in usermain() (queues, then mutexes, then
+ * tasks-started-last) guarantees no task can run before the objects it
+ * depends on are real.
+ */
+
+#include "ms_osal.h"
+
+/* ── µT-Kernel includes — only allowed in this file ──────────────────────── */
+#include <tk/tkernel.h>
+
+/* ── HAL for HAL_IncTick, and main.h for Error_Handler() ─────────────────── */
+#include "stm32n6xx_hal.h"
+#include "main.h"
+
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Deferred-creation pools
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+#define OSAL_MAX_TASKS      8u
+#define OSAL_MAX_QUEUES     4u
+#define OSAL_MAX_MUTEXES    4u
+
+/* Priority mapping: ms_osal.h documents "1 = lowest ... N = highest" (the
+ * FreeRTOS convention this project's callers were written against — see
+ * main.c's task table: 1=heartbeat, 2=logger, 4=ui, 5=cam_isp). µT-Kernel is
+ * the opposite: itskpri 1 is the HIGHEST priority. OSAL_PRI_CEILING is an
+ * arbitrary internal ceiling (well inside CNF_MAX_TSKPRI=32) that inverts
+ * the ordering while leaving headroom above the values this project actually
+ * uses (1..5) — only relative order matters, not the absolute numbers. */
+#define OSAL_PRI_CEILING    16u
+
+typedef struct {
+    osal_task_fn_t  fn;
+    void           *arg;
+    char            name[OSAL_TASK_NAME_MAX];
+    uint32_t        stack_words;
+    uint32_t        priority;
+    ID              tskid;     /* filled in by usermain() once real */
+    bool            in_use;
+} osal_task_slot_t;
+
+typedef struct {
+    uint32_t item_count;
+    uint32_t item_size;
+    ID       mbfid;            /* filled in by usermain() once real */
+    bool     in_use;
+} osal_queue_slot_t;
+
+typedef struct {
+    ID   mtxid;                /* filled in by usermain() once real */
+    bool in_use;
+} osal_mutex_slot_t;
+
+static osal_task_slot_t   s_tasks[OSAL_MAX_TASKS];
+static uint32_t           s_task_count   = 0u;
+
+static osal_queue_slot_t  s_queues[OSAL_MAX_QUEUES];
+static uint32_t           s_queue_count  = 0u;
+
+static osal_mutex_slot_t  s_mutexes[OSAL_MAX_MUTEXES];
+static uint32_t           s_mutex_count  = 0u;
+
+/* Set true by usermain() right after queues/mutexes are made real, before
+ * any task is started — see the file header comment above. */
+static volatile bool s_kernel_running = false;
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * ms_to_tmo — helper: OSAL timeout (ms) to µT-Kernel TMO
+ *
+ * T-Kernel TMO parameters are specified directly in milliseconds by spec
+ * (unlike a raw tick count) — no scaling needed, only the two sentinel
+ * values differ from this project's OSAL sentinels.
+ * ════════════════════════════════════════════════════════════════════════════ */
+static inline TMO ms_to_tmo(uint32_t ms)
+{
+    if (ms == OSAL_WAIT_FOREVER) {
+        return TMO_FEVR;
+    }
+    return (TMO)ms;   /* OSAL_NO_WAIT (0) already equals TMO_POL (0) */
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Task Management
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/* Every µT-Kernel task entry has the signature void(INT stacd, void *exinf).
+ * This trampoline adapts that to this project's void(void *arg) contract,
+ * using the task's own slot (passed as exinf) to recover fn/arg. */
+static void osal_task_trampoline(INT stacd, void *exinf)
+{
+    (void)stacd;
+    osal_task_slot_t *slot = (osal_task_slot_t *)exinf;
+    slot->fn(slot->arg);
+    /* Contract says task functions never return; this is a defensive
+     * net only — falling off the end would otherwise corrupt the stack. */
+    tk_ext_tsk();
+}
+
+static ID osal_start_task_slot(osal_task_slot_t *slot)
+{
+    T_CTSK ctsk = {
+        .exinf   = slot,
+        .tskatr  = TA_HLNG | TA_RNG3,
+        .task    = (FP)osal_task_trampoline,
+        .itskpri = (PRI)(OSAL_PRI_CEILING - slot->priority),
+        .stksz   = (SZ)(slot->stack_words * sizeof(uint32_t)),
+    };
+    ID id = tk_cre_tsk(&ctsk);
+    if (id > 0) {
+        (void)tk_sta_tsk(id, 0);
+    }
+    return id;
+}
+
+osal_task_handle_t osal_task_create(osal_task_fn_t fn,
+                                    const char    *name,
+                                    uint32_t       stack_words,
+                                    void          *arg,
+                                    uint32_t       priority)
+{
+    if (s_task_count >= OSAL_MAX_TASKS) {
+        printf("FATAL: osal_task_create — task pool exhausted (max %u)\r\n",
+               OSAL_MAX_TASKS);
+        Error_Handler();
+        return NULL;
+    }
+
+    osal_task_slot_t *slot = &s_tasks[s_task_count++];
+    slot->fn          = fn;
+    slot->arg         = arg;
+    slot->stack_words = stack_words;
+    slot->priority    = priority;
+    slot->in_use      = true;
+    slot->tskid       = 0;
+    (void)strncpy(slot->name, name, OSAL_TASK_NAME_MAX - 1u);
+    slot->name[OSAL_TASK_NAME_MAX - 1u] = '\0';
+
+    if (s_kernel_running) {
+        /* Not exercised by this codebase today (every task is created from
+         * main() before osal_scheduler_start()) but implemented for
+         * correctness: the kernel is already up, so create for real now
+         * instead of waiting for a usermain() pass that has already run. */
+        slot->tskid = osal_start_task_slot(slot);
+        if (slot->tskid <= 0) {
+            printf("FATAL: tk_cre_tsk failed for task '%s': %d\r\n", name, (int)slot->tskid);
+            Error_Handler();
+            return NULL;
+        }
+    }
+    /* else: left pending — usermain() creates and starts it. */
+
+    return (osal_task_handle_t)slot;
+}
+
+void osal_scheduler_start(void)
+{
+    /* Never returns: starts the µT-Kernel, which brings up inittask, which
+     * calls usermain() (below) once the kernel is ready to create objects. */
+    extern void knl_start_mtkernel(void);
+    knl_start_mtkernel();
+
+    /* Should never reach here. */
+    printf("FATAL: knl_start_mtkernel() returned\r\n");
+    Error_Handler();
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Queue (message-passing FIFO) — backed by a µT-Kernel message buffer
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/* Per-message overhead the kernel's message buffer reserves internally
+ * (messagebuf.h: HEADERSZ = sizeof(INT), each stored message is rounded up
+ * to a HEADER-sized boundary before the header is added) — sizing bufsz any
+ * smaller silently makes the buffer hold fewer items than item_count. */
+#define OSAL_MBF_HEADER_SZ   ((uint32_t)sizeof(INT))
+#define OSAL_MBF_ROUND(sz)   (((uint32_t)(sz) + (OSAL_MBF_HEADER_SZ - 1u)) & ~(OSAL_MBF_HEADER_SZ - 1u))
+
+static ID osal_start_queue_slot(osal_queue_slot_t *slot)
+{
+    uint32_t per_msg = OSAL_MBF_ROUND(slot->item_size) + OSAL_MBF_HEADER_SZ;
+    T_CMBF cmbf = {
+        .exinf  = NULL,
+        .mbfatr = TA_TFIFO,
+        .bufsz  = (SZ)(per_msg * slot->item_count),
+        .maxmsz = (INT)slot->item_size,
+        .bufptr = NULL,   /* no TA_USERBUF: kernel allocates via imalloc */
+    };
+    return tk_cre_mbf(&cmbf);
+}
+
+osal_queue_handle_t osal_queue_create(uint32_t item_count,
+                                      uint32_t item_size)
+{
+    if (s_queue_count >= OSAL_MAX_QUEUES) {
+        printf("FATAL: osal_queue_create — queue pool exhausted (max %u)\r\n",
+               OSAL_MAX_QUEUES);
+        Error_Handler();
+        return NULL;
+    }
+
+    osal_queue_slot_t *slot = &s_queues[s_queue_count++];
+    slot->item_count = item_count;
+    slot->item_size  = item_size;
+    slot->in_use     = true;
+    slot->mbfid      = 0;
+
+    if (s_kernel_running) {
+        slot->mbfid = osal_start_queue_slot(slot);
+        if (slot->mbfid <= 0) {
+            printf("FATAL: tk_cre_mbf failed: %d\r\n", (int)slot->mbfid);
+            Error_Handler();
+            return NULL;
+        }
+    }
+
+    return (osal_queue_handle_t)slot;
+}
+
+bool osal_queue_send(osal_queue_handle_t q,
+                     const void         *item,
+                     uint32_t            timeout_ms)
+{
+    osal_queue_slot_t *slot = (osal_queue_slot_t *)q;
+    return (tk_snd_mbf(slot->mbfid, item, (INT)slot->item_size, ms_to_tmo(timeout_ms)) == E_OK);
+}
+
+bool osal_queue_receive(osal_queue_handle_t q,
+                        void               *item_out,
+                        uint32_t            timeout_ms)
+{
+    osal_queue_slot_t *slot = (osal_queue_slot_t *)q;
+    return (tk_rcv_mbf(slot->mbfid, item_out, ms_to_tmo(timeout_ms)) >= E_OK);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Mutex — backed by a µT-Kernel mutex (priority-inheritance protocol)
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+static ID osal_start_mutex_slot(void)
+{
+    T_CMTX cmtx = {
+        .exinf   = NULL,
+        .mtxatr  = TA_INHERIT,
+        .ceilpri = 0,   /* unused under TA_INHERIT */
+    };
+    return tk_cre_mtx(&cmtx);
+}
+
+osal_mutex_handle_t osal_mutex_create(void)
+{
+    if (s_mutex_count >= OSAL_MAX_MUTEXES) {
+        printf("FATAL: osal_mutex_create — mutex pool exhausted (max %u)\r\n",
+               OSAL_MAX_MUTEXES);
+        Error_Handler();
+        return NULL;
+    }
+
+    osal_mutex_slot_t *slot = &s_mutexes[s_mutex_count++];
+    slot->in_use = true;
+    slot->mtxid  = 0;
+
+    if (s_kernel_running) {
+        slot->mtxid = osal_start_mutex_slot();
+        if (slot->mtxid <= 0) {
+            printf("FATAL: tk_cre_mtx failed: %d\r\n", (int)slot->mtxid);
+            Error_Handler();
+            return NULL;
+        }
+    }
+
+    return (osal_mutex_handle_t)slot;
+}
+
+bool osal_mutex_lock(osal_mutex_handle_t m, uint32_t timeout_ms)
+{
+    osal_mutex_slot_t *slot = (osal_mutex_slot_t *)m;
+    return (tk_loc_mtx(slot->mtxid, ms_to_tmo(timeout_ms)) == E_OK);
+}
+
+void osal_mutex_unlock(osal_mutex_handle_t m)
+{
+    osal_mutex_slot_t *slot = (osal_mutex_slot_t *)m;
+    (void)tk_unl_mtx(slot->mtxid);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Time
+ * ════════════════════════════════════════════════════════════════════════════ */
+void osal_delay_ms(uint32_t ms)
+{
+    (void)tk_dly_tsk((RELTIM)ms);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * SysTick Handler — PRE-KERNEL phase only
+ *
+ * stm32n6xx_it.c deliberately does NOT define SysTick_Handler (see its own
+ * comment at that call site) — this project's convention since Session 07
+ * is that whichever OSAL backend is active owns it, because the backend is
+ * what decides how (or whether) a tick needs bridging to HAL_IncTick().
+ *
+ * This was missed when ms_osal.c was rewritten for µT-Kernel: with no
+ * SysTick_Handler anywhere in the link, that vector fell back to the
+ * startup file's weak Default_Handler alias — a bare `b Infinite_Loop`,
+ * never returning from the exception. The very first SysTick tick (fired
+ * from inside HAL_Init()'s HAL_InitTick(), before main() has done anything
+ * else) would jump straight into that infinite loop and never come back,
+ * which is exactly the "stuck in Default_Handler, zero UART output" boot
+ * hang this session spent most of its time chasing everywhere except here.
+ *
+ * This handler only matters before osal_scheduler_start() — the instant
+ * knl_start_mtkernel() relocates the vector table and calls
+ * knl_init_interrupt(), µT-Kernel overwrites the SysTick vector with its
+ * own knl_systim_inthdr(), and this function is never called again (the
+ * post-kernel HAL_IncTick() bridge is the tk_cre_cyc cyclic handler further
+ * down this file, which is a completely separate mechanism for a completely
+ * separate phase of execution — both are needed, neither substitutes for
+ * the other). */
+void SysTick_Handler(void)
+{
+    HAL_IncTick();
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * D-cache maintenance for µT-Kernel's runtime-built exception vector table
+ *
+ * knl_start_mtkernel() copies the ROM vector table into knl_exctbl[] (plain
+ * AXI SRAM, normal write-back cacheable memory), points VTOR at it, and then
+ * knl_init_interrupt() overwrites entries 2..15 with the kernel's own
+ * handlers — all with ordinary stores and no cache maintenance anywhere. The
+ * reference project this BSP was vendored from
+ * (mtk3bsp2_samples/Examples/prj_stm32n6_cam) gets away with that because it
+ * runs with both CPU caches OFF: its main.c has SCB_EnableICache() and
+ * SCB_EnableDCache() commented out. THIS project enables both (main.c), and
+ * has done since Session 03 — the camera/NPU pipeline needs them.
+ *
+ * That difference matters: with the D-cache on and write-back, freshly
+ * written vector entries can still be sitting dirty in the cache when the
+ * CPU's exception-entry logic fetches a vector, so the fetch can see stale
+ * physical memory (whatever the previous image or reset state left at that
+ * address) rather than the handler the kernel just installed.
+ *
+ * Exposed here rather than inside the vendored kernel so the CMSIS
+ * cache intrinsic (which already no-ops when the D-cache is disabled) stays
+ * in this project's own code, consistent with how every other
+ * kernel-specific decision in this OSAL is handled.
+ * Called from mtk3_bsp2 sys_start.c and interrupt.c. */
+void ms_osal_clean_dcache(void *addr, uint32_t size)
+{
+    if ((addr == NULL) || (size == 0u)) {
+        return;
+    }
+    SCB_CleanDCache_by_Addr((uint32_t *)addr, (int32_t)size);
+    __DSB();
+    __ISB();
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * HAL tick bridge
+ *
+ * µT-Kernel owns SysTick outright (mtk3_bsp2 wires vector index 15 straight
+ * to its own knl_systim_inthdr() — see sysdepend/stm32_cube/cpu/core/armv8m/
+ * interrupt.c — so our old FreeRTOS-era SysTick_Handler() is never called
+ * again). Without a bridge, HAL_GetTick()/HAL_Delay() would freeze at boot,
+ * silently breaking every HAL peripheral timeout (DCMIPP, SDMMC2, camera
+ * ISP, ...) that calls them internally. Rather than editing the vendored
+ * kernel's interrupt.c, drive HAL_IncTick() from an ordinary µT-Kernel
+ * cyclic handler — keeps the bridge entirely inside this file, matching
+ * every other kernel-specific decision in this OSAL.
+ *
+ * Rate note (corrected in Session 11 after hardware testing): HAL_IncTick()
+ * adds exactly ONE to HAL's uwTick counter per call. So the cyclic period
+ * and the number of increments per firing must together add up to one HAL
+ * millisecond per real millisecond, or HAL_GetTick() does not measure
+ * milliseconds any more.
+ *
+ * The first version of this bridge fired every 10 ms (mtk3_bsp2's stock
+ * CNF_TIMER_PERIOD) and called HAL_IncTick() once — so HAL_GetTick()
+ * advanced 1 ms per 10 ms of real time and HAL's clock ran 10x SLOW. That
+ * is not the harmless coarseness the original comment here claimed: every
+ * HAL_GetTick()-based deadline in the UI stretched by 10x. The mascot's
+ * 250 ms frame gate (anime_ui.h LUMIO_FRAME_MS) became 2.5 s — 0.4 FPS
+ * instead of 4 — and state_machine.c's 500 ms touch dwell guard became 5 s,
+ * which is what "everything feels slow compared to FreeRTOS" was.
+ *
+ * CNF_TIMER_PERIOD is now 1 (see mtk3_bsp2/config/config.h for the full
+ * reasoning, including the separate tk_dly_tsk() granularity half of the
+ * same regression), matching what FreeRTOS's tick did. The period below is
+ * DERIVED from that macro rather than hardcoded, and the handler adds one
+ * HAL millisecond per millisecond of cyclic period, so the two can never
+ * silently disagree again even if the kernel tick is retuned later.
+ * ════════════════════════════════════════════════════════════════════════════ */
+#define OSAL_HAL_TICK_PERIOD_MS   ((uint32_t)CNF_TIMER_PERIOD)
+
+static void osal_hal_tick_cychdr(void *exinf)
+{
+    (void)exinf;
+    for (uint32_t i = 0u; i < OSAL_HAL_TICK_PERIOD_MS; i++) {
+        HAL_IncTick();      /* one HAL millisecond per ms of cyclic period */
+    }
+}
+
+static void osal_start_hal_tick_bridge(void)
+{
+    T_CCYC ccyc = {
+        .exinf  = NULL,
+        .cycatr = TA_HLNG | TA_STA,   /* start immediately on creation */
+        .cychdr = (FP)osal_hal_tick_cychdr,
+        .cyctim = (RELTIM)OSAL_HAL_TICK_PERIOD_MS,
+        .cycphs = 0,
+    };
+    ID id = tk_cre_cyc(&ccyc);
+    if (id <= 0) {
+        printf("FATAL: tk_cre_cyc (HAL tick bridge) failed: %d\r\n", (int)id);
+        Error_Handler();
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * usermain() — µT-Kernel's application entry point (called by inittask once
+ * the kernel is fully up). This is where every osal_*_create() call made
+ * from main() before osal_scheduler_start() finally becomes real — see the
+ * file header comment for why this indirection exists.
+ * ════════════════════════════════════════════════════════════════════════════ */
+EXPORT INT usermain(void)
+{
+    uint32_t i;
+
+    /* 1. Queues first — task bodies may osal_queue_receive() the moment
+     *    they start, so their queue must already be real. */
+    for (i = 0; i < s_queue_count; i++) {
+        s_queues[i].mbfid = osal_start_queue_slot(&s_queues[i]);
+        if (s_queues[i].mbfid <= 0) {
+            printf("FATAL: tk_cre_mbf (deferred) failed: %d\r\n", (int)s_queues[i].mbfid);
+            Error_Handler();
+        }
+    }
+
+    /* 2. Mutexes — none are actually used by this codebase today, but
+     *   created up front for the same reason as queues. */
+    for (i = 0; i < s_mutex_count; i++) {
+        s_mutexes[i].mtxid = osal_start_mutex_slot();
+        if (s_mutexes[i].mtxid <= 0) {
+            printf("FATAL: tk_cre_mtx (deferred) failed: %d\r\n", (int)s_mutexes[i].mtxid);
+            Error_Handler();
+        }
+    }
+
+    /* 3. HAL tick bridge — must be running before any task that touches a
+     *    HAL peripheral (camera/SD) starts. */
+    osal_start_hal_tick_bridge();
+
+    /* From here on, a fresh osal_task_create() call would create for real
+     * immediately instead of deferring — see osal_task_create() above. */
+    s_kernel_running = true;
+
+    /* 4. Tasks — started last, so every queue/mutex a task might touch on
+     *    its very first line is already real. */
+    for (i = 0; i < s_task_count; i++) {
+        s_tasks[i].tskid = osal_start_task_slot(&s_tasks[i]);
+        if (s_tasks[i].tskid <= 0) {
+            printf("FATAL: tk_cre_tsk (deferred) failed for task '%s': %d\r\n",
+                   s_tasks[i].name, (int)s_tasks[i].tskid);
+            Error_Handler();
+        }
+    }
+
+    /* usermain() itself is not a task we schedule work on — sleep forever.
+     * (Matches the pattern in every mtk3_bsp2 sample's own usermain().) */
+    tk_slp_tsk(TMO_FEVR);
+    return 0;
+}

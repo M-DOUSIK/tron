@@ -1,0 +1,13 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:109:20:rgb565_to_rgb888	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:139:13:convert_crop_to_fd_input	72	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:169:13:convert_crop_to_faceid_input	64	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:224:13:decode_best_face_box	96	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:271:6:ai_vision_init	40	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:352:13:run_pipeline_on_hold_buffer	208	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:432:6:ai_vision_run_pipeline	48	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:455:6:ai_vision_self_test	144	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:486:7:ai_vision_match_face	1072	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:523:6:gallery_init	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:544:6:gallery_save	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:549:5:gallery_add_patient	40	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_11/FSBL/Src/ai/ai_vision.c:586:5:gallery_find_best_match	32	static

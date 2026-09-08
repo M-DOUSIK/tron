@@ -78,8 +78,8 @@ the known "boss fight" sessions (08A/08B AI, 11 µT-Kernel migration).
 | 4–5 | 08A, 08B | AI: toolchain proof → face recognition + gallery matching (budget 1.5–2 weeks — hardest session; 08C action-recognition was planned but cut, see §8) |
 | 5–6 | 09 | Registration flow (enrollment UI, SD profile storage) — done |
 | 6 | 10 | Simulated dispense flow: face gate → on-screen dispense animation → manual "✓ I Took It" confirmation (no physical actuators — see §6) |
-| 6–7 | 11 | µT-Kernel 3.0 migration (contest compliance gate) |
-| 7 | 12 | System hardening: SD hot-plug resilience, gallery-full/face-retry handling, pill-count tracking, full log review |
+| 6–7 | 11 | µT-Kernel 3.0 migration (contest compliance gate) — done |
+| 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory |
 | 7–8 | 13 | Final polish, demo video, contest documentation packaging (last session in the plan) |
 
 If Session 08B or 11 overruns, cut scope from Session 13 first — never ship without a
@@ -216,6 +216,36 @@ two. `AI_PIPELINE.md` has been updated to match.
 
 ## 11. Changelog
 
+- **v9 (this update):** Session 11 (µT-Kernel 3.0 migration) is **done and
+  hardware-verified** — the full Session 09/10 registration and dispense flows
+  run unchanged on µT-Kernel with FreeRTOS entirely removed, confirmed from
+  real UART captures (see `milestones/session_11_notes.md`, nine addenda of
+  real bugs, several of them genuine ARMv8-M/Cortex-M55 issues the vendored
+  BSP could not have hit because its own reference project runs with the CPU
+  caches disabled). Following that, the actual TRON Programming Contest 2026
+  rules were read directly and checked against the project. The **requirement**
+  (rule 1.1 — an application program running on µT-Kernel 3.0) is met. Two
+  **evaluation criteria** in rule 1.4 were not being served: "real-time
+  performance, power saving, and small memory footprint", and — for the
+  "TRON × AI" theme — "the high degree of relevance to µT-Kernel 3.0 will be
+  highly evaluated". As shipped after Session 11, the AI runs
+  `LL_ATON_OSAL_BARE_METAL` in a polling loop called synchronously from the UI
+  task (so it sits *alongside* the RTOS rather than being mediated by it), and
+  `low_pow()` in the vendored STM32Cube BSP is an empty function, so the idle
+  loop spins the Cortex-M55 at full clock. **Session 12 has therefore been
+  rewritten** to absorb the optional "Session 12B" scope that v6 proposed and
+  v8 dropped: event flags for the dispense flow's genuine multi-condition
+  waits, a reasoned task-priority scheme, an honest evaluation of a fixed-size
+  memory pool, and a `WFI`-based `low_pow()` — on top of its original hardening
+  scope, plus Session 11's three closeout items and a new
+  `THIRD_PARTY_SOFTWARE.md` deliverable that rule 1.3 explicitly requires
+  (name, rights holder, acquisition method and function for every piece of
+  others' software, plus a rights guarantee — this project links a lot of it).
+  The session count is unchanged: **13 sessions, 13 is still the last.**
+  Session 12B is not being resurrected as a separate session. `session_12.md`
+  carries an explicit instruction to skip any µT-Kernel idiom that has no
+  genuine consumer in this codebase rather than force it — a contrived use
+  reads worse to an expert judge than not using it.
 - **v8 (this update):** Cut the physical multi-hopper dispensing hardware entirely —
   Session 10 onward implements the dispense flow as a software-only simulation (an
   on-screen animation + a manual "✓ I Took It" confirmation button), with no motors,
@@ -259,7 +289,10 @@ two. `AI_PIPELINE.md` has been updated to match.
   itself µT-Kernel — it's a thin naming layer whose internals are rewritten in
   Session 12 to call the real `mtk3_bsp2` kernel API, with FreeRTOS fully removed;
   post-Session-12 the firmware genuinely runs µT-Kernel 3.0, this was a
-  clarification, not an architecture change.
+  clarification, not an architecture change. *(Superseded by v9: this
+  Session 12B scope was dropped in v8 and has now been folded into
+  Session 12 itself — see the v9 entry for why the contest's own evaluation
+  criteria made it worth doing after all.)*
 - **v5:** Evaluated TouchGFX for the UI layer and decided against it — X-CUBE-AI and
   TouchGFX cannot coexist in one CubeMX project on the STM32N6570-DK (a confirmed ST
   toolchain limitation), and the main app needs the camera+AI pipeline running

@@ -2,7 +2,11 @@
 
 ## Context (for Antigravity to read)
 The project is complete. All software features are working on the STM32N6570-DK:
-- Face registration and recognition (NPU-powered, SCRFD + MobileFaceNet)
+- Face registration and recognition (NPU-powered; verify the actual detector/
+  embedder names against the model headers in `FSBL/Src/ai/` before writing them
+  down — `AI_PIPELINE.md` says CenterFace + FaceID, an earlier draft of this
+  file said "SCRFD + MobileFaceNet", and Session 12 Part D is tasked with
+  settling which is correct)
 - Software-simulated pill dispense with "I Took It" confirmation
 - Full SD card audit log
 - Running on μT-Kernel 3.0
@@ -32,6 +36,11 @@ EXPECTED OUTPUTS
    - Project overview: what MedSight is and what problem it solves.
    - Hardware: STM32N6570-DK, IMX335 camera, RK050 touchscreen display.
    - Software stack: μT-Kernel 3.0 RTOS, FatFS SD card, STEdgeAI NPU models.
+   - Link to MedSight_Docs/THIRD_PARTY_SOFTWARE.md (written in Session 12) —
+     TRON Contest rule 1.3 requires the name, rights holder, acquisition method
+     and function of every piece of third-party software, plus a statement that
+     rights have been handled per the Application Rules, and a statement that
+     no μT-Kernel 3.0 API specification was changed.
    - How the dispenser WOULD work in a real product (describe servo/IR design without
      implementing it) — reference the 3D design renders.
    - Build instructions (STM32CubeIDE, no .ioc, manual peripheral config).
