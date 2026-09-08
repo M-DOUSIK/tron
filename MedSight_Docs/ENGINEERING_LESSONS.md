@@ -212,3 +212,147 @@ above, or never existed for a copied project), regenerate it by scanning every r
 under the subdirectories actually listed in `Debug/sources.mk`'s `SUBDIRS` for their `OBJS +=`
 entries — same technique Session 08B's notes describe when a stray duplicate build folder
 threatened to poison this same file.
+
+## STM32CubeIDE Can Be Driven Headlessly — the "IDE build" Is Not GUI-Only (Session 12)
+
+### What this unlocks
+
+Session 11's Addendum 1 documented a real and expensive failure: hand-edited
+`Debug/` makefiles produced a clean command-line build while the *actual* IDE
+build failed, because STM32CubeIDE regenerates `Debug/sources.mk`,
+`Debug/makefile` and every `subdir.mk` **from `.project` + `.cproject`** before
+every build and silently discards whatever is already sitting in `Debug/`. The
+conclusion drawn at the time was that verifying this needs a human in front of
+the GUI.
+
+It does not. STM32CubeIDE ships `stm32cubeidec.exe` (the console-mode launcher)
+alongside `stm32cubeide.exe`, and it exposes Eclipse CDT's standard headless
+managed-build application:
+
+```bash
+IDE="C:/ST/STM32CubeIDE_2.1.1/STM32CubeIDE/stm32cubeidec.exe"
+WS="/some/scratch/workspace"      # throwaway; never point this at the repo
+
+# Import the project once, then clean-build one configuration:
+"$IDE" --launcher.suppressErrors -nosplash \
+  -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
+  -data "$WS" \
+  -import "<repo>/sessions/session_NN/STM32CubeIDE/FSBL" \
+  -cleanBuild "MedSight_SessionNN_FSBL/Debug"
+
+# Subsequent builds don't need -import again (the workspace remembers):
+"$IDE" --launcher.suppressErrors -nosplash \
+  -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
+  -data "$WS" -cleanBuild "MedSight_SessionNN_FSBL/Release"
+```
+
+Omit the `/Debug` or `/Release` suffix to build **every** configuration. The
+build log goes to stdout in exactly the form the GUI's Console view shows,
+ending with a `Build Finished. N errors, M warnings.` line per configuration.
+
+This is the real thing, not an approximation: it runs the same CDT managed-build
+machinery the GUI does, regenerates the whole `Debug/`/`Release/` tree from
+`.project`/`.cproject` first, and therefore catches exactly the class of bug
+Addendum 1 hit. Session 12 used it to close that open item for both
+configurations without a human touching the IDE.
+
+### The bug it immediately found
+
+`Release` had never been built since Session 08B, and the headless clean build
+failed at link with ~150 `Unknown destination type (ARM/Thumb)` errors out of
+`ll_sw_float.o` / `ll_sw_integer.o`. Root cause was in `.cproject`, exactly
+where Addendum 1 said to look: the **Release** configuration's linker settings
+were missing both the `../../../Middlewares/ST/AI/Lib` library search path and
+the `:NetworkRuntime1200_CM55_GCC.a` library entry that **Debug** has had since
+Session 08B. The AI runtime archive was simply never on the Release link line.
+Adding the two entries to the Release `<tool ...c.linker...>` block fixed it;
+`Release` now builds clean.
+
+### Hard rules
+
+1. **Point `-data` at a throwaway workspace outside the repository.** Eclipse
+   writes a `.metadata/` tree there — tens of megabytes of indexes and locks
+   that are worthless the moment the session ends. Sessions 08A-11 accumulated
+   three of these (`temp_workspace`, `temp_workspace2`, `temp_workspace3`,
+   51 MB total) inside the session folder and then copied them forward into
+   every subsequent session's snapshot, still pointing at `session_08A`'s
+   absolute paths. Session 12 excluded them from the folder copy.
+2. **A headless build is the check, not a substitute for the code check.**
+   It proves the project settings are right. It says nothing about whether the
+   firmware runs — that is still a flash-and-watch step on real hardware.
+3. **Still verify the artifact, not the log** (see the rule above this one).
+   A "Build Finished. 0 errors" line means the build system was happy, not that
+   the `.elf` contains what you think.
+
+## A Return Value Nobody Checks Is a Bug Nobody Finds (Session 12)
+
+### The bug
+
+`FSBL/Src/sd_diskio.c`'s `disk_ioctl()` opened with:
+
+```c
+if (HAL_SD_GetState(&hsd2) != HAL_SD_STATE_TRANSFER) return RES_NOTRDY;
+```
+
+`HAL_SD_GetState()` returns the HAL **driver handle's** `State` field — the
+software state of the driver object — not the card's status. Grep every
+assignment to that field in `stm32n6xx_hal_sd.c` and you find the driver writes
+only `RESET`, `READY`, `BUSY` and `PROGRAMMING` to it. **`HAL_SD_STATE_TRANSFER`
+is never assigned anywhere in the driver.** The condition was unconditionally
+true, so `disk_ioctl()` returned `RES_NOTRDY` for *every command it was ever
+given*, from Session 06 to Session 12.
+
+The check that was meant is `HAL_SD_GetCardState() != HAL_SD_CARD_TRANSFER` —
+which the `disk_read()` and `disk_write()` paths in the same file already use
+correctly, ten lines away. Two similarly-named HAL calls, one of which asks the
+card and one of which asks the driver.
+
+### Why it hid for six sessions
+
+FatFs calls `disk_ioctl(CTRL_SYNC)` from `sync_fs()`, at the very end of
+`f_close()` — **after** the file data, the dirty sector window and the directory
+entry have all already been written — and converts a non-`RES_OK` result into
+`FR_DISK_ERR`. So every close of every file reported a disk error over data that
+had been written perfectly well. That is exactly why `patients.dat` always
+persisted correctly regardless: the bug is downstream of the actual writes.
+
+And the two call sites above it threw the result away. Sessions 06-11's
+`SD_Log_Event()` was:
+
+```c
+f_write(&file, event_string, strlen(event_string), &bw);   /* result ignored */
+f_write(&file, "\n", 1, &bw);                              /* result ignored */
+f_close(&file);                                            /* result ignored */
+printf("SD_Log_Event: logged: %s\r\n", event_string);
+return true;                                               /* always */
+```
+
+`SD_Write_File()` was the same shape, checking only `bw == length` and never
+`f_close()`. The error had nowhere to surface.
+
+### What found it
+
+Session 12's hardening pass started checking those return values. The bug
+appeared on the *first* flash afterwards, as `SD_Log_Event: write failed 1` on
+the boot log line — and, because the same pass had also taught `sd_logger.c` to
+treat `FR_DISK_ERR` as "the card was pulled", it unmounted a perfectly healthy
+card. A six-session-old silent failure became a one-flash diagnosis the moment
+something looked at it.
+
+### Hard rules
+
+1. **Check the return value of every filesystem call, including `f_close()`.**
+   `f_close()` is where FatFs does the final sync; ignoring it means ignoring
+   the one call most likely to report that the media is unhappy. If a wrapper
+   returns `bool`, that bool has to mean something.
+2. **When two HAL calls have near-identical names, check which object each one
+   interrogates.** `HAL_SD_GetState()` (driver) vs `HAL_SD_GetCardState()`
+   (card) differ by four characters and by everything that matters. The same
+   trap exists across the STM32 HAL for other peripherals.
+3. **A guard that can never pass is indistinguishable from no guard at all
+   until something depends on it.** If a status check exists, prove on hardware
+   that it can return both answers — an enum value the driver never assigns is
+   a dead branch wearing a safety check's clothing.
+4. This is the same family as the two rules above about verifying the compiled
+   artifact rather than the build log: in all three cases the system reported
+   success through a channel nobody was actually reading.

@@ -79,7 +79,7 @@ the known "boss fight" sessions (08A/08B AI, 11 µT-Kernel migration).
 | 5–6 | 09 | Registration flow (enrollment UI, SD profile storage) — done |
 | 6 | 10 | Simulated dispense flow: face gate → on-screen dispense animation → manual "✓ I Took It" confirmation (no physical actuators — see §6) |
 | 6–7 | 11 | µT-Kernel 3.0 migration (contest compliance gate) — done |
-| 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory |
+| 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory — **done, see `milestones/session_12_notes.md`** |
 | 7–8 | 13 | Final polish, demo video, contest documentation packaging (last session in the plan) |
 
 If Session 08B or 11 overruns, cut scope from Session 13 first — never ship without a
@@ -207,16 +207,63 @@ two. `AI_PIPELINE.md` has been updated to match.
   guardrails (explicitly supersedes any "Pokémon-inspired" language in older drafts)
 - `COMPLIANCE_PRIVACY_POSTURE.md` — data-locality design principles, personal-data
   handling, explicit disclaimers
+- `THIRD_PARTY_SOFTWARE.md` — the contest rule 1.3 inventory: name, rights
+  holder, acquisition method and function of every piece of others' software
+  this firmware links, plus the µT-Kernel modification table and the explicit
+  statement that no `tk_*` API specification was changed (Session 12)
 - `ENGINEERING_LESSONS.md` — hard-won STM32CubeIDE/.ioc/Makefile rules from real
   board bring-up; GT911 pin facts; jpcano LCD reference repo; mtk3bsp2_samples
-  reference repo
+  reference repo; how to drive STM32CubeIDE's own build headlessly
 - `prompts/session_01.md` … `session_13.md` — copy-paste-ready Antigravity prompts,
   the complete and final session plan (Session 08 split into 08A/08B; there is no
   08C, 12B, 14, 15, or 16 — those were all dropped, see the Changelog)
 
 ## 11. Changelog
 
-- **v9 (this update):** Session 11 (µT-Kernel 3.0 migration) is **done and
+- **v10 (this update):** Session 12 is **done** — µT-Kernel-idiomatic
+  integration, power saving, hardening and the third-party inventory. See
+  `milestones/session_12_notes.md` for the full record; the parts that change
+  this plan's picture of the project:
+  - **The AI now runs through the RTOS, not merely beside it.** NPU inference
+    moved out of the UI task into its own µT-Kernel task at a deliberately
+    *lower* priority, with the request/response handshake carried by a real
+    µT-Kernel event flag (`tk_cre_flg`/`tk_set_flg`/`tk_wai_flg`) — the first
+    widening of the OSAL surface since Session 07. This is what rule 1.4's
+    "high degree of relevance to µT-Kernel 3.0" asks for, and it also buys a
+    real behavioural improvement: the UI stays responsive during a capture,
+    where before the whole UI task blocked inside the NPU for seconds. Frame-
+    buffer ownership between the UI, camera and NPU is now explicit
+    (`SOFTWARE_ARCHITECTURE.md` §9) rather than an accident of them being the
+    same task.
+  - **Two µT-Kernel idioms were evaluated and deliberately NOT adopted** — a
+    fixed-size memory pool (`tk_cre_mpf`, because this firmware has no
+    fixed-size runtime allocation site at all) and an event flag for
+    `STATE_CONFIRM_TAKEN` (because all three of its conditions are produced by
+    the task that would wait on them). Both are written up with their evidence.
+    `session_12.md`'s instruction to skip a forced idiom rather than perform it
+    was followed, and saying so *is* the deliverable.
+  - **Power saving exists now.** The vendored BSP's empty `low_pow()` forwards
+    to a real `WFI`, with the idle time measured via the DWT cycle counter and
+    reported as a percentage every 10 s from task context. This is the one
+    change in the session that must be confirmed on silicon rather than argued
+    from the ARM manual; a documented one-`#define` fallback is compiled in for
+    the case where it is not.
+  - **Session 11's last open items are closed** — including the STM32CubeIDE
+    clean build for **both** configurations, which turned out not to need a
+    human at the GUI at all (`ENGINEERING_LESSONS.md` now records how to drive
+    the IDE's own build machinery headlessly). Doing it found a real
+    `.cproject` bug latent since Session 08B: the Release configuration was
+    missing the ST Edge AI runtime library from its link line, so Release had
+    been unbuildable since the AI was introduced.
+  - **`THIRD_PARTY_SOFTWARE.md` is written** (rule 1.3), including a µT-Kernel
+    modification table derived from a recursive diff against pristine upstream:
+    exactly six modified files, and every file implementing a system call
+    byte-identical to upstream. It also settles a documentation conflict the
+    project had been carrying — the AI models are **CenterFace + MobileFaceNet**
+    (`AI_PIPELINE.md` was quoting ST's wrapper name "FaceID"; `session_13.md`'s
+    "SCRFD" was simply wrong). Both documents corrected.
+  - Session count unchanged: **13 sessions, and 13 is still the last.**
+- **v9:** Session 11 (µT-Kernel 3.0 migration) is **done and
   hardware-verified** — the full Session 09/10 registration and dispense flows
   run unchanged on µT-Kernel with FreeRTOS entirely removed, confirmed from
   real UART captures (see `milestones/session_11_notes.md`, nine addenda of

@@ -1,0 +1,5 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/sd_diskio.c:44:9:disk_initialize	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/sd_diskio.c:65:9:disk_status	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/sd_diskio.c:70:9:disk_read	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/sd_diskio.c:98:9:disk_write	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/sd_diskio.c:165:9:disk_ioctl	56	static

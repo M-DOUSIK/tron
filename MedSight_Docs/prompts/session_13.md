@@ -2,11 +2,13 @@
 
 ## Context (for Antigravity to read)
 The project is complete. All software features are working on the STM32N6570-DK:
-- Face registration and recognition (NPU-powered; verify the actual detector/
-  embedder names against the model headers in `FSBL/Src/ai/` before writing them
-  down — `AI_PIPELINE.md` says CenterFace + FaceID, an earlier draft of this
-  file said "SCRFD + MobileFaceNet", and Session 12 Part D is tasked with
-  settling which is correct)
+- Face registration and recognition (NPU-powered: **CenterFace** detector +
+  **MobileFaceNet** embedder, both INT8 on the Neural-ART accelerator). This
+  was settled in Session 12 Part D by reading the generated sources' own
+  `--onnx-input` lines rather than either doc's claim: an earlier draft of this
+  file said "SCRFD + MobileFaceNet" (wrong detector) and `AI_PIPELINE.md` said
+  "CenterFace + FaceID" (FaceID is ST's wrapper name, not the architecture).
+  See `MedSight_Docs/THIRD_PARTY_SOFTWARE.md` §2.7 — use those names.
 - Software-simulated pill dispense with "I Took It" confirmation
 - Full SD card audit log
 - Running on μT-Kernel 3.0

@@ -5,8 +5,9 @@
 Bare-metal (Sessions 01–06) → FreeRTOS behind an OS Abstraction Layer, OSAL
 (Sessions 07–10) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 11,
 done and hardware-verified — see `milestones/session_11_notes.md`) →
-µT-Kernel-idiomatic integration, power saving and hardening (Session 12) →
-final polish/demo packaging (Session 13). Session 13 is the last planned session —
+µT-Kernel-idiomatic integration, power saving and hardening (Session 12, done —
+see `milestones/session_12_notes.md`) → final polish/demo packaging
+(Session 13). Session 13 is the last planned session —
 see `MASTER_PROJECT_PLAN.md`'s Changelog for the renumbering history (this
 used to run through Session 16 with optional stretch sessions; those were
 dropped along with the physical-hardware cut below).
@@ -38,10 +39,13 @@ Core/
     ui/
       anime_ui.c/.h                 -- Session 04 (mascot rendering, states driven Session 05+)
       touch_driver.c/.h             -- Session 05 (GT911 touch controller, I2C2, PD14/PD4)
-      interactive_gui.c/.h          -- Session 05 (Register / Dispense Medicine buttons,
-                                        MASCOT_STATE management)
-      registration_ui.c/.h          -- Session 09 (enrollment flow: photo, name, phone,
-                                        medicine/quantity/time selection)
+      gui_draw.c/.h                 -- Session 05+ (screen drawing primitives, the
+                                        elderly-friendly palette and every full-screen
+                                        layout; Session 05's interactive_gui.c was
+                                        folded into this plus state_machine.c and no
+                                        longer exists as a file)
+      registration_ui.c/.h          -- Session 09 (enrollment flow: face capture hand-off,
+                                        on-screen keyboard, pill count, confirm)
     sd_logger.c/.h                  -- Session 06 (event log), extended Session 09
                                         (patient-profile read/write/list/delete)
     ai_vision.c/.h                  -- Sessions 08A-B (toolchain proof, one-shot face
@@ -54,7 +58,9 @@ Core/
                                         instead (Session 10).
     schedule_time_source.c/.h       -- Session 10 (swappable fast-timer/RTC abstraction)
     state_machine.c/.h              -- Session 10 (dispense-flow orchestration —
-                                        simulated dispense only, see §7)
+                                        simulated dispense only, see §7);
+                                        Session 12 added the error/alert states and
+                                        made the capture states non-blocking (§9)
   Inc/
     patient_profile.h               -- Session 09 (shared patient-record struct)
 docs/                               -- this documentation set, kept current
@@ -62,7 +68,7 @@ docs/                               -- this documentation set, kept current
 
 ## 3. Module Boundary Rules
 
-- `camera_lcd`, `anime_ui`, `touch_driver`, `interactive_gui`, `registration_ui`,
+- `camera_lcd`, `anime_ui`, `touch_driver`, `gui_draw`, `registration_ui`,
   `sd_logger`, `ai_vision` never call OS primitives directly — only through
   `ms_osal.h`. This is what makes the Session 11 µT-Kernel migration mechanical
   rather than a rewrite.
@@ -73,11 +79,16 @@ docs/                               -- this documentation set, kept current
   registration is its own self-contained flow that predates `state_machine.c`'s
   existence in the session order — document this explicitly as an accepted exception
   in Session 09's notes, not silently.)
-- No module outside `ai_vision.c` touches the NPU/STM32Cube.AI runtime.
+- No module outside `ai_vision.c` touches the NPU/STM32Cube.AI runtime. As of
+  Session 12 that file also owns the NPU **task** (`task_ai_fn`), the same way
+  `sd_logger.c` has owned the logger task since Session 07: `main.c` creates
+  it, but the body and everything it touches live in the module that owns the
+  hardware. `state_machine.c` reaches it only through `ai_vision.h`'s
+  request/wait pair, never by calling the pipeline directly.
 - No module outside `sd_logger.c` touches FATFS/SDMMC directly — everything else logs
   or reads profile data through its API.
 - No module outside `touch_driver.c` touches the touch controller's I2C2 bus directly —
-  `interactive_gui.c` and `registration_ui.c` consume touch events through
+  `state_machine.c` and `registration_ui.c` consume touch events through
   `touch_driver.h`'s API only.
 - No module outside `schedule_time_source.c` reads the fast-timer/RTC directly —
   `state_machine.c` asks "what's due now" through this module's API only, which is
@@ -87,27 +98,50 @@ docs/                               -- this documentation set, kept current
 
 Minimum surface needed, mapped to both backends:
 
-| OSAL call | FreeRTOS backend | µT-Kernel 3.0 backend |
+| OSAL call | FreeRTOS backend (historical) | µT-Kernel 3.0 backend (current) |
 |---|---|---|
 | `osal_task_create` | `osThreadNew` | `tk_cre_tsk` / `tk_sta_tsk` |
-| `osal_queue_create` / `osal_queue_send` | FreeRTOS queue API | `tk_cre_mbf` / `tk_snd_mbf` |
-| `osal_mutex_create` / lock / unlock | FreeRTOS mutex API | µT-Kernel semaphore/mutex API |
+| `osal_queue_create` / `send` / `receive` | FreeRTOS queue API | `tk_cre_mbf` / `tk_snd_mbf` / `tk_rcv_mbf` |
+| `osal_mutex_create` / lock / unlock | FreeRTOS mutex API | `tk_cre_mtx` / `tk_loc_mtx` / `tk_unl_mtx` |
 | `osal_delay_ms` | `osDelay` | `tk_dly_tsk` |
+| `osal_flag_create` / `set` / `clear` / `wait` **(Session 12)** | — (never existed) | `tk_cre_flg` / `tk_set_flg` / `tk_clr_flg` / `tk_wai_flg` with `TWF_ANDW`/`TWF_ORW`/`TWF_BITCLR` |
+| `ms_osal_low_power_idle` **(Session 12)** | — (never existed) | called from the BSP's `low_pow()`, which µT-Kernel's dispatcher invokes on its idle path |
+| `ms_osal_clean_dcache` (Session 11) | — (never existed) | called from the BSP's `sys_start.c` / `interrupt.c` |
 
-**Session 12 widens this surface deliberately.** The four primitives above were
-chosen as the lowest common denominator between the two backends, precisely so
-the Session 11 swap would be mechanical. That worked — but it also means the
-finished firmware uses µT-Kernel only through primitives every RTOS has, which
-scores weakly against TRON Contest rule 1.4's "high degree of relevance to
-µT-Kernel 3.0". Session 12 adds an event-flag primitive
-(`osal_flag_create`/`set`/`clear`/`wait`, backed by `tk_cre_flg`/`tk_set_flg`/
-`tk_wai_flg` with `TWF_ANDW`/`TWF_ORW`) for the genuine multi-condition waits in
-the dispense flow, and evaluates a fixed-size memory pool (`tk_cre_mpf`) against
-real allocation sites. There is no FreeRTOS column for these — FreeRTOS was
-removed in Session 11 — so the table above is now a historical record of the
-migration mapping, not a live two-backend contract. See `prompts/session_12.md`
-for the scope and the explicit instruction to skip any idiom that has no real
-consumer rather than force it.
+**Session 12 widened this surface, once, deliberately (done).** The original
+four primitives were the lowest common denominator between the two backends,
+chosen precisely so the Session 11 swap would be mechanical. That worked — but
+it also left the finished firmware talking to µT-Kernel only through primitives
+every RTOS has, which scores weakly against TRON Contest rule 1.4's "high
+degree of relevance to µT-Kernel 3.0". FreeRTOS was removed in Session 11, so
+there is no longer a second backend to keep the surface narrow for, and the
+FreeRTOS column above is now a historical record of the migration mapping, not
+a live two-backend contract.
+
+What Session 12 added, and what it deliberately did **not**:
+
+- **Added: event flags.** They have a genuine consumer — the AI
+  request/response handshake between the UI task and the new NPU task (§9).
+  The UI's wait has three outcomes to distinguish in one blocking call (face
+  found / no face / the AI task never answered), which is an OR-wait with a
+  timeout: exactly what an event flag expresses and what a queue, a semaphore
+  or a mutex cannot.
+- **Evaluated and skipped: a fixed-size memory pool (`tk_cre_mpf`).** This
+  codebase has no fixed-size runtime allocation site. Frame buffers are
+  linker-placed constants; the NPU's activation pools are addresses baked into
+  ST's generated code; the log records that looked like candidates are passed
+  by *copy* through a message buffer and never allocated at all. Adopting a
+  pool would have meant inventing an allocation in order to have something to
+  pool.
+- **Evaluated and skipped: an event flag for `STATE_CONFIRM_TAKEN`'s
+  "confirmed OR skipped OR timed out" wait.** All three conditions are
+  produced by the *same* task that would wait on them (the UI task polls touch
+  itself), so the flag would have been set and waited on by one task — a
+  synchronisation object with nothing to synchronise.
+
+`prompts/session_12.md` is explicit that a forced idiom reads worse to an expert
+judge than an absent one; `milestones/session_12_notes.md` records each of these
+decisions with its evidence.
 
 No application code calls `osThreadNew`, `osDelay`, etc. directly — enforce this in code
 review during every session from 07 onward. See `ENGINEERING_LESSONS.md` for the
@@ -134,7 +168,7 @@ typedef enum {
 } mascot_state_t;
 ```
 
-`interactive_gui.c` and `registration_ui.c` own state transitions triggered by touch;
+`registration_ui.c` owns state transitions triggered by touch;
 `state_machine.c` (from Session 10 onward) owns state transitions triggered by system
 events (face-match results, simulated-dispense/OK-confirmation results). All funnel
 through the same OSAL queue into `anime_ui.c`'s renderer — `anime_ui.c` itself never
@@ -192,6 +226,21 @@ STATE_CONFIRM_TAKEN -> (button tapped) -> log "CONFIRMED: <name> took pills",
 STATE_CONFIRM_TAKEN -> (timeout, no tap) -> MASCOT_ERROR, SD log, camera OFF, STATE_HOME
 ```
 
+**Session 12 additions to this diagram.** Two states were added, both on error
+or alert paths rather than in the happy path above, which is unchanged:
+
+```
+STATE_FACE_RETRY   -- reached instead of dead-ending home when a capture finds
+                      no face after 3 attempts, or finds a face that is not in
+                      the gallery. Offers TRY AGAIN (back to the capture state
+                      it came from) and CANCEL (home); times out to home after
+                      30 s so it can never strand the device.
+STATE_ALERT        -- one-button screen for conditions the user must act on
+                      outside the device: gallery full (also now refused up
+                      front, before a face is captured), no pills remaining,
+                      and "the dose was dispensed but could not be saved".
+```
+
 Edge cases (handled explicitly, not as afterthoughts), each driving `mascot_state_t`
 above to `MASCOT_ERROR` unless noted:
 - Missed dose (fast-timer/RTC schedule window elapses with no Dispense Medicine tap) →
@@ -216,3 +265,85 @@ This table stays a living document — record actual pin assignments here as eac
 session finalizes them, don't write speculative pin numbers ahead of the hardware work.
 No dispenser-actuator pins are listed here because none are built — see §1's note on
 the physical-hardware cut.
+
+## 9. Task Set and Priority Scheme (Session 12)
+
+Sessions 07-11 ran four tasks with priorities 5/4/2/1, argued informally
+("camera must never be starved", "touch should feel immediate"). The ordering
+was right, but the numbers had never been justified. Session 12 re-derived them
+rate-monotonically — shortest period gets the highest priority — added the NPU
+task, and left the existing numbers alone because the derivation agreed with
+them. The previously vacant level 3 is now occupied.
+
+| Pri | Task | Where its body lives | Period | Deadline / rationale |
+|---|---|---|---|---|
+| 5 | `cam_isp` | `main.c` | 1 ms | Shortest period and the only task tied to external hardware timing: `ISP_BackgroundProcess()` must consume each frame's statistics before the next VSYNC (~33 ms at 30 fps). Missing it degrades AE/AWB convergence visibly. |
+| 4 | `ui` | `main.c` → `state_machine.c` | 10 ms | Touch-to-response budget. A 10 ms poll plus the 4 FPS mascot frame gate stays an order of magnitude inside the ~100 ms at which input lag becomes noticeable. Session 11's Addendum 9 is the evidence: when a wrong kernel tick stretched these deadlines 10×, the device immediately "felt slower than FreeRTOS". |
+| 3 | `ai` | `ai_vision.c` | on demand | **No deadline.** Hundreds of milliseconds of solid NPU/CPU work per request, a few times per session, in response to a button press the user already expects to take a moment. Deliberately below the UI so it is preemptible — that is what keeps touch and the physical USER1 button alive during inference. Above the logger because a person is waiting on its result and nobody waits on a log line. |
+| 2 | `logger` | `sd_logger.c` | event-driven | Tolerates seconds of latency by construction; the async queue exists so no caller ever waits on a 10-50 ms SD write. |
+| 1 | `heartbeat` | `main.c` | 500 ms | No deadline at all. Deliberately lowest, so "the LED stopped blinking" means "something above me is starving the system" — which is exactly the signal it should carry. Also carries the periodic idle/power report (§10). |
+
+`ms_osal.h`'s convention is 1 = lowest; `ms_osal.c` inverts it onto µT-Kernel's
+opposite scale (1 = highest) as `OSAL_PRI_CEILING - priority`, so 5/4/3/2/1
+become `itskpri` 11/12/13/14/15. Only the ordering is load bearing; the absolute
+numbers leave headroom on both sides inside `mtk3_bsp2`'s `CNF_MAX_TSKPRI` of 32.
+
+### Frame-buffer ownership
+
+`BUFFER_ADDRESS` (0x34200000) is written by three different things — the DCMIPP
+camera DMA, the UI's drawing code, and (because ST's codegen hardcodes both
+networks' activation scratch to overlap it) the NPU. Until Session 11 they could
+not collide, because inference ran synchronously inside the UI task. With a
+separate AI task that is no longer automatic, so ownership is now explicit:
+
+```
+UI task                                   AI task
+────────────────────────────────────────  ──────────────────────────────────
+camera_stop()            (DMA stops)
+ai_vision_capture_request()  ──flag──▶    wakes; owns BUFFER_ADDRESS
+   [draws NOTHING while waiting]          detect → crop → embed, ×3 retries
+ai_vision_capture_wait()  ◀──flag──       sets DONE or FAIL; releases
+   [safe to draw again]
+```
+
+The UI task stays fully responsive across that window — it keeps polling touch
+and the USER1 button — but it must not *draw*. A USER1 press mid-capture is
+therefore recorded as a pending cancel and honoured the moment the capture
+completes, rather than transitioning home and redrawing into memory the NPU is
+still writing. This is the invariant to preserve in any future change to the
+capture states.
+
+## 10. Power Saving (Session 12)
+
+µT-Kernel's dispatcher calls the BSP's `low_pow()` from its idle path
+(`dispatch.S`, label `l_dispatch_110`) whenever no task is runnable. The
+vendored BSP ships `low_pow()` as an empty function, so through Session 11 the
+Cortex-M55 spun at full clock whenever the system had nothing to do — which, in
+an application whose five tasks are all periodic sleepers, is most of the time.
+
+`low_pow()` now forwards to `ms_osal_low_power_idle()` in `ms_osal.c`, which
+executes a race-free `WFI` and accumulates the cycles spent asleep via the DWT
+cycle counter.
+
+**The masking around that `WFI` is load bearing, and the first hardware flash
+proved it.** The idle path runs with `BASEPRI = 0x10`, and SysTick's priority is
+*also* `0x10`. A WFI wake-up event must be an exception that would preempt the
+current execution priority — the Arm ARM excludes PRIMASK from that judgement
+but **not** BASEPRI — so SysTick could not wake the core, and a plain `WFI`
+there froze the whole system the instant it first had nothing to run. The hook
+now does `PRIMASK = 1` (closing the check/sleep race), `BASEPRI = 0` (making
+every enabled interrupt a valid wake-up event), `WFI`, then restores BASEPRI
+*before* PRIMASK so the woken exception is still taken where the dispatcher
+expects it. Do not "simplify" that sequence. The body lives on this project's side of the vendored-code
+boundary — the same arrangement Session 11 used for `ms_osal_clean_dcache()` —
+so the CMSIS dependency stays out of third-party code and the diff against
+upstream mtk3_bsp2 is a single forwarding call (`THIRD_PARTY_SOFTWARE.md` §4,
+row 8).
+
+Constraints on anything added to that function, all of them hard:
+
+- It runs in **handler mode (PendSV)** with `BASEPRI` masked. No `printf`
+  (`session_11_notes.md` Addendum 8 documents what a slow dispatcher path costs
+  on this board), no `tk_*` call, nothing unbounded.
+- The measurement is read out from **task** context — `task_heartbeat_fn()`
+  prints an idle-percentage figure every 10 s — never from the hook itself.

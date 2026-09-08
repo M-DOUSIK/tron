@@ -1,0 +1,15 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:729:26:GetSensorGainHelper	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:743:26:GetSensorExposureHelper	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:238:13:task_heartbeat_fn	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:205:13:task_ui_fn	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:184:13:task_camera_isp_fn	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:736:26:SetSensorExposureHelper	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:722:26:SetSensorGainHelper	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:716:26:GetSensorInfoHelper	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:750:6:HAL_DCMIPP_PIPE_FrameEventCallback	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:755:6:HAL_DCMIPP_PIPE_VsyncEventCallback	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:777:6:Error_Handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:480:6:SystemClock_Config	7
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:556:6:PeriphCommonClock_Config	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:302:5:main	23
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/main.c:788:6:assert_failed	1

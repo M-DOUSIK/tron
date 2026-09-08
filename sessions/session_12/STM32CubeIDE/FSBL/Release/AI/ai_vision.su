@@ -1,0 +1,15 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:352:13:run_pipeline_on_hold_buffer	96	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:432:6:ai_vision_run_pipeline	16	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:455:6:ai_vision_self_test	136	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:486:7:ai_vision_match_face	1056	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:523:6:gallery_init	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:271:6:ai_vision_init	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:544:6:gallery_save	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:549:5:gallery_add_patient	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:586:5:gallery_find_best_match	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:610:5:gallery_count	12	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:656:6:ai_vision_service_init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:661:6:ai_vision_is_ready	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:666:6:ai_vision_capture_request	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:678:21:ai_vision_capture_wait	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ai_vision.c:705:6:task_ai_fn	32	static

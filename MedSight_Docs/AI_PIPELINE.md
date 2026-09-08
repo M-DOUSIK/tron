@@ -8,8 +8,19 @@ or logging anything. "One-shot" means enrollment from a single reference photo p
 patient (Session 09's registration flow), not a large training set per person.
 Matching is against a gallery of all currently enrolled patients, not a single
 hardcoded reference face — this is a shared, multi-person device (see
-`MASTER_PROJECT_PLAN.md` §1). Implemented Session 08B (CenterFace detector + FaceID
-embedder), confirmed working end-to-end on real hardware.
+`MASTER_PROJECT_PLAN.md` §1). Implemented Session 08B (**CenterFace** detector +
+**MobileFaceNet** embedder), confirmed working end-to-end on real hardware.
+
+**Model names, settled in Session 12.** This section previously said "CenterFace
+detector + FaceID embedder" and an earlier draft of `prompts/session_13.md` said
+"SCRFD + MobileFaceNet"; the two disagreed, so Session 12's third-party-software
+inventory checked the generated sources themselves. `FSBL/Src/ai/fd.c` records
+`--onnx-input = ".../centerface_OE_3_3_1.onnx"` and `FSBL/Src/ai/faceid.c`
+records `--onnx-input = ".../mobilefacenet_int8_faces_OE_3_3_1.onnx"`. So the
+detector is **CenterFace** (session_13.md's "SCRFD" was wrong) and the embedder
+is **MobileFaceNet** — "FaceID" is ST's wrapper/module name (`stai_faceid`), not
+the architecture. Both documents are now corrected. Full provenance and
+licensing in `THIRD_PARTY_SOFTWARE.md` §2.7.
 
 **This is the only model in the final pipeline.** Two other models were considered
 and both cut, in sequence (full history in `MASTER_PROJECT_PLAN.md` §8):
