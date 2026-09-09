@@ -1,13 +1,3 @@
-# scratch/ is a workbench, not part of the project: vendor repos, sample
-# models, downloaded reference code, host-side experiments and build output.
-# About 1.5 GB of it, none of it version-controlled by design.
-#
-# One consequence worth knowing: the UI asset generator
-# (scratch/gen_ui_assets.py) and the designer's source artwork live there,
-# so they are NOT in this repository. That does not affect building - its
-# output, sessions/session_13/FSBL/Inc/ui/ui_assets.{h,inc}, IS committed,
-# and a fresh clone builds and flashes without it. It only matters if you
-# want to regenerate the sprites and fonts from the original PNGs.
 /scratch/
 /.metadata/
 /.vscode/
