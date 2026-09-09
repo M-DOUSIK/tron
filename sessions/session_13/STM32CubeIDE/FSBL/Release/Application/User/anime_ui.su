@@ -1,0 +1,13 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:66:27:sad_sprite	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:75:13:draw_sad_frame	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:84:27:pose_sprite	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:93:13:draw_lumio_frame	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:131:6:anime_ui_init	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:144:6:anime_ui_set_dest_buffer	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:145:6:anime_ui_set_bg_color	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:147:6:anime_ui_set_state	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:152:6:anime_ui_update	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:173:6:anime_ui_dma2d_cplt_cb	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:177:6:anime_ui_state_active	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:178:6:anime_ui_state_success	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/anime_ui.c:179:6:anime_ui_state_error	0	static

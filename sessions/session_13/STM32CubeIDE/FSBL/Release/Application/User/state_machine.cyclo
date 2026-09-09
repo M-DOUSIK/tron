@@ -1,0 +1,10 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:174:13:camera_stop	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:178:13:camera_start	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:184:13:switch_ltdc_buffer	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:190:13:check_hit	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:216:13:show_alert	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:262:13:display_blank	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:278:13:begin_capture	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:294:28:poll_capture	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:332:6:state_machine_init	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/state_machine.c:367:6:state_machine_update	102

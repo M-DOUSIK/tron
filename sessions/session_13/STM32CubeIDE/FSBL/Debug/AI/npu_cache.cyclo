@@ -1,0 +1,11 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:34:20:npu_cache_init	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:41:20:npu_cache_deinit	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:49:6:npu_cache_enable	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:62:6:npu_cache_disable	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:74:6:npu_cache_invalidate	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:82:6:npu_cache_clean_range	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:93:6:npu_cache_clean_invalidate_range	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:107:13:HAL_CACHEAXI_MspInit	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:113:13:HAL_CACHEAXI_MspDeInit	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:122:13:npu_cache_enable_clocks_and_reset	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ai/npu_cache.c:123:13:npu_cache_disable_clocks_and_reset	1
