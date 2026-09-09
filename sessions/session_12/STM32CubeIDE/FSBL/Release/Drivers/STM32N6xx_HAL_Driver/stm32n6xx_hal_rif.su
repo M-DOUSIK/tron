@@ -23,5 +23,5 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1031:6:HAL_RIF_IAC_DisableIT	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1051:10:HAL_RIF_IAC_GetFlag	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1076:6:HAL_RIF_IAC_ClearFlag	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1127:13:HAL_RIF_ILA_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1092:6:HAL_RIF_IRQHandler	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_rif.c:1127:13:HAL_RIF_ILA_Callback	0	static

@@ -1,8 +1,8 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:120:12:knl_del_tsk	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:197:12:knl_ter_tsk	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:29:12:tk_cre_tsk	12
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:120:12:knl_del_tsk	2
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:140:12:tk_del_tsk	11
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:169:12:tk_sta_tsk	11
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:197:12:knl_ter_tsk	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:224:14:tk_ext_tsk	4
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:264:14:tk_exd_tsk	4
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/task_manage.c:292:12:tk_ter_tsk	12

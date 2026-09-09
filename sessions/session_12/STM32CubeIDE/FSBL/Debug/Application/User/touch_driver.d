@@ -50,7 +50,7 @@ Application/User/touch_driver.o: \
  ../../../Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.h \
  ../../../Drivers/BSP/STM32N6570-DK/../Components/gt911/gt911.h \
  ../../../Drivers/BSP/STM32N6570-DK/../Components/gt911/gt911_reg.h \
- ../../../FSBL/Inc/gt911_conf.h
+ ../../../FSBL/Inc/gt911_conf.h ../../../FSBL/Inc/ms_osal.h
 ../../../FSBL/Inc/ui/touch_driver.h:
 ../../../Drivers/BSP/STM32N6570-DK/stm32n6570_discovery.h:
 ../../../FSBL/Inc/stm32n6570_discovery_conf.h:
@@ -102,3 +102,4 @@ Application/User/touch_driver.o: \
 ../../../Drivers/BSP/STM32N6570-DK/../Components/gt911/gt911.h:
 ../../../Drivers/BSP/STM32N6570-DK/../Components/gt911/gt911_reg.h:
 ../../../FSBL/Inc/gt911_conf.h:
+../../../FSBL/Inc/ms_osal.h:

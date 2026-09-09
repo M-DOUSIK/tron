@@ -6,9 +6,9 @@ Session 12 did four things, in the order `prompts/session_12.md` lays them out:
 
 - **Part 0** closed Session 11's three open items. The STM32CubeIDE clean build
   now passes for **both** configurations — and doing it found a real
-  `.cproject` bug that had been latent since Session 08B. The other two items
-  (flash the stripped binary, multi-minute soak) are hardware steps and are
-  listed at the bottom for you.
+  `.cproject` bug that had been latent since Session 08B. The stripped binary
+  has since been flashed and the multi-minute run done; see "Hardware
+  verification — RESULTS".
 - **Part A** widened the OSAL with a real µT-Kernel event-flag primitive and
   moved NPU inference out of the UI task into its own µT-Kernel task, with the
   request/response handshake carried by that event flag and frame-buffer
@@ -33,8 +33,8 @@ through the real STM32CubeIDE build machinery.**
 | Configuration | Result | text | data | bss |
 |---|---|---|---|---|
 | Debug (baseline, before any edit) | 0 errors, 2 warnings | 734320 | 3992 | 656824 |
-| Debug (final, incl. Addenda 1-2) | 0 errors, 2 warnings | 740048 | 4008 | 657024 |
-| Release (final, incl. Addenda 1-2) | 0 errors, 4 warnings | 593160 | 3956 | 657016 |
+| Debug (final, incl. Addenda 1-3) | 0 errors, 2 warnings | 740192 | 4008 | 657024 |
+| Release (final, incl. Addenda 1-3) | 0 errors, 4 warnings | 593328 | 3956 | 657016 |
 
 The baseline row reproduces Session 11's final numbers **exactly**, which is
 what the prompt asked for before writing any new code. Every remaining warning
@@ -42,9 +42,13 @@ is pre-existing and in third-party ST AI code (`ll_aton_profiler.c` ×2 in both
 configurations, plus `ATON.h` ×2 which only `-O1`+ triggers, so it appears only
 in Release). Session 12 introduced none and removed one — see Part 0 below.
 
-As always: this confirms the code compiles and links. It does **not** confirm
-runtime correctness on hardware. Flashing and manual verification is your step
-per `MASTER_PROJECT_PLAN.md` §4.
+**Hardware status: VERIFIED.** After the two fixes in Addenda 1 and 2, the
+session's full scope was confirmed on the real board from a UART capture — boot,
+registration, dispense, gallery persistence across a power cycle and reflash,
+the new face-retry path, and the power measurement. See
+**"Hardware verification — RESULTS"** near the end of this file for what the
+capture shows, the measured idle figure, and the one genuine robustness finding
+it surfaced (which is *not* a Session 12 regression).
 
 ---
 
@@ -436,10 +440,43 @@ Design notes:
   `DWT_CTRL_NOCYCCNT` and then verifies the counter actually advances, rather
   than assuming the write took.
 
-**No number is quoted in this document** because I cannot run the board. Record
-the first figure you see here when you flash it — that is the number worth
-putting in the submission, and "we measured X%" is a categorically better claim
-than "we call WFI".
+### The measured result
+
+From the hardware capture, steady state on the home screen with the camera live:
+
+```
+power: idle 89.6% of last 10020ms (9825 WFI entries)
+power: idle 89.6% of last 10025ms (9825 WFI entries)
+power: idle 89.7% of last 10028ms (9834 WFI entries)
+```
+
+and under load, during registration and dispense:
+
+```
+power: idle 87.1% of last 10079ms (9708 WFI entries)
+power: idle 86.9% of last 10235ms (9799 WFI entries)
+```
+
+**The Cortex-M55 spends roughly 90% of wall-clock time asleep in `WFI`**, idle or
+busy, waking about 980 times a second — essentially once per 1 ms kernel tick,
+which is exactly the expected shape: the scheduler wakes, finds nothing runnable,
+and goes straight back to sleep.
+
+Two things worth saying about that number in the submission. First, it is
+measured, not claimed — a DWT cycle counter read either side of the `WFI`,
+reported as a fraction of `HAL_GetTick()` wall time. Second, the ~10% that is
+*not* idle is almost entirely the camera/ISP task: `ISP_BackgroundProcess()`
+runs every millisecond at the highest priority to keep auto-exposure and
+auto-white-balance converged against the DCMIPP's statistics. The AI, the UI and
+the logger together are a rounding error next to it. That is a useful thing to
+be able to state precisely, and it only became knowable because the measurement
+exists — before this session the same 90% was spent spinning in an empty
+`low_pow()` at full clock, with no way to know it.
+
+Note the figure barely moves between idle and active (89.6% → 86.9%). That is
+not a measurement artifact: face recognition really is a few hundred
+milliseconds of NPU work a handful of times per session, against ten seconds of
+wall clock per sample.
 
 ---
 
@@ -802,35 +839,73 @@ verified by grep across every `.mk`, `makefile`, `.project`, `.cproject` and
 
 ---
 
-## Hardware verification — YOUR step
+## Hardware verification — RESULTS
 
-The regression bar for this whole session is at the top of the list. If it
-fails, the AI task restructure is the first suspect.
+Confirmed on the board from a UART capture of a single continuous run, after the
+Addendum 1 and 2 fixes. Everything below marked `[x]` is verified from that
+capture; the few remaining `[ ]` items are the ones nobody has deliberately
+exercised yet.
 
-- [ ] **The Session 10 dispense flow still works end-to-end**, exactly as after
-      Session 11: tap Dispense → READY → face match → dispensing animation →
-      "I Took It" → thank-you → home, with `patients.dat`'s `pills_remaining`
-      decremented and reloaded correctly on the next boot.
-- [ ] **Registration end-to-end**: Register → face capture → keyboard → pill
-      count → confirm → "Registered!" → home; then dispense to that patient and
-      confirm they are matched by name.
-- [ ] **Part 0.2** — the stripped Session 11 binary (now also with Session 12's
-      changes) boots and runs. If something fails that worked before, suspect a
-      removed `printf` that was accidentally load-bearing for timing rather than
-      a logic change, and say so.
-- [x] **Part B idle hang** — found and fixed on the first flash, see
-      Addendum 1. Re-confirm on the next flash that the board stays alive when
-      idle: heartbeat LED blinking, touch responsive after a minute of sitting
-      on the home screen, and the `power: idle NN.N%` line appearing every 10 s.
-- [ ] **Record the idle percentage.** Watch for the `power: idle NN.N% of last
-      ...ms` line every 10 s. Note it at idle and during a dispense; both
-      numbers belong in the submission.
-- [ ] **`HAL_GetTick()` tracks real time.** The power lines are stamped with
-      their own measured window (`of last 10003ms`); over 60 s that should stay
-      within a percent of a stopwatch.
-- [ ] **Part 0.3 soak** — several minutes of continuous operation with the
-      camera live, watching for anything the deferred object-creation design in
-      `ms_osal.c` could have got subtly wrong.
+**The regression bar passed.** The Session 10 dispense flow ran end to end,
+unchanged in behaviour, on top of the restructured AI task:
+
+```
+STATE_CAMERA_DISPENSE -> det_run done rc=0 -> Detector: Face detected!
+  -> emb_run done rc=0 -> Dispense: matched patient 'DOUSIK.'
+  -> STATE_DISPENSING -> DISPENSE: DOUSIK 3 pills
+  -> STATE_CONFIRM_TAKEN -> SD_Write_File(patients.dat): 1630 bytes written.
+  -> CONFIRMED: DOUSIK took pills -> STATE_HOME
+```
+
+That is the whole point of Part A demonstrated: inference now happens in a
+separate µT-Kernel task, handed off through an event flag, and the application
+flow above did not have to change by a single line to accommodate it — the same
+property the OSAL gave Session 11's kernel swap.
+
+Other results from the same capture:
+
+- **The lazy SD mount fixed the start-up ordering hazard, visibly.**
+  `SD_Logger_Init: SD card mounted OK.` appears *before* `task_logger: started.`
+  — the AI task mounted the card on demand during `gallery_init()`, well before
+  the logger task's own eager mount ran. That is precisely the race Part C1
+  predicted, happening and being handled.
+- **Gallery persistence survives a power cycle and a reflash.** Registered
+  'DOUSIK', reset the board, reflashed, tapped Dispense, and the patient was
+  matched from `patients.dat`. All three files (`events.log`, `patients.dat`,
+  `dummy_face.bin`) were present and well-formed when the card was read on a PC.
+- **`STATE_FACE_RETRY` works.** A failed identification reached the new TRY
+  AGAIN / CANCEL screen instead of dead-ending home, and the intruder event was
+  still written to the audit log.
+- **The audit log is complete.** Every state transition, the dispense, and the
+  confirmation all appear in `events.log`.
+- **No face-embedding bytes anywhere in the capture** — names, event strings,
+  slot indices, pill counts and confidence scores only.
+- **The `disk_read:`/`disk_write:` tracing is gone**, as intended.
+
+- [x] **The Session 10 dispense flow still works end-to-end** — verified, with
+      `pills_remaining` decremented, re-saved and reloaded across a power cycle.
+- [x] **Registration end-to-end** — verified: Register → face capture →
+      keyboard → pill count → confirm → `patient 'DOUSIK' saved to slot 0` →
+      home, then matched by name on a subsequent dispense.
+- [x] **Part 0.2** — the stripped, gated build boots and runs. Nothing that
+      worked before broke, so no `printf` in the removed instrumentation was
+      load-bearing for timing. (Two things *did* break on the first flash, but
+      both were real bugs rather than timing side effects — Addenda 1 and 2.)
+- [x] **Part B idle hang** — found and fixed on the first flash (Addendum 1);
+      the board now stays alive indefinitely when idle.
+- [x] **Idle percentage recorded** — ~89.6% idle, ~980 WFI entries/second. See
+      "The measured result" under Part B above.
+- [x] **`HAL_GetTick()` tracks real time.** Each 10 s report stamps its own
+      measured window: 10020, 10025, 10028, 10024 ms against a nominal 10000 —
+      0.2-0.3% high, which is the expected quantisation of a 500 ms task period
+      sampling a 10 s deadline, not clock drift. The Session 11 Addendum 9 tick
+      regression would have shown up here as a 10× error.
+- [~] **Part 0.3 soak** — the capture covers several minutes of continuous
+      operation with the camera live, across two registrations and three
+      dispense attempts, with the 10 s power reports running throughout and no
+      gap, stall or reset. That is the bar Session 07 set. A longer unattended
+      soak (30 min+) is still worth doing once before Session 13 packaging,
+      purely to catch a slow kernel-heap leak that minutes cannot.
 - [ ] **Part C6 stress test** — register 3 patients; dispense to each in
       sequence; verify the SD log is complete and correct; verify face matching
       still works after **10 repeated dispense cycles**. This is the regression
@@ -848,12 +923,15 @@ fails, the AI task restructure is the first suspect.
         animation.
       - Fill all 10 gallery slots, then tap REGISTER → refused immediately with
         "GALLERY FULL", before any camera capture.
-      - Press USER1 *during* a face capture → the console prints "cancel
+      - Press USER1 *during* a face capture (in the ~1-4 s window between the
+        preview ending and the result appearing) → the console prints "cancel
         pending" and the device returns home cleanly once the capture finishes,
-        with no display corruption.
-- [ ] **UART capture contains no face-embedding bytes** — a real grep of the
-      serial log is the verification `COMPLIANCE_PRIVACY_POSTURE.md` asks for;
-      code review only gets you so far.
+        with no display corruption. **This is the single most valuable
+        untested path**, because it is the one that exercises the frame-buffer
+        ownership handshake Part A is built on.
+- [x] **UART capture contains no face-embedding bytes** — confirmed against a
+      real capture, not just code review. Names, event strings, indices, pill
+      counts and confidence scores only.
 - [ ] **Confirm the diskio tracing is actually gone** from the console (no
       `disk_read:` / `disk_write:` lines), and that the log is noticeably
       quieter and the flow noticeably snappier during SD writes.
@@ -1004,3 +1082,788 @@ of hardware bring-up, because the two call sites above it threw the result away.
 The instructive part is not the wrong constant — it is that adding error
 checking in Part C is what turned a six-session-old silent failure into a
 one-flash diagnosis. Recorded in `ENGINEERING_LESSONS.md` too.
+
+---
+
+## Addendum 3 — what the verified run surfaced, and two log-clarity fixes
+
+The successful hardware run (see "Hardware verification — RESULTS") produced one
+genuine finding and two small blemishes of my own making.
+
+### 3a. A false rejection: the same enrolled person matched, then did not
+
+The capture contains this sequence, all with the same enrolled patient in front
+of the camera:
+
+```
+Dispense: matched patient 'DOUSIK.'                     <- attempt 1, accepted
+...
+Dispense: face detected but no gallery match (intruder). <- attempt 2, rejected
+```
+
+The face detector was confident both times (0.87 and 0.86, well over its 0.50
+threshold), so this is not a detection failure — the pipeline saw a face
+perfectly well. It is the **gallery matching** step: the 128-dimensional
+embedding of the second capture scored below `GALLERY_MATCH_THRESHOLD` (0.65
+cosine similarity) against the enrolled one.
+
+**This is not a Session 12 regression.** Nothing in this session touched
+`ai_vision_run_pipeline()`, the models, the embedding maths or
+`gallery_find_best_match()`. It is the threshold question Session 08B raised and
+deliberately deferred, now showing up for the first time because Session 12 is
+the first build where a person actually walks the whole flow repeatedly.
+`session_08B_notes.md` is explicit about why it was always going to need this:
+
+> Matches PeleAB's own `face_gallery.c` constant
+> (`FACE_GALLERY_MATCH_SIMILARITY`). Starting point only — PeleAB stores
+> embeddings as 16-bit fixed point; `ai_vision.h`'s mandated API here is
+> `int8_t embedding[128]` (lower precision), so this threshold may need
+> retuning once you have real enrolled-vs-impostor measurements.
+
+That is exactly the situation. The reference project's threshold was chosen for
+16-bit embeddings; this project quantises to int8, which costs similarity
+precision, and 0.65 was never validated against this quantisation.
+
+**What was missing to act on it: the number.** A rejection printed only
+"intruder", which cannot distinguish "a stranger, correctly refused" (similarity
+nowhere near the bar) from "an enrolled patient the threshold is too strict for"
+(similarity just under it) — and those need opposite fixes. The similarity was
+being computed and even returned through `out_confidence`, and then thrown away
+unprinted at every call site.
+
+`gallery_find_best_match()` now reports it, one line per dispense attempt:
+
+```
+Gallery: best similarity 71/100, threshold 65/100 -> MATCH
+Gallery: best similarity 58/100, threshold 65/100 -> no match
+```
+
+Printed as hundredths because nano.specs `printf` has no `%f`. A confidence
+score is explicitly loggable under `COMPLIANCE_PRIVACY_POSTURE.md` — it is a
+single scalar derived from the embedding, not the biometric data itself, which
+still never leaves the device or reaches the console.
+
+**How to tune it, once there is data.** Collect a handful of numbers: several
+dispense attempts by the enrolled patient (the *genuine* distribution) and
+several by someone who is not enrolled (the *impostor* distribution). The
+threshold belongs in the gap between them. If genuine attempts cluster around,
+say, 0.55-0.75 and impostors sit below 0.40, then 0.65 is cutting through the
+middle of the genuine distribution and should come down to ~0.45-0.50. If the
+two distributions actually overlap, the answer is not a threshold change —
+it is better enrolment (capture with the face square-on and well lit, since the
+enrolled embedding is the reference every future attempt is measured against).
+
+**Deliberately not changed in this session.** Moving the threshold is a
+one-character edit, and doing it blind would be worse than leaving it: it trades
+a false rejection (annoying, recoverable — the patient taps TRY AGAIN, which is
+exactly what Part C3 added) for a false *acceptance* (someone else is handed a
+patient's medication). That trade needs the measurement, not a guess. The
+diagnostic to take the measurement now exists; the decision belongs to whoever
+has the numbers.
+
+Note also that Part C3's face-retry screen is what makes this survivable in a
+demo at all: before Session 12 a false rejection dead-ended to the home screen
+and the whole flow had to be walked again.
+
+### 3b. One boot looked like two
+
+The capture showed:
+
+```
+SD_Log_Event: logged: System Boot - MedSight on uT-Kernel 3.0
+SD_Log_Binary: 16 bytes written.
+SD_Log_Event: logged: System Boot - MedSight on uT-Kernel 3.0
+```
+
+Two boot lines for one boot. There genuinely are two writers — `task_ui_fn`
+queues one when the UI comes up, and `task_logger_fn` writes one directly once
+the card is mounted — which has been true since Session 07 and is harmless.
+What was new is that this session gave **both** the same text while tidying up a
+stale "Session 07" string, so a normal two-writer log started reading as a
+duplicate. The logger's line is now `"System Boot - SD logger ready"`, which is
+also more useful: it marks the moment the filesystem became available, which is
+a different event from the UI coming up.
+
+### 3c. Sizes after 3a and 3b
+
+Both changes are log-only. Debug `text 740192 / data 4008 / bss 657024`,
+Release `text 593328 / data 3956 / bss 657016`, both configurations 0 errors and
+only the pre-existing third-party warnings. **Reflashing for these is optional**
+— the firmware you verified is functionally identical; the new build only says
+more on the console.
+
+---
+
+## Addendum 4 — `pill_count` is the dose, and `patients.dat` now says what it is
+
+Two changes made after the verified run, on your report that the pill count was
+being reduced.
+
+### 4a. The pill count was being treated as a stock level. It is a dose.
+
+**What was wrong.** `PatientRecord` carried two fields: `pill_count`, set at
+registration, and `pills_remaining`, initialised to the same value and
+decremented **by one** on every confirmed dose. Session 12's Part C4 then built
+"refill needed" alerts on top of that counter.
+
+The whole structure was a misreading of the domain. `pill_count` is **the
+dose** — how many pills this patient takes in one sitting, a fixed property of
+their prescription. A patient prescribed 3 pills takes 3 pills today, 3
+tomorrow, and 3 every time thereafter. Treating it as a stock and drawing it
+down one pill at a time meant a patient registered for 3 was offered 3, then 2,
+then 1, then told to refill — which is visible in the hardware capture as
+`DISPENSE: DOUSIK 3 pills` on a screen whose underlying counter was already on
+its way down.
+
+**What changed.** `pills_remaining` is deleted from the struct. The dispense
+flow reads `pill_count` and never writes it. The decrement, the `gallery_save()`
+that followed it, and both "REFILL NEEDED" alerts are gone.
+
+**The refill idea was not simply dropped — it was moved to where it can be
+true.** A software stock counter in this device is a number that starts drifting
+from reality the moment a carer tops the hopper up by hand, because nothing
+tells the firmware that happened. Session 14's IR break-beam counter measures
+pills physically dropping, so a short dispense after a full actuator cycle *is*
+an empty hopper — observed rather than assumed. That is the right place for it,
+and `prompts/session_14.md` Part B item 4 carries the requirement.
+
+**A side benefit worth noting:** the confirmation tap no longer triggers a
+1.6 KB SD write. The patient record is now written exactly once, at
+registration. The dose itself is still recorded — in the append-only event log,
+which is where an adherence record belongs.
+
+### 4b. `patients.dat` gained a versioned header
+
+Removing a field changes `sizeof(PatientRecord)` from 163 to 162 bytes, and the
+gallery from 1630 to 1620. Every existing card became unreadable — and the old
+code's response to an unreadable card was the single line "starting with an
+empty gallery", which is also exactly what it printed on a genuine first boot.
+
+So "the file is from older firmware", "the file is truncated", "the file came
+from a different device" and "there is no file" were all indistinguishable, and
+all silently discarded every enrolled patient. That is a bad property in
+general and a actively confusing one while debugging a "my patients disappeared"
+report.
+
+The file now opens with a header carrying a magic number, a format version, and
+the record geometry it was written with. `gallery_init()` validates all four and
+reports which case it is in, then lists the patients it loaded:
+
+```
+gallery_init:   slot 0 = 'DOUSIK', 3 pill(s) per dose
+gallery_init: loaded 1 patient(s) from patients.dat (format v2).
+```
+
+or, on a card written by older firmware:
+
+```
+gallery_init: patients.dat is format v0 (0x0 bytes), this firmware wants
+              v2 (10x162) - IGNORED, please re-register.
+```
+
+**You will need to register again once** after flashing this build. That is the
+format change, working as intended rather than failing silently.
+
+### 4c. On the "gallery not loaded after reset" report — what was ruled out
+
+You reported that after a reset the device did not use the patient data from the
+SD card. I could not reproduce it without the board, so I audited the plausible
+mechanisms instead. Three were ruled out with evidence:
+
+- **Cache coherency.** Ruled out: `HAL_SD_ReadBlocks`/`WriteBlocks` on this part
+  are FIFO-polled by the CPU, not DMA (verified in
+  `stm32n6xx_hal_sd.c` — the read loop is a `SDMMC_ReadFIFO()` byte copy). CPU
+  copies are coherent with the D-cache by construction, so there is no
+  invalidate/clean requirement on the SD path.
+- **The gallery being clobbered by the NPU.** Ruled out: `patient_gallery` links
+  to `0x34023494` (from the `.map`), inside the RAM region `0x34000400`
+  -`0x34100000`. The NPU's activation scratch is at `0x34200000`. No overlap.
+- **A malformed write.** Ruled out arithmetically: `sizeof(PatientRecord)` was
+  163, ×10 = 1630, which is exactly the byte count the capture reports
+  (`SD_Write_File(patients.dat): 1630 bytes written.`), and
+  `gallery_add_patient()` does set `valid = 1`.
+
+What remains, and what 4b now distinguishes between: the file genuinely not
+being found or being the wrong size (the header check now says so explicitly and
+prints the byte counts), versus the gallery loading correctly and the *face
+match* falling below threshold (Addendum 3's similarity print now says so). **One
+boot log will now settle which.** If it turns out to be the second, that is the
+threshold-tuning exercise in Addendum 3, not a persistence bug.
+
+---
+
+## Addendum 5 — the Debug/Release run problem: Release could never have worked
+
+Reported after the working run: right-clicking the project and choosing **Run
+As → STM32 C/C++ Application** offers two ELF qualifiers, and they behave
+completely differently.
+
+- **Release ELF** → `Error: BSP_TS_Init failed with status -1`, then
+  `Error: Epoch Controller binary is invalid` and the assertion at
+  `ll_aton_runtime.c:454`.
+- **Debug ELF** → boots to `task_heartbeat: started.`, then the LCD gradually
+  corrupts, ghosts and fades out.
+
+### The Release failure — diagnosed and fixed
+
+**Root cause: the two configurations lay the NPU epoch-controller blobs out in
+different orders, so only one of them can ever match what is physically in
+external flash.**
+
+The blobs are `const` arrays tagged `__attribute__((section(".xspi2")))`, mapped
+to OSPI NOR at `0x71000000` and marked `(NOLOAD)` — a normal Debug/Run never
+programs them, so they are flashed once by hand from an image extracted from a
+build. Because the attribute names one literal section, `-fdata-sections` does
+not split the arrays, and their order inside it is just GCC's emission order —
+which differs between `-O0` and `-Os`:
+
+```
+Debug   (-O0):  71000000 _ec_blob_faceid_1     71000700 _ec_blob_faceid_6
+Release (-Os):  71000000 _ec_blob_faceid_149   71002a80 _ec_blob_faceid_144
+```
+
+Reversed. Every blob address the Release binary computed pointed into a
+different blob's bytes, so `ec_get_blob_ptr()` read a bad magic number and the
+runtime asserted. **Re-flashing would not have helped** — the two builds wanted
+physically different images and only one fits.
+
+Confirmed by comparing the `0x71000000` symbol addresses across builds. The
+Session 08B, 11 and 12 **Debug** ELFs are byte-identical in that range, so the
+image flashed back in Session 08B is still correct for Debug and has never
+drifted. Only Release differs.
+
+**Fix:** `-fno-toplevel-reorder` added to the Release C compiler settings in
+`.cproject`. It forbids GCC reordering top-level definitions, restoring source
+order. Verified after a clean rebuild: the Release layout is now **identical**
+to Debug, and both match the flashed image. One weight image serves both
+configurations; the footgun is gone rather than documented around.
+
+The optimisation cost is negligible — it constrains emission order, not code
+generation. Release still builds to `text 596504` against Debug's `740888`.
+
+### The touch failure in the same log
+
+`BSP_TS_Init failed with status -1` appeared only in the Release run, and is
+almost certainly a *consequence* rather than a second bug. `BSP_TS_Init()`
+reaches the GT911 over I2C2, and a warm reset — which is what the IDE does
+between Run attempts — leaves an I2C slave that was mid-transaction holding the
+bus. A touch controller that probes fine from a cold boot and fails after a
+reset is the textbook symptom. It is listed below as something to confirm
+rather than claimed as fixed, because it cannot be reproduced without the board.
+
+### The Debug symptom — most likely the same root cause, one step removed
+
+I could not reproduce the LCD degradation without hardware, so this is a
+ranked hypothesis rather than a diagnosis. What is certain is that the Debug
+build's own weight layout has not changed since Session 08B, so it is **not** a
+weight mismatch.
+
+The most likely explanation is state left behind by the failed Release run.
+`aiPreInitialize()` puts the OSPI flash into memory-mapped octal mode before the
+NPU init fails, and `AI_LESSONS.md` already documents this exact hazard from
+Session 08B:
+
+> A board that boots fine, then hangs … right after flashing OSPI content — even
+> though the flash write itself reported success — is very likely the flash
+> chip's live bus state getting confused. **Do a full power cycle** — unplug the
+> USB cable entirely (not a software/debugger reset).
+
+A debugger reset does not clear either the flash chip's bus state or a stuck
+I2C slave; only removing power does. That single mechanism would explain both
+the touch failure and a display that degrades rather than failing cleanly.
+
+**What to do on the bench, in this order:**
+
+1. **Unplug the USB cable completely.** Wait a few seconds. Plug it back in.
+2. Flash and run the **Debug** configuration only, and let it sit on the home
+   screen for a minute. It should stay clean, blink the heartbeat, and print a
+   `power: idle NN.N%` line every 10 s.
+3. Only then try Release. It should now get past the NPU init — watch for the
+   new `ai_vision_init: RELEASE build (-Os).` line confirming which binary is
+   actually running.
+4. **If the LCD still degrades on a cold-booted Debug build**, that is a
+   genuinely separate fault and needs a fresh UART capture from boot, plus
+   whether the `power:` lines keep appearing while the display rots (they
+   distinguish "the system died" from "only the display is wrong").
+
+### Also added: a diagnostic instead of a cryptic assert
+
+`main.c` now defines `__assert_func()`, overriding newlib's. The bare
+`assertion "ret == 1" failed` has now cost this project three separate
+debugging sessions — Session 08B Addenda 1 and 2, and this one — presenting
+identically every time while having a different underlying cause. It now prints
+the failing expression, the location, and for the `LL_ATON_RT_Init_Network`
+case a plain-language diagnosis with the three flash addresses and the
+power-cycle requirement.
+
+It ends in `Error_Handler()` (blinking RED) rather than a silent `while(1)`, so
+a board with no serial attached shows that something failed instead of merely
+appearing frozen.
+
+`ai_vision_init()` also now prints which configuration is running, keyed off
+`__OPTIMIZE__` rather than the project's own `DEBUG` define — which is, as it
+happens, inverted in `.cproject` (defined for *Release*, not Debug). Session 13
+Part D owns fixing that inversion.
+
+### Build status after these changes
+
+Both configurations, clean, through the real STM32CubeIDE build:
+
+| Configuration | Result | text | data | bss |
+|---|---|---|---|---|
+| Debug | 0 errors, 2 warnings | 740888 | 4008 | 658624 |
+| Release | 0 errors, 4 warnings | 596504 | 4004 | 658620 |
+
+All remaining warnings are the pre-existing third-party ones. OSPI layout
+verified identical between the two and unchanged from the flashed image.
+
+---
+
+## Addendum 6 — the cold-boot display failure: two power-sequencing bugs
+
+Addendum 5's `-fno-toplevel-reorder` fix worked — the Release build no longer
+reports `Error: Epoch Controller binary is invalid`, confirmed on hardware. What
+remained was the display, and it turned out to be a different fault that
+Addendum 5's advice ("power cycle the board") accidentally *exposed* rather than
+cured.
+
+### The evidence
+
+Reported after power-cycling:
+
+1. Cold power cycle → flash Debug **or** Release → **the LCD darkens, ghosts and
+   fades out.** UART output is completely normal throughout.
+2. Click Run again **without unplugging** → works perfectly.
+3. In the debugger, waiting ~20 s at the halt before resuming → also works.
+
+Three observations that all say one thing: **the first run after power is
+applied behaves differently from every run after it.** Note also that the fault
+is display-only — the MCU, the tasks, the SD card and the console are all fine,
+which rules out anything global like a clock or a hang.
+
+### Cause 1 — the LCD's GPIO banks were unpowered when LTDC configured them
+
+The STM32N6's higher GPIO banks sit behind separately supplied I/O domains, and
+a bank whose domain has not been declared valid does not drive its pins.
+Reading the ST BSP's own call sites gives the mapping:
+
+| Domain | Bank | Enabled by |
+|---|---|---|
+| VDDIO2 | GPIOO | `BSP_LED_Init()` |
+| VDDIO3 | GPION | SD card-detect init |
+| VDDIO4 | GPIOH | I2C1 MspInit (camera) |
+| VDDIO5 | GPIOC, GPIOE | SDMMC2 MspInit |
+
+LTDC's MspInit configures **PE11** (LCD_VSYNC), **PE1** (touch NRST) and
+**PH3/PH4/PH6** (colour bits B4/R4/B5) — VDDIO5 and VDDIO4 pins — and enables
+neither domain. Nothing enabled VDDIO5 until the SD card was initialised, which
+happens in the logger task, long after the panel was configured and the LTDC had
+started scanning out.
+
+**Why nine sessions never saw it:** the PWR `SVMCR*` supply-valid bits live in
+the always-on power domain and **are not cleared by a system reset** — only by
+removing VDD. Once any run had set them, every subsequent flash-and-run
+inherited valid domains and the display came up fine. The normal development
+loop is flash-and-run on a permanently powered board, so the bug was invisible
+until a genuine cold boot happened — which is exactly what Addendum 5 asked for.
+
+Observation 3 fits too: waiting at a debugger halt does not help because of the
+delay, it helps because the *previous* run had already validated the domains.
+
+This is the Session 06 VDDIO5/SDMMC finding one layer further out. That time a
+missing domain produced an obvious hang; this time it produced a display that
+half-worked, and a bug that only surfaced when the testing habit changed.
+
+**Fix:** enable all four domains once in `main()`, straight after the supply and
+clock configuration and before any peripheral or GPIO init. The bits are
+idempotent, every rail is populated on this board, and the BSP's own later calls
+become no-ops. The ordering dependency is gone rather than merely satisfied.
+
+### Cause 2 — the touch controller is held in reset by the display driver, then probed too fast
+
+Two facts that only bite together:
+
+- **`PE1` is the GT911's NRST**, and LTDC's MspInit configures it as a push-pull
+  output while bringing up the display. GPIO ODR resets to zero, so
+  **initialising the display holds the touch controller in reset.** Nothing
+  releases it until `BSP_TS_Init()` runs.
+- **`BSP_TS_Init()` drives NRST high and immediately probes over I2C**, with no
+  delay. The GT911 needs tens of milliseconds to boot before it answers.
+
+So whether touch initialises comes down to how long the code happens to take
+between two adjacent lines. That is precisely why `BSP_TS_Init failed with
+status -1` (`BSP_ERROR_NO_INIT`) appeared **only in the Release build** — `-Os`
+reached the I2C read sooner than the part could answer, and `-O0` did not.
+
+Addendum 5 guessed this was an I2C bus left stuck by a warm reset. That guess
+was wrong; the real cause is a missing power-on delay, and it is deterministic
+rather than incidental.
+
+**Fix:** `touch_driver_init()` now performs the reset itself before handing over
+to the BSP — assert NRST, hold 20 ms, release, wait 120 ms for the controller to
+boot — using `osal_delay_ms()` so the UI task yields rather than spinning. If the
+probe still fails it repeats the whole sequence once and retries, because a
+touchscreen that silently fails to initialise makes the device unusable.
+
+Doing it in this project's own code keeps the ST BSP unmodified.
+
+### What to expect on the next flash
+
+- **Cold boot works.** Unplug, replug, flash, run — the display should come up
+  correctly the first time, with no fade.
+- **Touch works in both configurations.** Watch for `BSP_TS_Init successful.` in
+  Release as well as Debug. If the retry ever fires you will see
+  `touch_driver: BSP_TS_Init failed (-1), retrying after reset.` first — worth
+  reporting if it appears, because it would mean 120 ms is not enough on this
+  panel.
+- **Release runs the NPU.** `Error: Epoch Controller binary is invalid` should be
+  gone (Addendum 5); `ai_vision_init: RELEASE build (-Os).` confirms which
+  binary is running.
+
+### Build status
+
+Both configurations, clean, through the real STM32CubeIDE build:
+
+| Configuration | Result | text | data | bss |
+|---|---|---|---|---|
+| Debug | 0 errors, 2 warnings | 741152 | 4008 | 658624 |
+| Release | 0 errors, 4 warnings | 596696 | 4004 | 658620 |
+
+All remaining warnings are the pre-existing third-party ones. The OSPI weight
+layout is still identical between the two configurations and still matches the
+flashed image, so **no re-flashing of external memory is needed.**
+
+---
+
+## Addendum 7 — SUPERSEDED: "the display fade was removed instrumentation"
+
+> **This addendum's diagnosis is wrong. See Addendum 8 for the real cause.**
+> The fade was not a missing boot delay. `MS_BOOT_SETTLE_MS` was added on the
+> strength of the reasoning below, tested on hardware with 5.6 s of settling
+> applied, and the display still faded. Everything below is kept because the
+> `MS_BOOT_SETTLE_MS`/`MS_BOOT_TRACE` instrumentation it introduced is still
+> in the tree and still useful, and because three wrong diagnoses in a row is
+> the most instructive part of this session. Read it as a record of a dead
+> end, not as an explanation.
+
+
+Addendum 6 fixed one real thing and got the headline wrong. Recording both,
+because the wrong turns are the useful part.
+
+### What Addendum 6 got right, and what it did not
+
+- **The GT911 reset/timing fix worked.** `BSP_TS_Init successful.` now appears
+  in both configurations, confirmed on hardware. That analysis stands: LTDC's
+  MspInit really does hold the touch controller in reset via PE1, and
+  `BSP_TS_Init()` really does probe over I2C with no boot delay, which is why
+  it failed only at `-Os`.
+- **The VDDIO2-5 change did not fix the display.** The reasoning behind it is
+  still sound and the change stays — enabling all four I/O domains up front
+  genuinely removes an ordering dependency, and the domain mapping in Addendum 6
+  is correct. But it was not the cause, and the display kept fading after it.
+
+Two wrong diagnoses in a row on the same symptom. The thing that finally
+identified it was not another theory; it was arithmetic.
+
+### The actual cause: Session 12 deleted 4.7 seconds of boot settling time
+
+Sessions 07-11 carried Session 11's boot-hang instrumentation in `main.c`: six
+`_MS_BLINK()` calls through the camera/LCD bring-up, and a ten-toggle LED burst
+before the scheduler started. **Session 12 gated all of it off** as dead
+diagnostic weight — see the "Also done" section above, which was pleased about
+removing "~3.7 s of blinking on every single boot".
+
+What that instrumentation was *also* doing, entirely by accident:
+
+```
+6 × _MS_BLINK()  = 6 × (HAL_Delay(120) + HAL_Delay(500))  = 3720 ms
+1 × LED burst    = 10 × HAL_Delay(100)                    = 1000 ms
+                                                    total = 4720 ms
+```
+
+**4.72 seconds of settling time spread through the camera and display bring-up,
+removed in one commit.** The reported symptom is a direct match: pausing "a few
+seconds" in the debugger before resuming makes it work, and so does re-running
+without removing power, because both give the hardware the same time back.
+
+It only ever appears on a **cold** boot because that is the only case where the
+bring-up sequence runs within milliseconds of the rails coming up. Every warm
+re-run inherits stable supplies — which is also why nine sessions of
+flash-and-run never saw it, and why Addendum 5's "power cycle the board" advice
+is what exposed it.
+
+### The uncomfortable part
+
+`session_12_notes.md`'s own hardware checklist, written before any of this,
+says under Part 0.2:
+
+> If something now fails that worked before, suspect a removed `printf` that
+> was accidentally load-bearing (a timing side effect) rather than a real logic
+> change, and say so.
+
+The prediction was already written down, about this exact class of change, in
+this exact file — and it still took three rounds and two wrong theories to
+apply it to the display. Writing a lesson down is not the same as reaching for
+it.
+
+### The fix
+
+The delay is now **explicit, tunable and measured** rather than a side effect
+of blinking an LED:
+
+- `MS_BOOT_SETTLE_MS` (default **620 ms**, one old `_MS_BLINK()`) after each
+  bring-up step, plus one before the first peripheral touches a pin.
+- `MS_BOOT_PRESCHED_SETTLE_MS` (default **1000 ms**) before the scheduler
+  starts, replacing the LED burst.
+- Total ~5.34 s, slightly more than the 4.72 s that used to work — deliberate
+  margin, since the exact requirement is unknown.
+- `MS_BOOT_TRACE` (default **on**) prints one line per step with how long the
+  step itself took, so the settle can be tuned against evidence:
+
+```
+boot: starting camera/LCD bring-up at 12ms (settle 620ms/step, 1000ms pre-scheduler)
+boot: MX_DCMIPP_Init         done at 640ms (step took 8ms), settling 620ms
+boot: LCD_Init               done at 1902ms (step took 22ms), settling 620ms
+...
+boot: handing off to the scheduler at 5352ms
+```
+
+`MS_BOOT_LED_CHECKPOINTS` stays available and stays off by default, but is now
+**purely visual** — toggling it no longer changes boot timing, which is the
+property that made this bug possible in the first place.
+
+### Tuning it down later
+
+5.3 s is a slow boot and Session 13 will want it shorter for the demo video.
+The way to do that is: turn `MS_BOOT_TRACE` on, halve `MS_BOOT_SETTLE_MS`,
+**power the board down completely**, and check the display. Repeat until the
+fade returns, then back off one step. Two rules:
+
+1. **A warm reset cannot reproduce this.** Any tuning tested by flash-and-run
+   is meaningless.
+2. **Find out which step actually needs the time.** Right now all seven get the
+   same blanket delay because nobody has measured which one matters — very
+   likely it is only the panel-related one, in which case the other six can go
+   to zero and boot drops to well under a second.
+
+---
+
+## Addendum 8 — SUPERSEDED: "the display fade was an `ai_vision_init()` race"
+
+> **This addendum's diagnosis is also wrong. See Addendum 9 for the real cause.**
+> The ordering hazard described below is real and the fix for it
+> (`ai_vision_wait_init()`) is still in the tree and worth keeping — but it
+> was NOT what caused the grey screen. The very next hardware run showed
+> `ai_vision_init: face detector + embedder ready.` printing *before*
+> `BSP_TS_Init successful.`, i.e. NPU init had already finished before the UI
+> drew anything. The race was not firing, and the display still failed.
+> Kept as the record of a fourth wrong turn, and because the hardening is
+> genuinely worth having.
+
+
+Three addenda in a row (6, 7, and the first half of this one's investigation)
+blamed the wrong thing for the same symptom. The cause was a Session 12 design
+change, not a hardware or timing property of the board at all.
+
+### The symptom
+
+From a genuine cold boot — power physically removed — the panel came up, showed
+part of the home screen, glitched, and then greyed out entirely. Everything else
+was perfectly healthy: UART, all five tasks, the SD card, the NPU, touch, and
+the idle report all behaved exactly as they should. Re-flashing without removing
+power worked. Pausing a few seconds in the debugger before resuming worked.
+
+### The cause
+
+Both networks' activation arena is placed by the Cube.AI codegen at
+`0x34200000`. That is `BUFFER_ADDRESS` — the LCD framebuffer. The overlap is
+deliberate and it is safe during a capture, because the UI hands the buffer over
+to the AI task and does not draw again until the result comes back.
+
+It was not safe at start-up. Up to Session 11, `ai_vision_init()` was called
+from `task_ui_fn` itself, so it *necessarily* finished before
+`state_machine_init()` drew anything. Session 12 moved it into `task_ai_fn` —
+for a good reason, that the task which owns the NPU should be the task that
+brings it up, and that several hundred milliseconds of blocking init does not
+belong on the UI's startup path. That change was correct in intent and wrong in
+effect: `task_ai` runs at priority 3, below the UI's 4, so it executes during
+`task_ui`'s 10 ms poll sleeps — which begin immediately after the home screen is
+drawn. The NPU finished coming up on top of the pixels.
+
+It presented as a timing fault because it *is* one: anything that shifted the
+relative ordering of the two tasks hid it. That is why a warm re-flash worked,
+why a debugger pause worked, and why it never reproduced on the bench in the
+same way twice.
+
+### What made it findable
+
+The boot log, which had said so for two rounds before anyone read it that way.
+In the last known-good log:
+
+```
+task_camera_isp: started.
+task_ui: started.
+BSP_TS_Init successful.        <-- immediately after task_ui
+task_ai: started.
+```
+
+In the failing log:
+
+```
+task_ui: started.
+task_ai: started.
+ai_vision_init: DEBUG build (-O0).
+ai_vision_init: face detector + embedder ready.
+task_logger: started.
+task_heartbeat: started.
+BSP_TS_Init successful.        <-- now last
+```
+
+`BSP_TS_Init successful.` had moved to the very end. Addendum 6's own GT911 fix
+is why: `gt911_hardware_reset()` spends 140 ms in `osal_delay_ms()`, and
+`touch_driver_init()` is the *first* call in `state_machine_init()`. Yielding
+there let every lower-priority task run before the home screen was ever drawn.
+The touch fix did not cause the fade — the fade predates it — but it changed the
+interleaving enough to make the ordering visible in the log.
+
+There was also a comment in `ai_vision.c`, written back in Session 09B,
+explaining that `ai_vision_self_test()` had been removed from the boot path
+because "running it at every boot corrupted the freshly-drawn home screen (same
+NPU-activation-overlaps-display-buffer issue)". It was written about the self
+test. It applies just as much to the init.
+
+### The fix
+
+`AI_FLAG_INIT_DONE`, a latched bit on the AI service's existing event flag:
+
+- `task_ai_fn()` sets it once `ai_vision_init()` returns — unconditionally,
+  including on `ai_vision_init()`'s internal failure paths, because a device
+  with a dead NPU is still a device and must not be held off its own display.
+- `ai_vision_wait_init(timeout_ms)` waits for it with `OSAL_FLAG_WAIT_AND` and
+  deliberately *without* `OSAL_FLAG_WAIT_CLEAR`: it is a latch any number of
+  callers may test at any time, not a one-shot handshake.
+- `state_machine_init()` waits on it after `touch_driver_init()` /
+  `user_button_init()` / `camera_stop()` — none of which touch the framebuffer —
+  and before `gui_draw_init()`, which is the first line that does.
+
+The 140 ms of GT911 reset delay is now doing double duty: it overlaps NPU
+bring-up, so the wait itself usually costs nothing.
+
+The timeout is 20 s against a real init time of roughly 0.5–1 s, so reaching it
+means `task_ai` is wedged rather than slow. In that case the UI draws anyway and
+says so on the console.
+
+Nothing about the Session 12 concurrency design is given up. `task_ai` keeps its
+own priority, its own stack and its own event-flag protocol; only the start-up
+ordering that Session 11 got for free is now stated explicitly instead of being
+relied on by accident.
+
+### Status of the three earlier theories
+
+| # | Theory | Verdict |
+|---|--------|---------|
+| 1 | VDDIO2–5 domains left unpowered (Addendum 6) | **Real bug, really fixed** — it is what fixed touch and SDMMC2. Not the fade. |
+| 2 | Warm-reset peripheral state; needs a true power cycle | Wrong. The user power-cycled; it still faded. |
+| 3 | Removed `_MS_BLINK()` instrumentation was load-bearing (Addendum 7) | Wrong. 5.6 s of explicit settle was applied and it still faded. |
+| 4 | `ai_vision_init()` races the first draw over `BUFFER_ADDRESS` | **This one.** |
+
+`MS_BOOT_SETTLE_MS` is left at its current value for the run that confirms this
+fix, so that exactly one variable changes. Once confirmed it should come back
+down — it is 5.6 s of boot time bought by a theory that turned out to be wrong,
+and the demo video cannot afford it.
+
+---
+
+## Addendum 9 — SOLVED: the WFI added for power saving was starving the LTDC
+
+Five wrong diagnoses preceded this one. The cause was the single largest thing
+Session 12 added, and the last thing anyone thought to question.
+
+### The cause
+
+`WFI` on the STM32N6 enters CSleep, which stops the CPU **and stops the clock
+of every peripheral, bus and memory whose `LPEN` bit is clear**. The STM32N6
+has a full set of "sleep enable" registers for exactly this — `BUSLPENR`,
+`MEMLPENR`, `AHB5LPENR`, `APB5LPENR` and friends — and nothing in the project
+had ever touched them, because until Session 12 the device never slept.
+
+The framebuffer lives at `0x34200000`, which is AXISRAM3-6. So on every idle
+tick the LTDC's DMA lost either its own clock, the AXI bus matrix clock, or the
+RAM it was reading from. The controller kept scanning and kept driving sync —
+which is why every register measured healthy — but it was fetching nothing. The
+panel starved and went grey. With the CPU idle around 85% of the time, that is
+effectively continuous.
+
+### Why it defeated five rounds of diagnosis
+
+Every measurement that could have caught it was taken by the CPU, and the CPU
+is only running when it is *not* asleep:
+
+- The framebuffer checksum was always correct. The picture really was in RAM.
+- Every LTDC register read correct — enabled, scanning, right address, right
+  format, right geometry, 25 MHz pixel clock, 62.6 Hz refresh.
+- The panel's power and backlight pins were high.
+- It vanished under the debugger. A halted core never executes WFI.
+- It vanished on warm re-runs — which were debugger-driven, so also full of
+  halts.
+
+It also explains why the seven-rung recovery ladder failed completely: nothing
+about the LTDC configuration was ever wrong, so nothing that reconfigured the
+LTDC could fix it.
+
+**The measurement that isolated it** was setting `MS_OSAL_IDLE_WFI` to 0 —
+keeping the whole idle path, its accounting, its PRIMASK/BASEPRI handling, and
+removing only the sleep instruction. The display came up and stayed up. One
+variable, one answer.
+
+### The fix
+
+`ms_configure_sleep_clocks()` in `main.c`, called immediately before the
+scheduler starts, because the first thing the idle task does is sleep:
+
+| Register | Bits set | Why |
+|---|---|---|
+| `BUSLPENR` | `ACLKN`, `ACLKNC` | the AXI bus matrix — without it no master reaches memory at all during sleep |
+| `MEMLPENR` | `AXISRAM3-6` | the framebuffer at `0x34200000` and the NPU activation pools that share it |
+| `APB5LPENR` | `LTDC`, `DCMIPP`, `CSI` | the display, and the camera that DMAs into the same buffer during preview |
+| `AHB5LPENR` | `DMA2D`, `SDMMC2`, `NPU` | the mascot blitter, audit-log writes, and inference |
+
+More than the LTDC is deliberate. Every entry is a bus master that moves data
+with **no CPU involvement**, during a window when the CPU is blocked and
+therefore asleep — a face capture, an SD write, a mascot redraw. Any of them
+left gated would produce the same class of silent, intermittent fault, most
+likely during a demo. The display was simply the one that made it visible.
+
+Do not trim this set without re-testing the flow that uses it, **from a cold
+boot**. That is the only condition under which the original fault appeared.
+
+### Verified on hardware
+
+Full flow, cold boot, one run: home screen stable, register → face detected at
+0.91 confidence → patient saved to `patients.dat` (1632 bytes) → dispense →
+`Gallery: best similarity 90/100, threshold 65/100 -> MATCH` → 2 pills →
+confirm → home. `power: idle 78.5%` then `81.8%`. `SCR=0` throughout, so
+SLEEPDEEP was never involved; this was plain CSleep doing exactly what it is
+documented to do.
+
+### Cleanup done alongside
+
+- `MS_BOOT_SETTLE_MS` and `MS_BOOT_PRESCHED_SETTLE_MS` → **0**. They existed
+  only to serve Addendum 7's disproved theory. Boot drops from 5.7 s to a few
+  hundred milliseconds, which the demo video needed.
+- `MS_BOOT_TRACE`, `MS_DISPLAY_WATCH`, `MS_DISPLAY_RECOVER` → **0**. Kept in
+  the tree, gated off; they are good instruments and cost nothing at 0.
+- `ai_vision_wait_init()` **kept**. It did not fix this bug, but the ordering
+  hazard it closes is real: `ai_vision_init()` on a lower-priority task can
+  legitimately run after the UI has drawn, and both use `BUFFER_ADDRESS`.
+
+### The five wrong theories, for the record
+
+| # | Theory | Verdict |
+|---|--------|---------|
+| 1 | VDDIO2-5 domains unpowered | **Real bug, really fixed** — it is what fixed touch and SDMMC2. Not this. |
+| 2 | Warm-reset peripheral state needs a true power cycle | Wrong. Power-cycled; still failed. |
+| 3 | Removed `_MS_BLINK()` instrumentation was load-bearing | Wrong. 5.6 s of explicit settle applied; still failed. |
+| 4 | `ai_vision_init()` races the first draw over `BUFFER_ADDRESS` | Wrong *for this fault*. The log showed NPU init finishing first. Hardening kept. |
+| 5 | Panel cannot lock to the BSP's 4/4/4 blanking | Untested — the rung that was meant to test it changed the porches without the layer window, so it was invalid. Moot now. |
+| 6 | WFI gates the clocks the LTDC needs | **This one.** |

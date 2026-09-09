@@ -17,18 +17,41 @@ This board alone covers camera, display, **touch input**, storage, and debug —
 separate dev board or added touch hardware needed for the electronics core. The touch
 panel is a driver/software task (Session 05), not a wiring task.
 
-## 2. Dispensing Hardware: NOT Built — Design Intent Only
+## 2. Dispensing Hardware: One Hopper Being Built (Session 14)
 
-**This section previously specified real BOM items (stepper motors, ULN2003 driver
-boards, IR break-beam sensors, a shared motor power rail) to be physically wired to
-the DK board.** That physical-build plan was cut entirely — see
-`MASTER_PROJECT_PLAN.md`'s Changelog and `prompts/session_10.md`'s "Hardware decision
-(FINAL): No physical motors/servos/IR sensors are interfaced." The contest-submitted
-prototype dispenses via an on-screen simulation only. **None of the hardware in the
-table below is purchased, wired, or driven by firmware in this project — it documents
-the mechanism a real future product would use**, kept here (and in
-`MECHANICAL_DESIGN.md`, illustrated via `RAGNAR_CAD_PROMPT.md`'s 3D renders) purely as
-submission material explaining the design intent.
+**Status changed in v11 of `MASTER_PROJECT_PLAN.md` — read the history, because
+this section said the opposite for three sessions.** The physical build was cut
+in v8 on the grounds that it was not achievable solo before the deadline;
+Sessions 10-13 were therefore built as a software-only simulation, and every
+document gained a firm "no motors, ever" banner. A teammate able to design and
+build the hardware has since joined, so **Session 14 builds a real
+single-hopper turntable dispenser**: an actuator that singulates pills onto a
+chute, and an IR break-beam sensor that **counts each pill as it physically
+drops**, so the actuator stops on a real count rather than a timer.
+
+What is being built and what is not:
+
+- **Built (Session 14):** one hopper, one actuator, one IR counter.
+- **Still design intent:** the 6-8 independently addressable hopper
+  architecture in `MECHANICAL_DESIGN.md`, illustrated by
+  `RAGNAR_CAD_PROMPT.md`'s renders. The firmware keeps the dispense API clean
+  enough that adding a `hopper_id` would be additive, not a rewrite.
+
+**The actuator is a 28BYJ-48 unipolar stepper driven through a ULN2003**, which
+is exactly what the table below and `MECHANICAL_DESIGN.md` already specify — so
+no correction is needed there, only the removal of the "not built" framing.
+Four GPIO lines drive the coils directly in a half-step sequence; there is no
+STEP/DIR driver IC. The motor is open-loop and stalls silently, which is
+precisely why the count comes from the sensor and never from the step count.
+
+**The IR break beam is hand-built from discrete parts** rather than a packaged
+module: an IR emitter LED and an IR receiver facing each other across the pill
+chute, each with its series/pull-up resistor. `prompts/session_14.md` Part 0
+covers what that means for firmware — chiefly that the idle polarity must be
+measured rather than assumed, that the edge will be noisier than a datasheet
+would suggest, and that ambient IR can saturate the receiver.
+
+The motor rail needs its own 5 V supply with grounds tied to the board's.
 
 | Component (not built) | Would be used for | Would interface via |
 |---|---|---|
@@ -47,9 +70,11 @@ The only peripheral actually added to the DK board for this project is:
 - Ethernet (on-board but never initialized — zero-network requirement)
 - USB Host/Device data functions beyond ST-LINK debug/flash
 - Any wireless module — none is added to this BOM
-- Any dispensing actuator hardware (motors, servos, IR sensors) — see §2 above; this
-  is a firm decision, not a "not yet," and no future session in this project's plan
-  (Sessions 01-13, the full current plan) adds it back
+- ~~Any dispensing actuator hardware~~ — **no longer true as of v11.** See §2:
+  Session 14 interfaces one actuator and one IR sensor. This bullet is left in
+  place, struck through, because three sessions' worth of documents and prompts
+  cite it as a firm rule and a reader needs to see that it was deliberately
+  superseded rather than forgotten.
 
 ## 4. Debug Interface
 

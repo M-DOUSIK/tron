@@ -1,6 +1,13 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:150:13:To_Shift_Multiplier	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:167:17:From_Shift_Multiplier	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:175:16:To_CConv_Reg	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:185:16:From_CConv_Reg	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:195:16:GetAvgStats	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:235:13:SetStatConfig	2
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:227:13:ReadStatHistogram	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:235:13:SetStatConfig	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:243:32:GetNextStatStage	20
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:364:32:GetStatCycleStart	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:399:32:GetStatCycleEnd	2
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:434:9:LuminanceFromRGB	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:440:9:LuminanceFromRGBMono	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:456:19:ISP_SVC_ISP_SetDemosaicing	13
@@ -14,7 +21,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Libr
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:821:19:ISP_SVC_ISP_GetBadPixel	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:851:19:ISP_SVC_ISP_SetBlackLevel	6
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:894:19:ISP_SVC_ISP_GetBlackLevel	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:922:19:ISP_SVC_ISP_SetGain	15
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:922:19:ISP_SVC_ISP_SetGain	9
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:965:19:ISP_SVC_ISP_GetGain	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:992:19:ISP_SVC_ISP_SetColorConv	10
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1055:19:ISP_SVC_ISP_GetColorConv	3
@@ -47,7 +54,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Libr
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1641:19:ISP_SVC_IQParam_Init	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1655:21:ISP_SVC_IQParam_Get	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1668:6:ISP_SVC_Stats_Init	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1680:6:ISP_SVC_Stats_Gather	55
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1680:6:ISP_SVC_Stats_Gather	36
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1909:19:ISP_SVC_Stats_ProcessCallbacks	10
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1955:19:ISP_SVC_Stats_GetLatest	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1981:19:ISP_SVC_Stats_GetNext	8

@@ -1,10 +1,9 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:1001:13:UARTEx_SetNbDataToProcess	2
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:166:19:HAL_RS485Ex_Init	30
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:272:13:HAL_UARTEx_WakeupCallback	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:287:13:HAL_UARTEx_RxFifoFullCallback	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:302:13:HAL_UARTEx_TxFifoEmptyCallback	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:387:19:HAL_MultiProcessorEx_AddressLength_Set	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:425:19:HAL_UARTEx_StopModeWakeUpSourceConfig	29
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:425:19:HAL_UARTEx_StopModeWakeUpSourceConfig	28
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:480:19:HAL_UARTEx_EnableStopMode	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:499:19:HAL_UARTEx_DisableStopMode	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:518:19:HAL_UARTEx_EnableFifoMode	24
@@ -15,3 +14,5 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:834:19:HAL_UARTEx_ReceiveToIdle_IT	6
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:892:19:HAL_UARTEx_ReceiveToIdle_DMA	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:959:29:HAL_UARTEx_GetRxEventType	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:983:13:UARTEx_Wakeup_AddressConfig	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_uart_ex.c:1001:13:UARTEx_SetNbDataToProcess	2

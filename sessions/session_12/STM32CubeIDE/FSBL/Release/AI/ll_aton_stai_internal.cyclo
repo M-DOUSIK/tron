@@ -13,5 +13,6 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_inte
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:321:6:__ll_aton_stai_deinit_network_instance	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:330:6:__ll_aton_stai_set_execution_status	4
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:352:18:__ll_aton_stai_get_execution_status	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:359:13:__ll_aton_stai_run_synchonously	3
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:383:18:__ll_aton_stai_reset	6
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:403:18:__ll_aton_stai_run	9
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_aton_stai_internal.c:403:18:__ll_aton_stai_run	7

@@ -1,4 +1,5 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:6:6:touch_driver_init	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:25:6:touch_driver_get_touch	5
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:40:6:user_button_init	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:45:6:user_button_is_pressed	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:32:13:gt911_hardware_reset	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:55:6:touch_driver_init	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:87:6:touch_driver_get_touch	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:102:6:user_button_init	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:107:6:user_button_is_pressed	1

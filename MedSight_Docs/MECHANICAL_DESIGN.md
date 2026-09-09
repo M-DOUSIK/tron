@@ -1,16 +1,29 @@
 # MECHANICAL_DESIGN.md — MedSight Dispensing Mechanism
 
-> **STATUS: DESIGN INTENT ONLY — NOT BUILT, NOT WIRED TO FIRMWARE.** Everything below
-> describes the dispensing mechanism a real, future MedSight product would use. It was
-> originally scoped to be physically built (2–3 hoppers) for the contest demo; that
-> physical-build plan was **cut entirely** — see `MASTER_PROJECT_PLAN.md`'s Changelog
-> and `prompts/session_10.md`'s "Hardware decision (FINAL): No physical motors/
-> servos/IR sensors are interfaced." The contest-submitted prototype dispenses via an
-> on-screen simulation only (Session 10). This document is retained as submission
-> material — illustrated via `RAGNAR_CAD_PROMPT.md`'s 3D renders and referenced from
-> Session 13's `DESIGN_PROTOTYPE.md` deliverable — explaining the design intent, not
-> as instructions for anything actually built in this project. Read it as "here is
-> what we'd build next," not "here is what Session 10 does."
+> **STATUS: ONE HOPPER IS BEING BUILT (Session 14). The rest stays design intent.**
+>
+> This document's history, because it has said three different things:
+> it originally specified a 2–3 hopper physical build; `MASTER_PROJECT_PLAN.md`
+> v8 cut that entirely and the document was banner-ed "NOT BUILT" while
+> Sessions 10–13 ran on a software simulation; v11 restored a **single hopper**
+> once a hardware teammate joined.
+>
+> **What is being built:** exactly the mechanism described below, at one hopper
+> — a 28BYJ-48 stepper turning a turntable that singulates pills past an IR
+> break-beam counter. §3's reasoning about why a break-beam and not a gate is
+> the direct justification for the closed-loop design in
+> `prompts/session_14.md`. **The specification below is correct; build it.**
+>
+> **What remains design intent:** the 6–8 independently addressable hopper
+> architecture, the per-hopper duplication, and the multi-medication data
+> model. Those stay illustrated by `RAGNAR_CAD_PROMPT.md`'s renders and
+> referenced from Session 13's `DESIGN_PROTOTYPE.md`, not built.
+>
+> **One correction to the text below:** it says a `dispenser.c` exposing
+> `dispense_dose(hopper_id, count)` "was never built". Session 14 builds
+> `dispenser.c` for real, with a single-hopper signature deliberately kept
+> clean enough that adding `hopper_id` would be additive rather than a
+> rewrite.
 
 ## 1. Scope Change: Multi-Hopper, Multi-Patient Device
 

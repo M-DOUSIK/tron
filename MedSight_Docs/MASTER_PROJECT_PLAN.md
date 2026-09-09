@@ -53,21 +53,26 @@ contest-submitted form it:
 - **Not** cloud-connected. No Wi-Fi stack, no network peripheral bring-up, ever, in any
   session. If a future session tempts you to add connectivity, that's scope creep —
   reject it.
-- **Not** physically dispensing pills in this prototype. `MECHANICAL_DESIGN.md`
-  documents the mechanism a real product would use, and `RAGNAR_CAD_PROMPT.md`
-  generates 3D renders of it for the submission — neither is built, wired, or driven
-  by firmware. This is a firm decision (see §8 and the Changelog), not a "not yet" —
-  if a future session prompt or contributor suggests interfacing a motor, servo, or
-  IR sensor, that's scope creep — reject it, same as the cloud-connectivity rule above.
+- **Not** a multi-hopper dispenser. **Superseded in part — read this carefully.**
+  Sessions 10-13 were built as a software-only simulation because the physical
+  build was not achievable solo before the deadline. That constraint changed
+  when a teammate able to design and build the hardware joined, so **Session 14
+  builds a real single-hopper stepper turntable with an IR pill counter** (see
+  the v11 Changelog entry). What remains out of scope is the *6-8 hopper*
+  architecture in `MECHANICAL_DESIGN.md`, which stays documented design intent.
+  Note also that physical dispensing was never in the originally submitted
+  Program Plan at all — that described a camera-only verification device — so
+  Session 14 is scope *added* beyond what was promised, not restored.
+  **The no-networking rule above is not affected and never will be.**
 
 ## 3. Timeline (Aug 8 → Sep 30, 2026 ≈ 7.5 weeks)
 
-One session ≈ one focused evening/weekend block. **13 session files total, Session 01
-through Session 13 — this is the complete, final plan.** (Session 08 split into
+One session ≈ one focused evening/weekend block. **15 session files total, Session 01
+through Session 15 — this is the complete, final plan.** (Session 08 split into
 08A/08B for risk management — 08C, action recognition, was planned but never run, see
-§8. No optional post-submission stretch sessions remain in the plan; see the
-Changelog for what was dropped and why.) Roughly 2–3 sessions per week, with slack for
-the known "boss fight" sessions (08A/08B AI, 11 µT-Kernel migration).
+§8. Sessions 14 and 15 were added in v11 when a hardware teammate joined; see the
+Changelog.) Roughly 2–3 sessions per week, with slack for the known "boss fight"
+sessions (08A/08B AI, 11 µT-Kernel migration, 14 hardware bring-up).
 
 | Week | Sessions | Focus |
 |---|---|---|
@@ -80,31 +85,43 @@ the known "boss fight" sessions (08A/08B AI, 11 µT-Kernel migration).
 | 6 | 10 | Simulated dispense flow: face gate → on-screen dispense animation → manual "✓ I Took It" confirmation (no physical actuators — see §6) |
 | 6–7 | 11 | µT-Kernel 3.0 migration (contest compliance gate) — done |
 | 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory — **done, see `milestones/session_12_notes.md`** |
-| 7–8 | 13 | Final polish, demo video, contest documentation packaging (last session in the plan) |
+| 7–8 | 13 | UI/UX overhaul: one visual system, the framebuffer glitch, mascot states, contest documentation packaging |
+| 8 | 14 | Physical dispensing hardware: 28BYJ-48 stepper turntable + hand-built IR break-beam pill counter, closed-loop count (with the hardware teammate) |
+| 8 | 15 | Program Plan reconciliation, highest-value remaining feature, submission materials (last session in the plan) |
 
-If Session 08B or 11 overruns, cut scope from Session 13 first — never ship without a
-successful µT-Kernel migration (Session 11 is the actual contest requirement).
+**Cut order if time runs short**, most-expendable first: Session 15's optional
+feature work (Part B) → Session 14's physical hardware (the simulated dispense
+path is deliberately kept working precisely so this cut stays available) →
+Session 13's visual polish. **Never** cut the µT-Kernel migration or the
+third-party inventory: Session 11 satisfies contest rule 1.1 and Session 12's
+`THIRD_PARTY_SOFTWARE.md` satisfies rule 1.3. Those two are the requirements;
+everything else is evaluation criteria.
 
 ## 4. Execution Workflow (repeats every session)
 
-1. You open the saved project from the previous session's folder (`tron/session_NN/`).
+1. You open the saved project from the previous session's folder
+   (`sessions/session_NN/` — older revisions of this document said `tron/`, which
+   was never the actual path).
 2. You paste that session's prompt (from `/prompts/session_NN.md`) into Antigravity
    unmodified.
 3. Antigravity edits/generates code and docs only within that session's stated scope.
 4. **You** compile in STM32CubeIDE, flash the STM32N6570-DK, and manually verify against
    that session's checklist. Antigravity never touches hardware.
-5. On success: copy the whole working project into a new folder `tron/session_NN/`
-   (don't overwrite the previous one — this is your rollback trail).
+5. On success: copy the whole working project into a new folder
+   `sessions/session_NN/` (don't overwrite the previous one — this is your
+   rollback trail). `ENGINEERING_LESSONS.md` documents the exact copy procedure;
+   it has bitten this project three separate times.
 6. On failure: use the session's "Common pitfalls / rollback strategy" section, fix, or
-   discard the session's changes and retry from the last good `tron/session_(NN-1)/`.
+   discard the session's changes and retry from the last good
+   `sessions/session_(NN-1)/`.
 7. Move to the next prompt only after that session's Definition of Done is met.
 
 ## 5. Non-Negotiable Rules for Every Antigravity Session
 
 - Stay inside the session's stated file scope. Don't let Antigravity "helpfully" refactor
   unrelated modules.
-- No cloud/network code, ever. "Notifications" in the prototype are local (LCD +
-  buzzer) only — see §9.
+- No cloud/network code, ever. "Notifications" in the prototype are local and
+  on-screen only — see §7.
 - No copyrighted character assets, ever, including "Pokémon-style" if it resurfaces in
   any future brief — see `MASCOT_UI_DESIGN.md`.
 - Follow `ENGINEERING_LESSONS.md` for anything touching a hardware peripheral: always
@@ -138,21 +155,41 @@ nobody mistakes the shortcut for the real design:
   intended final behavior — implemented in the state machine as a swappable time
   source (same pattern as the OSAL: one clearly isolated point of substitution), not
   hardcoded to the fast-timer path.
-- **Data deletion:** the prototype includes an on-device "delete user data" option
-  with **no authentication** — appropriate for a bench prototype, not appropriate for
-  a real deployed device. If this project continues past the contest, this needs a PIN
-  or similar gate before it's used with real patient data.
+- **Data deletion:** there is **no on-device delete function**, and earlier
+  revisions of this plan were wrong to describe one. Deletion is by physical
+  control of the SD card — remove it, wipe it, destroy it — which is complete
+  and verifiable precisely because the device stores nothing anywhere else. A
+  no-authentication delete of biometric data was described in older drafts and
+  deliberately never built; see `COMPLIANCE_PRIVACY_POSTURE.md` §5.
+- **Dose, not stock:** a patient's `pill_count` is **how many pills they take in
+  one sitting** — a fixed property of their prescription. The firmware keeps no
+  stock counter, because it has no way to know when a carer refills the hopper;
+  Sessions 10-12 briefly carried one (`pills_remaining`) that decremented on
+  every dose, which was simply wrong and is gone. Real hopper-level knowledge
+  arrives in Session 14, where the IR counter measures pills physically
+  dropping instead of assuming a number.
 
 ## 7. Notification Architecture (Prototype vs. Future Work)
 
-The scheduling flow calls for notifying the patient's phone when a dose is due. That
-requires a radio (GSM/SMS, BLE-to-companion-app, or Wi-Fi) that doesn't exist in this
-project's zero-network design — adding one is a real scope and privacy decision, not a
-firmware detail. **Prototype behavior: local alert only** — LCD message + buzzer,
-triggered by the state machine when a scheduled dose window opens. Real phone
-notification is documented here as explicit future work requiring a connectivity
-choice, not something Antigravity should attempt to add via any hidden or "lightweight"
-networking shortcut.
+A medication reminder naturally suggests notifying the patient's phone when a
+dose is due. That needs a radio (GSM/SMS, BLE-to-companion-app, or Wi-Fi) which
+does not exist in this project's zero-network design, and adding one is a real
+scope and privacy decision rather than a firmware detail.
+
+**Prototype behaviour: on-screen alert only.** When Session 15's scheduled dose
+window opens, the device shows the reminder on its own display and logs the
+event; the patient is assumed to be at the device and to tap Dispense within
+their window. A missed window is recorded to the SD card for a carer to review
+later, which is the local equivalent of a notification.
+
+**There is no buzzer and no audio.** Earlier revisions of this plan said "LCD +
+buzzer"; no audio code was ever written, and the claim was dropped in Session 12
+rather than implemented. The board does have an unused SAI codec and speaker
+output, so audio remains genuinely possible — `prompts/session_15.md`'s roadmap
+section records it as deferred work, and this plan does not claim it.
+
+Phone notification stays explicit future work requiring a connectivity choice —
+never something to add via a hidden or "lightweight" networking shortcut.
 
 ## 8. AI Model Scope: Two Cuts, Ending at Face Recognition Only
 
@@ -199,7 +236,13 @@ two. `AI_PIPELINE.md` has been updated to match.
 - `RAGNAR_CAD_PROMPT.md` — text-to-3D prompt generating the enclosure/hopper renders
   that illustrate `MECHANICAL_DESIGN.md`'s design intent for the submission
 - `SOFTWARE_ARCHITECTURE.md` — module boundaries, OSAL, folder structure, patient
-  profile data model, mascot state enum, dispense-flow state machine, pin map
+  profile data model, mascot state enum, dispense-flow state machine, task set and
+  priority derivation, power saving, pin map
+- `UI_SCREEN_INVENTORY.md` — every screen the device can show, what draws it, and
+  the known visual defects; written from the code as Session 13's design input
+- `PROGRAM_PLAN_RECONCILIATION.md` — Session 15's clause-by-clause comparison of
+  the delivered system against the originally submitted Program Plan (not yet
+  written)
 - `AI_PIPELINE.md` — face recognition + gallery matching (the only NPU model in the
   final pipeline — action/consumption recognition was evaluated and dropped, see §8),
   STM32Cube.AI workflow
@@ -220,7 +263,61 @@ two. `AI_PIPELINE.md` has been updated to match.
 
 ## 11. Changelog
 
-- **v10 (this update):** Session 12 is **done** — µT-Kernel-idiomatic
+- **v11 (this update):** Two changes, one of them a reversal.
+  - **Physical dispensing is back, at one hopper.** v8 cut it because it was
+    not achievable solo before the deadline. A teammate able to design and
+    build the hardware has joined, so the resource assumption behind that cut
+    no longer holds. **Session 14** interfaces a 28BYJ-48 stepper-driven
+    turntable (exactly the mechanism `MECHANICAL_DESIGN.md` already specified)
+    and a hand-built IR break-beam sensor — discrete emitter and receiver LEDs
+    with their resistors — that counts each pill as it physically drops — a
+    closed loop, so the actuator stops on a real count rather than a timer,
+    which is the whole argument `MECHANICAL_DESIGN.md` makes for why a gate
+    mechanism was rejected. The 6-8 hopper architecture stays design intent.
+    The simulated dispense path is deliberately kept working behind a build
+    switch, so the hardware remains cuttable if it misbehaves near the
+    deadline. **The no-networking rule is untouched and permanent.** Note for
+    the record that dispensing was never in the originally submitted Program
+    Plan either — that described a camera-only verification device — so this
+    is scope added beyond what was promised, not restored.
+  - **Session 15 added:** reconcile the finished system against that original
+    Program Plan (`scratch/Program Plan 54916.pdf`), which is the document the
+    judges have already read and which promised at least two things that were
+    never built — pill/packet classification and schedule validation — then
+    spend whatever time remains on the single highest-value item rather than a
+    list. Also produces the submission materials that argue the case: the
+    measured numbers, the concrete µT-Kernel relevance, and the debugging
+    stories from Sessions 11 and 12.
+  - **Session count: 13 → 15.** 15 is now the last.
+  - **Four documented-but-unbuilt claims resolved** after a full sweep of the
+    doc set against the code, rather than left as flags for a future session to
+    trip over. **Buzzer/audio** (claimed in three
+    documents, zero audio code exists): **claim dropped**. **Mascot
+    SUCCESS/ERROR states**: **claim dropped** — the full-screen state changes
+    already signal every outcome those animations would, so a parallel channel
+    adds work without information. **On-device delete-user-data** (claimed in the plan and
+    the compliance posture, no such function exists): **claim dropped**;
+    deletion is by physical control of the card, and a password-gated delete
+    arrives inside Session 15's carer mode instead. **A second AI model** (pill
+    classification or action recognition): **ruled out on measured memory** —
+    Debug ROM is 85% full with 78 KB free, usable RAM is ~350 KB against a
+    ~393 KB frame ring for a temporal model, and a third activation pool would
+    compete directly with Session 13's second framebuffer.
+  - Also corrected in the same sweep: `COMPLIANCE_PRIVACY_POSTURE.md` still
+    described collecting a patient phone number that was never implemented;
+    `SOFTWARE_ARCHITECTURE.md` §2 listed four modules that do not exist
+    (`camera_lcd.c`, `interactive_gui.c`, `schedule_time_source.c`,
+    `patient_profile.h`) and used a `tron/` root path that was never real;
+    `MASCOT_UI_DESIGN.md` attributed the dispense flow to Session 11 instead of
+    Session 10.
+  - Also in this revision: `pill_count` corrected to mean **the dose** (see §6)
+    and the `pills_remaining` stock counter removed; `patients.dat` gained a
+    versioned header so a stale or foreign file is reported rather than
+    silently ignored; `UI_SCREEN_INVENTORY.md` added as Session 13's input;
+    `prompts/session_13.md` rewritten from "final polish" into a real UI/UX
+    overhaul, since Session 12 left the functionality working but the interface
+    visibly assembled one session at a time.
+- **v10:** Session 12 is **done** — µT-Kernel-idiomatic
   integration, power saving, hardening and the third-party inventory. See
   `milestones/session_12_notes.md` for the full record; the parts that change
   this plan's picture of the project:
@@ -262,6 +359,24 @@ two. `AI_PIPELINE.md` has been updated to match.
     project had been carrying — the AI models are **CenterFace + MobileFaceNet**
     (`AI_PIPELINE.md` was quoting ST's wrapper name "FaceID"; `session_13.md`'s
     "SCRFD" was simply wrong). Both documents corrected.
+  - **Hardware-verified.** Registration, dispense, gallery persistence across a
+    power cycle, the new face-retry path and the power measurement all confirmed
+    from a real UART capture. Two bugs were found in the process and fixed:
+    the plain `WFI` hung the board (BASEPRI masks the very SysTick that would
+    wake it — Addendum 1), and `disk_ioctl()` had been returning `RES_NOTRDY`
+    for every command since Session 06, which Session 12's new error checking
+    was simply the first thing to notice (Addendum 2). **Measured idle: ~89.6%
+    of wall-clock time asleep**, waking ~980 times/second — a real number for
+    rule 1.4, and the ~10% that is busy is almost entirely the 1 ms camera/ISP
+    task.
+  - One robustness item is now visible and deliberately left open: the gallery
+    match threshold (0.65 cosine, inherited from a reference project that used
+    16-bit embeddings where this one uses int8) produced a false rejection of an
+    enrolled patient. Session 08B flagged it as needing real measurement;
+    Session 12 added the diagnostic that makes the measurement possible but did
+    **not** move the threshold blind, since loosening it trades a recoverable
+    false rejection for a false acceptance. See `session_12_notes.md`
+    Addendum 3.
   - Session count unchanged: **13 sessions, and 13 is still the last.**
 - **v9:** Session 11 (µT-Kernel 3.0 migration) is **done and
   hardware-verified** — the full Session 09/10 registration and dispense flows

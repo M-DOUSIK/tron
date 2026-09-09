@@ -326,7 +326,9 @@ void task_logger_fn(void *arg)
      * from any entry point — but doing it eagerly here still gets the card up
      * before the first log line and reports the result on the console. */
     if (SD_Logger_Init()) {
-        SD_Log_Event("System Boot - MedSight on uT-Kernel 3.0");
+        /* Distinct from task_ui_fn's queued boot line — Session 12 briefly gave
+         * both the same text, which made one boot look like two in the log. */
+        SD_Log_Event("System Boot - SD logger ready");
         /* Write-path probe: proves the card is not just mounted but writable
          * (a write-protected or worn card mounts fine and then fails). */
         uint8_t dummy_face[16] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04};

@@ -77,6 +77,20 @@ write landed, or to check a known magic-number header):
 ```powershell
 & $cli -c port=SWD mode=HOTPLUG -el $loader -r32 <address> <word_count>
 ```
+**The flashed image is tied to the build that produced it.** Session 12 found
+that the `Debug` and `Release` configurations emitted the `.xspi2` blobs in
+*different order* (`-O0` ascending, `-Os` reversed), so a Debug-flashed image
+made Release fail with `Error: Epoch Controller binary is invalid` and no
+amount of re-flashing could satisfy both at once. Fixed by adding
+`-fno-toplevel-reorder` to the Release compiler settings, which restores source
+order and makes one image serve both — see `ENGINEERING_LESSONS.md`. Before
+blaming code for an epoch-controller error, compare the layouts:
+```bash
+arm-none-eabi-nm -n <build>/<Project>.elf | grep '^71' | head
+```
+A different first symbol than the build the image came from means the flash is
+wrong for this binary.
+
 **Every distinct model/weight file needs its own address** — don't assume
 one `.xspi2`-tagged blob is the whole story. Session 08B's face pipeline
 needed flashing to *three* separate addresses across two rounds of

@@ -1,8 +1,8 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:132:19:HAL_Init	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:160:19:HAL_DeInit	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:201:13:HAL_MspInit	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:212:13:HAL_MspDeInit	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:160:19:HAL_DeInit	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:235:26:HAL_InitTick	4
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:132:19:HAL_Init	2
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:300:13:HAL_IncTick	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:311:17:HAL_GetTick	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal.c:320:10:HAL_GetTickPrio	1

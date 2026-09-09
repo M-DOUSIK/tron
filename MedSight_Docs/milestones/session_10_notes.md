@@ -1,5 +1,23 @@
 # Session 10 Notes — Simulated Dispense Flow & "Pill Taken" Confirmation
 
+> **SUPERSEDED IN TWO PLACES — read before relying on this document.** It is
+> kept as an accurate record of what Session 10 built, not of how the system
+> works today.
+>
+> 1. **`pills_remaining` no longer exists.** Session 12 established that
+>    `pill_count` is the *dose* — how many pills a patient takes in one
+>    sitting, fixed by their prescription — not a stock level. This document's
+>    decrement-and-re-save behaviour was wrong and is gone, along with the
+>    refill alerts built on it. See `session_12_notes.md` Addendum 4 and
+>    `SOFTWARE_ARCHITECTURE.md` §6.
+> 2. **The dispense is no longer simulated.** Session 14 drives a real servo
+>    turntable with an IR break-beam pill counter. The simulated path is kept
+>    behind a build switch. See `prompts/session_14.md`.
+>
+> What this document remains authoritative on: the *flow* — face match →
+> dispense → "I Took It" / "Skip" confirmation → SD log — which Sessions 11 and
+> 12 both preserved unchanged and which is still the regression bar.
+
 ## Summary
 
 Implemented the full dispense flow per `prompts/session_10.md`: face recognition →

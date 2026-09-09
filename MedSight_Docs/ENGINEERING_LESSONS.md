@@ -356,3 +356,255 @@ something looked at it.
 4. This is the same family as the two rules above about verifying the compiled
    artifact rather than the build log: in all three cases the system reported
    success through a channel nobody was actually reading.
+
+## Debug and Release Laid the NPU Weights Out Differently, So Only One Could Ever Run (Session 12)
+
+### What went wrong
+
+Session 12 made the `Release` configuration build for the first time since
+Session 08B. Running it produced two failures the `Debug` build never had:
+
+```
+Error: BSP_TS_Init failed with status -1
+Error: Epoch Controller binary is invalid
+assertion "ret == 1" failed: file ".../ll_aton_runtime.c", line 454,
+                             function: LL_ATON_RT_Init_Network
+```
+
+That assertion is the same one Session 08B hit twice. Both earlier times the
+cause was "the weights were never written to external flash". This time they
+had been written — but **to a layout the Release binary does not use.**
+
+### Root cause
+
+The NPU's epoch-controller blobs are large `const` arrays tagged
+`__attribute__((section(".xspi2")))`, which the linker script maps to OSPI NOR
+at `0x71000000` and marks **`(NOLOAD)`** — so a normal Debug/Run never programs
+them. They are flashed once, by hand, from an image extracted from a build.
+
+Because the attribute names a single literal section (`.xspi2`, not
+`.xspi2.<varname>`), `-fdata-sections` does **not** split them, and every blob
+in a translation unit lands in one section whose internal order is simply
+GCC's emission order. That order is not the same at `-O0` and `-Os`:
+
+```
+Debug   (-O0):  71000000 _ec_blob_faceid_1     71000700 _ec_blob_faceid_6   ...
+Release (-Os):  71000000 _ec_blob_faceid_149   71002a80 _ec_blob_faceid_144 ...
+```
+
+**Reversed.** So every blob address the Release binary computed pointed at a
+different blob's bytes, `ec_get_blob_ptr()` found a bad magic number, and the
+runtime asserted. No amount of re-flashing would have fixed it — the two
+configurations wanted physically different flash images, and only one image
+fits in the flash at a time.
+
+Verified by comparing symbol addresses in the `0x71000000` range across the
+Session 08B, 11 and 12 `Debug` ELFs (byte-identical, so the flashed image was
+still correct for Debug) against the Session 12 `Release` ELF (completely
+different).
+
+### The fix
+
+Add **`-fno-toplevel-reorder`** to the Release C compiler settings in
+`.cproject`. It forbids GCC reordering top-level definitions, which restores
+source order and makes the Release layout identical to Debug:
+
+```
+Release+noreorder: 71000000 _ec_blob_faceid_1  71000700 _ec_blob_faceid_6 ...
+```
+
+One flashed weight image now serves both configurations. The optimisation cost
+is negligible — it constrains emission order, not code generation — and it buys
+a correctness guarantee that is otherwise impossible to hold onto.
+
+### Hard rules
+
+1. **Whenever anything about the model files or their compilation changes,
+   re-check the `.xspi2` layout against the flashed image** before assuming a
+   runtime failure is a code bug:
+   ```bash
+   arm-none-eabi-nm -n <build>/<Project>.elf | grep '^71' | head
+   ```
+   Compare against the build the flashed image was extracted from. Different
+   first symbol = the flash is wrong for this binary, full stop.
+2. **A `(NOLOAD)` section is invisible to every normal build check.** It links,
+   it produces no warning, `size` reports it, and nothing verifies that what is
+   physically in flash corresponds to it. Treat the flashed image as a build
+   artifact with its own version, not as something that "is just there".
+3. **An optimisation level is not a neutral choice when absolute addresses are
+   involved.** Anywhere a section's *internal* ordering is load-bearing —
+   hand-placed data, external memory images, anything programmed separately
+   from the ELF — pin the order explicitly rather than assuming the compiler
+   will be consistent across configurations.
+
+### The diagnostic that should have existed from Session 08B
+
+`main.c` now defines `__assert_func()`, overriding newlib's, so this failure
+prints its actual cause and the exact recovery procedure instead of an
+expression and a line number. Providing the symbol in an object file wins over
+libc because the linker resolves objects before searching libraries.
+
+The same class of failure had already cost this project three separate
+debugging sessions (`session_08B_notes.md` Addenda 1 and 2, and this one) while
+presenting each time as `assertion "ret == 1" failed`. When one error message
+has burned three sessions, replacing it is cheaper than diagnosing it a fourth
+time.
+
+## A Cold Boot Is Not the Same Reset You Have Been Testing (Session 12)
+
+### The symptom
+
+After a full power cycle, flashing and running the firmware left the LCD dark —
+gradually washing out, ghosting, then fading to nothing — while UART output was
+completely normal. Clicking Run again *without* unplugging the board produced a
+perfect display. Pausing in the debugger for ~20 s before resuming also worked.
+
+Three observations that all say the same thing: **the first run after power is
+applied behaves differently from every subsequent run.**
+
+### Root cause
+
+The STM32N6's higher GPIO banks are fed by separately supplied I/O domains
+(VDDIO2..VDDIO5), and a bank whose domain has not been declared valid does not
+drive its pins. Mapping the domains from the ST BSP's own call sites:
+
+| Domain | Bank | Enabled by |
+|---|---|---|
+| VDDIO2 | GPIOO | `BSP_LED_Init()` |
+| VDDIO3 | GPION | SD card-detect init |
+| VDDIO4 | GPIOH | I2C1 MspInit (camera) |
+| VDDIO5 | GPIOC, GPIOE | SDMMC2 MspInit |
+
+LTDC's MspInit configures **PE11** (LCD_VSYNC), **PE1** (touch NRST) and
+**PH3/PH4/PH6** (colour bits B4/R4/B5) — pins in the VDDIO5 and VDDIO4 domains —
+and enables neither. Nothing enabled VDDIO5 until the SD card was initialised,
+long after the panel had been configured and the LTDC had begun scanning out.
+
+**Why it hid for nine sessions:** the PWR `SVMCR*` "supply valid" bits live in
+the always-on power domain and **are not cleared by a system reset** — only by
+actually removing VDD. Once any run had enabled them, every subsequent
+flash-and-run inherited valid domains and the display came up correctly. The
+normal development loop is flash-and-run on a board that never loses power, so
+the bug was invisible until someone did a genuine cold boot.
+
+This is the same trap as the Session 06 VDDIO5/SDMMC finding above, one layer
+further out: that time the missing domain produced an obvious hang; this time it
+produced a display that half-worked and a bug that only appeared when the
+development habit changed.
+
+### The fix
+
+Enable **every** I/O domain the board uses once, in `main()`, immediately after
+the supply and clock configuration and before any peripheral or GPIO init:
+
+```c
+HAL_PWREx_EnableVddIO2();
+HAL_PWREx_EnableVddIO3();
+HAL_PWREx_EnableVddIO4();
+HAL_PWREx_EnableVddIO5();
+```
+
+The bits are idempotent, every one of these rails is populated on the
+STM32N6570-DK, and the BSP's own later calls become harmless no-ops. It removes
+the ordering dependency entirely rather than relying on the right peripheral
+being initialised in the right order.
+
+### Hard rules
+
+1. **Enable all I/O supply domains up front, not on demand.** On-demand
+   enabling makes correctness depend on peripheral init order, which changes
+   whenever a task is added or reordered.
+2. **Test from a cold boot, not just a reset.** Anything in an always-on domain
+   — PWR supply-valid bits, backup registers, RTC configuration, some RCC
+   state — survives a system reset and will mask a missing initialisation for
+   as long as the board stays powered. A whole class of bug is invisible to the
+   flash-and-run loop.
+3. **"It works on the second try" is a diagnosis, not a workaround.** It means
+   run N is leaving state that run N+1 depends on. Find out what.
+
+## A Reset Line Configured by One Driver, Released by Another (Session 12)
+
+`PE1` on the STM32N6570-DK is the GT911 touch controller's NRST. LTDC's MspInit
+configures it as a push-pull output as part of bringing up the display — and
+GPIO ODR resets to zero, so **initialising the display holds the touch
+controller in reset**. Nothing releases it until `BSP_TS_Init()` runs, much
+later.
+
+`BSP_TS_Init()` then drives NRST high and probes the part over I2C
+**immediately**, with no delay. The GT911 needs tens of milliseconds to boot
+before it answers. Whether the probe succeeds therefore depends on how fast the
+code happens to run between two adjacent lines — which is why touch
+initialisation worked in the Debug build (`-O0`) and failed in Release (`-Os`)
+with `BSP_ERROR_NO_INIT` (-1).
+
+**Fix:** do the reset explicitly in this project's own `touch_driver_init()`
+before calling into the BSP — assert NRST, hold 20 ms, release, wait 120 ms —
+and retry the whole sequence once if the probe still fails.
+
+**The rule:** when a shared line is configured by one driver and used by
+another, own the sequencing yourself at the application layer. And never let a
+device's power-on timing be satisfied by "however long the compiler decided the
+intervening code should take."
+
+## Putting a CPU to Sleep Is a System-Wide Change, Not a Power Tweak (Session 12)
+
+### What happened
+
+Session 12 added a `WFI` to the kernel idle path to satisfy the competition's
+power-saving criterion, measured 89.6% idle, and recorded it as a win. It was
+also, silently, the worst bug of the project.
+
+`WFI` on the STM32N6 enters CSleep, which stops the CPU **and stops the clock
+of every peripheral, bus and memory whose `LPEN` bit is clear**. The
+framebuffer lives in AXISRAM3-6. So on every idle tick the LTDC's DMA lost
+either its own clock, the AXI bus matrix clock, or the RAM it was reading. It
+kept scanning and kept driving sync, and fetched nothing. From a cold boot the
+home screen drew, glitched, and greyed out — while UART, touch, the SD card,
+the NPU and all five tasks reported perfect health.
+
+It took six rounds to find. Five diagnoses were wrong first.
+
+### Why every measurement lied
+
+Because the CPU takes the measurements, and the CPU is only running when it is
+**not** asleep. A framebuffer checksum read by the CPU is always correct. An
+LTDC register read by the CPU always says "enabled, scanning, right address".
+The one agent that could see the problem — the LTDC's DMA — has no way to
+report anything.
+
+The same asymmetry produced the false clue that misled everything else: the
+fault vanished under the debugger, and on warm re-runs driven from the
+debugger. That reads exactly like a hardware settling problem. It actually
+meant "a halted core never executes WFI".
+
+### Hard rules
+
+1. **Adding a sleep instruction changes the contract for every DMA master in
+   the system.** Before enabling any sleep mode, enumerate what moves data
+   without the CPU — display, camera, SD, accelerators, the bus matrix itself,
+   and the RAM each of them touches — and explicitly keep those clocked. On
+   STM32 that is the `*LPENR` family; every platform has an equivalent.
+2. **A subsystem that cannot report is a subsystem you cannot debug by
+   reading registers.** When the CPU's view of a peripheral is structurally
+   unable to observe the failure, stop dumping registers and start perturbing
+   the system. One build that removed the WFI and changed nothing else
+   answered a question that four builds of instrumentation could not.
+3. **"It works under the debugger" is evidence about what the CPU is
+   executing, not about timing.** It was read as "the hardware needs settling
+   time" for three rounds. It meant "the core is halted, so it is not sleeping".
+4. **Change one variable per hardware run.** The runs that produced knowledge
+   were the ones that changed exactly one thing. The runs that produced more
+   theories changed several.
+5. **The most recently added subsystem is the first suspect, especially when
+   it is the one you are proud of.** The WFI was skipped for five rounds
+   precisely because it was the session's headline feature and had been
+   carefully reviewed for its *own* correctness. It was correct. Its effect on
+   everything else was not.
+
+### The part worth sitting with
+
+Four of the six theories were about hardware — power domains, reset state,
+settling time, panel timing. The cause was a deliberate, reviewed, documented
+change made in that same session. The prior should have been the other way
+round from the first round, and the question should have been "what did I add,
+and what does it change for everything else" long before it was.

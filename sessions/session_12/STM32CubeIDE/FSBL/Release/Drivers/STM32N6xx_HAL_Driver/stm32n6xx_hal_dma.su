@@ -16,3 +16,5 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_dma.c:1591:19:HAL_DMA_GetIsolationAttributes	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_dma.c:1626:19:HAL_DMA_LockChannelAttributes	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_dma.c:1658:19:HAL_DMA_GetLockChannelAttributes	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_dma.c:1705:13:DMA_SetConfig	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_dma.c:1730:13:DMA_Init	8	static

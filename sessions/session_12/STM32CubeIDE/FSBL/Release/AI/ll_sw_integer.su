@@ -1,3 +1,4 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_integer.c:45:12:helper_emit_shape_index_axis	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_integer.c:66:6:ll_sw_forward_qlinearmatmul	592	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_integer.c:179:6:ll_sw_forward_gemm_integer	576	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_integer.c:288:6:ll_sw_forward_quantizelinear	288	static

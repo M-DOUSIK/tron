@@ -41,9 +41,12 @@
  *    capture completes, instead of transitioning home and redrawing straight
  *    into memory the NPU is still using.
  *  - Hardening: gallery-full is refused up front, three failed capture
- *    attempts offer TRY AGAIN / CANCEL instead of dead-ending home, an empty
- *    pill count raises a refill alert, and an unavailable SD card is stated
- *    on the home screen instead of failing silently.
+ *    attempts offer TRY AGAIN / CANCEL instead of dead-ending home, and an
+ *    unavailable SD card is stated on the home screen instead of failing
+ *    silently.
+ *  - pill_count is the DOSE, not a stock level. The `pills_remaining`
+ *    decrement-and-resave on every confirmed dose is gone, along with the
+ *    "refill needed" alerts that were built on top of it — see ai_vision.h.
  */
 
 #include "ui/state_machine.h"
@@ -80,8 +83,12 @@ static volatile bool g_isp_suspend = false;
  * pass, decided once up front and then just displayed/timed out. */
 static bool     s_dispense_identified = false;
 static char     s_dispense_patient_name[PATIENT_NAME_MAX];
-/* Session 10: gallery slot of the matched patient (for pills_remaining
- * decrement/save on confirm) and the pill count shown on STATE_DISPENSING. */
+/* Gallery slot of the matched patient, and their dose — the number of pills
+ * shown on STATE_DISPENSING and recorded in the audit log.
+ *
+ * Session 12 correction: this used to read (and decrement) a `pills_remaining`
+ * stock counter. `pill_count` is the DOSE, fixed per patient; nothing about
+ * dispensing changes it. See the comment on PatientRecord in ai_vision.h. */
 static int      s_dispense_slot       = -1;
 static uint8_t  s_dispense_pill_count = 0;
 /* Session 10: true while STATE_CONFIRM_TAKEN is holding its post-tap
@@ -238,13 +245,34 @@ static ai_capture_result_t poll_capture(int8_t *out_embedding, uint32_t since_ms
  * PUBLIC API
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* How long state_machine_init() will wait for the NPU to finish coming up
+ * before drawing anyway. ai_vision_init() takes roughly 0.5-1 s on this
+ * board; 20 s is far beyond any legitimate value, so reaching it means the
+ * AI task is wedged, not slow. In that case the UI comes up regardless —
+ * losing face recognition is bad, but a blank screen is worse, and the
+ * console line below says exactly which of the two happened. */
+#define AI_INIT_WAIT_MS   20000u
+
 void state_machine_init(void)
 {
+    /* Touch first: gt911_hardware_reset() spends 140 ms in osal_delay_ms(),
+     * which is 140 ms of NPU bring-up the wait below will not have to pay
+     * for. Neither call touches the framebuffer. */
     touch_driver_init();
     user_button_init();
     was_touching = false;
 
     camera_stop();
+
+    /* NOTHING above this line writes to BUFFER_ADDRESS; nothing below it may
+     * run until the NPU has stopped writing there. See the long comment on
+     * ai_vision_wait_init() in ai_vision.h — this one line is the whole fix
+     * for the cold-boot "screen draws, glitches, then greys out" fault. */
+    if (!ai_vision_wait_init(AI_INIT_WAIT_MS)) {
+        printf("state_machine: NPU init did not finish in %ums - "
+               "drawing anyway, face recognition may be unavailable.\n",
+               AI_INIT_WAIT_MS);
+    }
 
     gui_draw_init(BUFFER_ADDRESS, FRAME_WIDTH, FRAME_HEIGHT);
     switch_ltdc_buffer(BUFFER_ADDRESS);
@@ -677,32 +705,25 @@ void state_machine_update(void)
                     {
                         s_dispense_identified = true;
                         s_dispense_slot       = slot;
-                        s_dispense_pill_count = patient_gallery[slot].pills_remaining;
+                        s_dispense_pill_count = patient_gallery[slot].pill_count;
                         strncpy(s_dispense_patient_name, patient_gallery[slot].name,
                                 PATIENT_NAME_MAX - 1);
                         s_dispense_patient_name[PATIENT_NAME_MAX - 1] = '\0';
-                        printf("Dispense: matched patient '%s'.\n", s_dispense_patient_name);
+                        printf("Dispense: matched patient '%s' (%u pill(s) per dose).\n",
+                               s_dispense_patient_name,
+                               (unsigned)s_dispense_pill_count);
                         SD_Log_Event_Async("EVENT: Dispense - patient matched");
 
-                        /* Session 12: an enrolled patient with nothing left
-                         * to take must be told so, not walked through a
-                         * dispense animation for zero pills. */
-                        if (patient_gallery[slot].pills_remaining == 0u)
-                        {
-                            printf("Dispense: '%s' has no pills remaining.\n",
-                                   s_dispense_patient_name);
-                            SD_Log_Event_Async("EVENT: Dispense - REFILL NEEDED (0 remaining)");
-                            show_alert("REFILL NEEDED",
-                                       "There are no pills left\n"
-                                       "for this patient.\n\n"
-                                       "Please ask your carer to refill.",
-                                       COLOR_WARN, STATE_HOME);
-                        }
-                        else
-                        {
-                            current_state   = STATE_DISPENSING;
-                            state_init_done = false;
-                        }
+                        /* Session 12 removed a "no pills remaining" check that
+                         * used to live here. It was reading a software stock
+                         * counter that this device has no way to keep honest —
+                         * nothing tells the firmware when a carer tops the
+                         * hopper up. Real hopper-level sensing arrives in
+                         * Session 14 with the IR break-beam counter, which
+                         * measures pills physically dropping instead of
+                         * assuming a number. */
+                        current_state   = STATE_DISPENSING;
+                        state_init_done = false;
                     }
                     else
                     {
@@ -866,48 +887,20 @@ void state_machine_update(void)
                               s_dispense_patient_name);
                     SD_Log_Event_Async(log_line);
 
-                    bool now_empty   = false;
-                    bool save_failed  = false;
-                    if (s_dispense_slot >= 0)
-                    {
-                        PatientRecord *rec = &patient_gallery[s_dispense_slot];
-                        if (rec->pills_remaining > 0u)
-                        {
-                            rec->pills_remaining--;
-                        }
-                        now_empty = (rec->pills_remaining == 0u);
-                        if (!gallery_save())
-                        {
-                            save_failed = true;
-                            printf("state_machine: WARNING gallery_save failed after dispense.\n");
-                            SD_Log_Event_Async("EVENT: Dispense - WARNING pill count not saved");
-                        }
-                    }
-
-                    /* Session 12: three outcomes instead of one. The dose is
-                     * already logged and the count already decremented in
-                     * every case — these screens only differ in what the
-                     * patient is told to do next. */
-                    if (save_failed)
-                    {
-                        show_alert("NOT RECORDED",
-                                   "Your dose was dispensed but\n"
-                                   "could not be saved to the\n"
-                                   "SD card.\n\n"
-                                   "Please tell your carer.",
-                                   COLOR_ALERT, STATE_HOME);
-                        break;
-                    }
-                    if (now_empty)
-                    {
-                        SD_Log_Event_Async("EVENT: Dispense - REFILL NEEDED (0 remaining)");
-                        show_alert("REFILL NEEDED",
-                                   "That was your last pill.\n\n"
-                                   "Please ask your carer to\n"
-                                   "refill the dispenser.",
-                                   COLOR_WARN, STATE_HOME);
-                        break;
-                    }
+                    /* Session 12 correction: nothing is written to the
+                     * gallery here any more.
+                     *
+                     * Sessions 10-12 decremented a `pills_remaining` field and
+                     * re-saved patients.dat on every confirmed dose. That was
+                     * wrong — pill_count is the DOSE, not a stock level (see
+                     * ai_vision.h) — and it also meant a full 1.6 KB card
+                     * write on the patient's most latency-sensitive tap, for
+                     * data that never needed to change. The dose itself is
+                     * still recorded, in the append-only event log above,
+                     * which is where an adherence record belongs.
+                     *
+                     * The patient record is now written exactly once, at
+                     * registration. */
 
                     gui_draw_taken_thankyou_screen();
                     s_taken_ack_shown = true;

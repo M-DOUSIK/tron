@@ -41,6 +41,38 @@
 PatientRecord patient_gallery[MAX_PATIENTS];
 
 #define GALLERY_FILE "patients.dat"
+
+/* ── patients.dat on-card format (Session 12) ─────────────────────────────
+ *
+ * Sessions 08B-12 wrote the raw PatientRecord[] array to the card with no
+ * header at all, and gallery_init() accepted it if — and only if — the file
+ * length happened to equal sizeof(patient_gallery). Any other length, for any
+ * reason, produced the single line "starting with an empty gallery", which is
+ * the same thing it prints on a genuine first boot. So "the file is from an
+ * older firmware", "the file is truncated", "the file belongs to a different
+ * device" and "there is no file" were all indistinguishable, and all silently
+ * discarded every enrolled patient.
+ *
+ * That mattered the moment this session changed PatientRecord (dropping
+ * pills_remaining shrinks a record from 163 to 162 bytes, and the gallery from
+ * 1630 to 1620), because every existing card became silently unreadable.
+ *
+ * The file now starts with a small header carrying a magic number, a format
+ * version, and the record geometry it was written with. A mismatch is
+ * reported specifically, so the log says which of those four situations you
+ * are actually in. */
+#define GALLERY_MAGIC     0x4753444Du   /* 'M','D','S','G' little-endian */
+#define GALLERY_VERSION   2u            /* v2 = Session 12, pills_remaining removed */
+
+typedef struct {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t record_size;    /* sizeof(PatientRecord) when written */
+    uint16_t record_count;   /* MAX_PATIENTS when written          */
+    uint16_t reserved;       /* zero; keeps the header 4-byte aligned */
+} GalleryFileHeader;
+
+#define GALLERY_FILE_BYTES  (sizeof(GalleryFileHeader) + sizeof(patient_gallery))
 /* Cosine-similarity accept threshold. Matches PeleAB's face_gallery.c
  * FACE_GALLERY_MATCH_SIMILARITY default (0.65f) — starting point only, tune
  * against real enrolled-vs-impostor measurements during hardware bring-up. */
@@ -270,6 +302,29 @@ static bool decode_best_face_box(int hold_size, int *out_x, int *out_y, int *out
 
 void ai_vision_init(void)
 {
+    /* Session 12: say which build this is, before touching the NPU.
+     *
+     * The epoch-controller blobs live in external OSPI NOR, which the linker
+     * script marks (NOLOAD) — so they are flashed by hand, once, and a
+     * mismatch between what is physically in flash and what this binary
+     * expects shows up as an assert deep inside the ST runtime with no clue
+     * as to why (see __assert_func() in main.c).
+     *
+     * `__OPTIMIZE__` is defined by GCC at -O1 and above, so it distinguishes
+     * the Release build (-Os) from Debug (-O0) without relying on the
+     * project's own DEBUG/NDEBUG defines — which are, as it happens,
+     * inverted in this project's .cproject.
+     *
+     * Both configurations now produce the SAME OSPI layout: Session 12 added
+     * -fno-toplevel-reorder to the Release compiler settings after finding
+     * that -Os emitted the blobs in reverse order, which made a Debug-flashed
+     * weight image unusable from Release. One flashed image serves both. */
+#ifdef __OPTIMIZE__
+    printf("ai_vision_init: RELEASE build (-Os).\r\n");
+#else
+    printf("ai_vision_init: DEBUG build (-O0).\r\n");
+#endif
+
     extern void aiPreInitialize(void);
     aiPreInitialize();
 
@@ -520,30 +575,87 @@ float ai_vision_match_face(const int8_t *emb1, const int8_t *emb2)
  * patient_profile_t-based storage from the real registration flow.
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/* Staging buffer for the whole file (header + records). Static rather than a
+ * local because the AI task's stack is 8 KB and this is ~1.6 KB. */
+static uint8_t s_gallery_io[GALLERY_FILE_BYTES];
+
 void gallery_init(void)
 {
     memset(patient_gallery, 0, sizeof(patient_gallery));
 
     uint32_t bytes_read = 0;
-    bool ok = SD_Read_File(GALLERY_FILE, (uint8_t *)patient_gallery,
-                            sizeof(patient_gallery), &bytes_read);
-    if (!ok || bytes_read != sizeof(patient_gallery)) {
-        /* No saved gallery yet (first boot) or a size mismatch — start empty. */
-        memset(patient_gallery, 0, sizeof(patient_gallery));
-        printf("gallery_init: starting with an empty gallery.\r\n");
+    bool ok = SD_Read_File(GALLERY_FILE, s_gallery_io,
+                            (uint32_t)sizeof(s_gallery_io), &bytes_read);
+    if (!ok) {
+        /* SD_Read_File already said whether this was "no such file" (normal on
+         * a first boot) or a real media error. */
+        printf("gallery_init: no gallery loaded - starting empty.\r\n");
         return;
     }
 
+    if (bytes_read != (uint32_t)GALLERY_FILE_BYTES) {
+        printf("gallery_init: %s is %lu bytes, expected %lu - IGNORED, "
+               "starting empty.\r\n",
+               GALLERY_FILE, (unsigned long)bytes_read,
+               (unsigned long)GALLERY_FILE_BYTES);
+        return;
+    }
+
+    GalleryFileHeader hdr;
+    memcpy(&hdr, s_gallery_io, sizeof(hdr));
+
+    if (hdr.magic != GALLERY_MAGIC) {
+        printf("gallery_init: %s has no MedSight header (magic %08lX) - "
+               "IGNORED, starting empty.\r\n",
+               GALLERY_FILE, (unsigned long)hdr.magic);
+        return;
+    }
+    if (hdr.version != GALLERY_VERSION ||
+        hdr.record_size != (uint16_t)sizeof(PatientRecord) ||
+        hdr.record_count != (uint16_t)MAX_PATIENTS) {
+        printf("gallery_init: %s is format v%u (%ux%u bytes), this firmware "
+               "wants v%u (%ux%u) - IGNORED, please re-register.\r\n",
+               GALLERY_FILE, (unsigned)hdr.version,
+               (unsigned)hdr.record_count, (unsigned)hdr.record_size,
+               (unsigned)GALLERY_VERSION,
+               (unsigned)MAX_PATIENTS, (unsigned)sizeof(PatientRecord));
+        return;
+    }
+
+    memcpy(patient_gallery, s_gallery_io + sizeof(hdr), sizeof(patient_gallery));
+
     int count = 0;
     for (int i = 0; i < MAX_PATIENTS; i++) {
-        if (patient_gallery[i].valid) count++;
+        if (patient_gallery[i].valid) {
+            count++;
+            /* Names and dose counts are loggable; embeddings never are. */
+            printf("gallery_init:   slot %d = '%s', %u pill(s) per dose\r\n",
+                   i, patient_gallery[i].name,
+                   (unsigned)patient_gallery[i].pill_count);
+        }
     }
-    printf("gallery_init: loaded %d patient(s) from %s.\r\n", count, GALLERY_FILE);
+    printf("gallery_init: loaded %d patient(s) from %s (format v%u).\r\n",
+           count, GALLERY_FILE, (unsigned)GALLERY_VERSION);
 }
 
 bool gallery_save(void)
 {
-    return SD_Write_File(GALLERY_FILE, (const uint8_t *)patient_gallery, sizeof(patient_gallery));
+    GalleryFileHeader hdr = {
+        .magic        = GALLERY_MAGIC,
+        .version      = GALLERY_VERSION,
+        .record_size  = (uint16_t)sizeof(PatientRecord),
+        .record_count = (uint16_t)MAX_PATIENTS,
+        .reserved     = 0u,
+    };
+    memcpy(s_gallery_io, &hdr, sizeof(hdr));
+    memcpy(s_gallery_io + sizeof(hdr), patient_gallery, sizeof(patient_gallery));
+
+    bool ok = SD_Write_File(GALLERY_FILE, s_gallery_io,
+                            (uint32_t)sizeof(s_gallery_io));
+    if (!ok) {
+        printf("gallery_save: FAILED to write %s.\r\n", GALLERY_FILE);
+    }
+    return ok;
 }
 
 int gallery_add_patient(const char *name, const int8_t *embedding, int pill_count)
@@ -573,8 +685,10 @@ int gallery_add_patient(const char *name, const int8_t *embedding, int pill_coun
     rec->valid = 1;
     strncpy(rec->name, name, PATIENT_NAME_MAX - 1);
     memcpy(rec->embedding, embedding, sizeof(rec->embedding));
+    /* The dose. Fixed for the life of the enrolment — see the comment on
+     * PatientRecord in ai_vision.h for why there is no stock counter beside
+     * it any more. */
     rec->pill_count = (uint8_t)(pill_count < 0 ? 0 : (pill_count > 255 ? 255 : pill_count));
-    rec->pills_remaining = rec->pill_count;
 
     if (!gallery_save()) {
         printf("gallery_add_patient: WARNING save to SD failed for slot %d.\r\n", slot);
@@ -600,6 +714,33 @@ int gallery_find_best_match(const int8_t *embedding, float *out_confidence)
     }
 
     if (out_confidence) *out_confidence = best_sim;
+
+    /* Session 12: report the similarity that was actually measured, and the
+     * bar it had to clear.
+     *
+     * Session 08B set GALLERY_MATCH_THRESHOLD to 0.65 by copying the reference
+     * project's constant and explicitly flagged it as "a starting point only,
+     * tune against real enrolled-vs-impostor measurements" — but nothing ever
+     * printed the number you would tune it against. A rejection said only
+     * "intruder", which is indistinguishable between "a stranger, correctly
+     * refused" (similarity nowhere near the bar) and "an enrolled patient the
+     * threshold is too strict for" (similarity just under it). Those need
+     * opposite fixes, and the first real hardware run of the finished flow
+     * produced exactly that ambiguity: the same enrolled person matched on one
+     * attempt and was rejected on the next.
+     *
+     * Printed as hundredths because this toolchain links nano.specs, whose
+     * printf has no %f. Cosine similarity is [-1.0, 1.0], so this reads
+     * -100..100. Confidence scores are explicitly loggable under
+     * COMPLIANCE_PRIVACY_POSTURE.md — it is the embedding itself that must
+     * never be printed, and this is a single scalar derived from it, not the
+     * biometric data.
+     *
+     * One line per dispense attempt, never on a hot path. */
+    printf("Gallery: best similarity %d/100, threshold %d/100 -> %s\r\n",
+           (int)(best_sim * 100.0f),
+           (int)(GALLERY_MATCH_THRESHOLD * 100.0f),
+           (best_slot >= 0 && best_sim >= GALLERY_MATCH_THRESHOLD) ? "MATCH" : "no match");
 
     if (best_slot >= 0 && best_sim >= GALLERY_MATCH_THRESHOLD) {
         return best_slot;
@@ -642,6 +783,10 @@ int gallery_count(void)
 #define AI_FLAG_REQUEST   (1u << 0)   /* UI -> AI: run a capture             */
 #define AI_FLAG_DONE      (1u << 1)   /* AI -> UI: face found                */
 #define AI_FLAG_FAIL      (1u << 2)   /* AI -> UI: ran, but found no face    */
+/* AI -> everyone, latched, never cleared: ai_vision_init() has returned, so
+ * the NPU runtime is done touching the activation arena — which overlaps the
+ * LCD framebuffer at BUFFER_ADDRESS. See ai_vision_wait_init(). */
+#define AI_FLAG_INIT_DONE (1u << 3)
 
 /* Capture retry policy — moved here from state_machine.c's two copies of the
  * same loop (STATE_CAMERA_REGISTER and STATE_CAMERA_DISPENSE), unchanged in
@@ -656,6 +801,18 @@ static int8_t             s_capture_embedding[EMBEDDING_SIZE];
 void ai_vision_service_init(void)
 {
     s_ai_flag = osal_flag_create();
+}
+
+bool ai_vision_wait_init(uint32_t timeout_ms)
+{
+    if (s_ai_flag == NULL) {
+        return false;
+    }
+    /* AND, and deliberately WITHOUT OSAL_FLAG_WAIT_CLEAR: this bit is a
+     * latch that any number of callers may test, now or later, not a
+     * one-shot handshake. */
+    return osal_flag_wait(s_ai_flag, AI_FLAG_INIT_DONE,
+                          OSAL_FLAG_WAIT_AND, NULL, timeout_ms);
 }
 
 bool ai_vision_is_ready(void)
@@ -715,6 +872,13 @@ void task_ai_fn(void *arg)
      * regardless of whether the logger task has mounted the card yet —
      * sd_logger.c mounts lazily on first use as of Session 12. */
     ai_vision_init();
+
+    /* Latch "the NPU arena is yours again". task_ui blocks on this in
+     * state_machine_init() before it draws anything — see ai_vision_wait_init().
+     * Set unconditionally, including on the failure paths inside
+     * ai_vision_init(): a UI that cannot do face recognition is still a UI,
+     * and must not be held off the display forever by a dead NPU. */
+    osal_flag_set(s_ai_flag, AI_FLAG_INIT_DONE);
 
     for (;;) {
         /* Block until the UI asks for a capture. TWF_ORW with BITCLR so the

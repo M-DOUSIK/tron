@@ -28,6 +28,7 @@
 #include "sd_logger.h"
 #include "ai_vision.h"
 #include "ms_osal.h"    /* Session 07: all RTOS access goes through OSAL */
+#include <string.h>     /* Session 12: strstr() in __assert_func() below */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +59,41 @@
  * 10 s is frequent enough to watch a change take effect on the bench and
  * infrequent enough that it never competes with the flow's own logging. */
 #define MS_IDLE_REPORT_MS   10000u
+
+/* ════════════════════════════════════════════════════════════════════════
+ * MS_DISPLAY_WATCH — diagnostic for the cold-boot "draws, fades, greys out"
+ * fault, added after four wrong diagnoses (session_12_notes.md Addenda 6-8).
+ *
+ * Every guess so far has been about a *mechanism*. This measures the two
+ * things that would tell those mechanisms apart, once a second, from the
+ * lowest-priority task:
+ *
+ *   1. Is the framebuffer's CONTENT changing after the home screen is drawn?
+ *      A sampled checksum, read back from RAM (not from cache), plus the
+ *      DCMIPP frame counter. If the checksum moves, something is writing
+ *      over the display buffer and the only question left is who. If
+ *      NbMainFrames is also climbing, the answer is the camera: main() starts
+ *      DCMIPP PIPE1 into BUFFER_ADDRESS in CONTINUOUS mode before the
+ *      scheduler, and state_machine_init()'s camera_stop() is supposed to end
+ *      that.
+ *
+ *   2. Is the LTDC still SCANNING, and still scanning the right address?
+ *      GCR.LTDCEN, layer 1 CR.LEN and CFBAR, plus CDSR — the live
+ *      HSYNC/VSYNC/HDE/VDE status bits. If the checksum is rock steady and
+ *      CDSR goes quiet or LTDCEN drops, the memory is fine and the fault is
+ *      the controller or the panel, which is a completely different search.
+ *
+ * Also prints the three panel control pins, since PQ6 (LCD_BL_CTRL) going
+ * low is literally "the screen fades".
+ *
+ * This is a bench instrument, not a feature. Set it to 0 once the fault is
+ * understood — and unlike MS_BOOT_SETTLE_MS, do not let it quietly become
+ * load-bearing: it only reads registers and memory, it changes nothing.
+ * ════════════════════════════════════════════════════════════════════════ */
+#ifndef MS_DISPLAY_WATCH
+#define MS_DISPLAY_WATCH 0   /* bench instrument; see Addendum 9 */
+#endif
+#define MS_DISPLAY_WATCH_MS  1000u
 
 /* USER CODE END PD */
 
@@ -235,6 +271,363 @@ static void task_ui_fn(void *arg)
 /* ── Task: Heartbeat — liveness LED blink ───────────────────────────────── */
 /* Priority 1 — lowest. If this stops blinking, the scheduler has stalled.
  * Blink period: 500ms on, 500ms off = 1Hz. */
+#if MS_DISPLAY_WATCH
+/* Sampled checksum of the framebuffer, read from RAM rather than from cache.
+ *
+ * Clean-then-invalidate, not plain invalidate: a plain invalidate would throw
+ * away any dirty lines the UI task had not flushed yet and corrupt the very
+ * picture we are trying to observe. Cleaning first pushes our own writes out,
+ * so what we then read back is exactly the bytes LTDC's DMA sees. */
+static uint32_t framebuffer_sample_checksum(void)
+{
+    uint32_t sum = 0u;
+    /* 32 rows spread down the screen, one 32-byte cache line each: enough to
+     * catch any large-area overwrite, cheap enough to run once a second on
+     * the lowest-priority task. */
+    for (uint32_t i = 0u; i < 32u; i++) {
+        uint32_t row  = (i * FRAME_HEIGHT) / 32u;
+        uint32_t addr = (BUFFER_ADDRESS + row * FRAME_WIDTH * 2u) & ~31u;
+        SCB_CleanInvalidateDCache_by_Addr((uint32_t *)addr, 32);
+        const volatile uint32_t *p = (const volatile uint32_t *)addr;
+        for (uint32_t w = 0u; w < 8u; w++) {
+            sum = (sum * 31u) + p[w];
+        }
+    }
+    return sum;
+}
+
+/* Read one pixel straight out of RAM, bypassing the cache the same way the
+ * checksum does. Used to answer a question the checksum cannot: the buffer is
+ * *stable*, but is it stable holding the home screen, or stable holding grey? */
+static uint16_t framebuffer_peek(uint32_t x, uint32_t y)
+{
+    uint32_t addr    = BUFFER_ADDRESS + ((y * FRAME_WIDTH) + x) * 2u;
+    uint32_t aligned = addr & ~31u;
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)aligned, 32);
+    return *(const volatile uint16_t *)addr;
+}
+
+/* Is the LTDC actually scanning the panel?
+ *
+ * CDSR carries the live HSYNC/VSYNC/HDE/VDE status. A single sample cannot
+ * distinguish "scanning, and I happened to catch the active area" from "not
+ * scanning at all" — which is exactly the ambiguity the first watch build
+ * left behind, because it read 0 on almost every sample.
+ *
+ * So sample it hard instead: a few thousand back-to-back reads spanning well
+ * over a line period. If the controller is scanning, those bits MUST move.
+ * Zero transitions across the whole burst means the pixel clock is not
+ * running, whatever the enable bits claim. */
+static uint32_t ltdc_scan_activity(uint32_t *seen_mask)
+{
+    uint32_t prev        = LTDC->CDSR & 0xFu;
+    uint32_t transitions = 0u;
+    uint32_t mask        = (1u << prev);
+
+    /* Bound by TIME, not by iteration count. The first version of this burst
+     * ran a fixed 20000 reads, which at -O0 is only a few milliseconds — less
+     * than one 16 ms frame. That made the set of observed CDSR values look
+     * like it changed between samples ("seen=405" then "seen=8CAF") when in
+     * fact the burst was simply aliasing against the frame rate and sometimes
+     * missing the vertical events entirely. 40 ms guarantees at least two
+     * complete frames at any plausible refresh rate, so the value is stable
+     * and actually means something. */
+    uint32_t start = HAL_GetTick();
+    while ((HAL_GetTick() - start) < 40u) {
+        uint32_t cur = LTDC->CDSR & 0xFu;
+        if (cur != prev) {
+            transitions++;
+            prev = cur;
+        }
+        mask |= (1u << cur);
+    }
+    if (seen_mask != NULL) {
+        *seen_mask = mask;
+    }
+    return transitions;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * MS_DISPLAY_RECOVER — the escalating recovery ladder
+ *
+ * Four rounds of register reading have now said the same thing: the picture
+ * is in RAM, the pixel format is right, the layer is enabled and pointed at
+ * it, the pixel clock is 25 MHz, the sync outputs are toggling, and the
+ * panel's power and backlight pins are high. By every measurement the display
+ * path is working. The screen is still grey.
+ *
+ * When observation keeps saying "fine" and reality keeps saying "no", the way
+ * forward is to perturb it: apply progressively bigger hammers, spaced far
+ * enough apart to watch, and announce each one over UART. Whichever rung
+ * brings the picture back identifies the broken layer, and does it in ONE
+ * flash cycle instead of one per theory.
+ *
+ *   1  shadow reload      - LTDC shadow registers never latched
+ *   2  immediate reload   - same, via the other reload path
+ *   3  LTDC off/on        - controller-level state
+ *   4  panel power cycle  - the panel latched a bad state at power-on
+ *   5  backlight cycle    - backlight driver enable
+ *   6  full LCD re-init   - anything in the LTDC configuration itself
+ *   7  relaxed blanking    - the panel cannot lock to the current timings
+ *
+ * The ordering is deliberate: cheapest and least destructive first, so the
+ * answer is as specific as possible. If rung 4 fixes it, the LTDC was never
+ * the problem and the panel needs its power sequenced differently at boot. If
+ * only rung 6 fixes it, something in LCD_Init() is not surviving a cold start.
+ * If NOTHING fixes it, the fault is below software entirely.
+ *
+ * Set MS_DISPLAY_RECOVER to 0 for normal builds. This is a bench instrument.
+ * ════════════════════════════════════════════════════════════════════════ */
+#ifndef MS_DISPLAY_RECOVER
+#define MS_DISPLAY_RECOVER 0   /* bench instrument; see Addendum 9 */
+#endif
+/* Let the fault establish itself first — it needs a few seconds to grey out. */
+#define MS_RECOVER_START_MS   12000u
+/* Long enough to see the screen change and note which rung did it. */
+#define MS_RECOVER_STEP_MS     6000u
+
+#if MS_DISPLAY_RECOVER
+static void display_recover_poll(void)
+{
+    static uint32_t next_at = MS_RECOVER_START_MS;
+    static uint32_t step    = 0u;
+
+    uint32_t now = HAL_GetTick();
+    if ((step > 7u) || (now < next_at)) {
+        return;
+    }
+    next_at = now + MS_RECOVER_STEP_MS;
+    step++;
+
+    switch (step) {
+    case 1u:
+        printf("recover 1: HAL_LTDC_SetAddress - force a shadow reload\r\n");
+        HAL_LTDC_SetAddress(&hltdc, BUFFER_ADDRESS, LTDC_LAYER_1);
+        break;
+
+    case 2u:
+        printf("recover 2: immediate reload (SRCR.IMR)\r\n");
+        __HAL_LTDC_RELOAD_CONFIG(&hltdc);
+        break;
+
+    case 3u:
+        printf("recover 3: LTDC disable -> 100ms -> enable\r\n");
+        __HAL_LTDC_DISABLE(&hltdc);
+        HAL_Delay(100u);
+        __HAL_LTDC_ENABLE(&hltdc);
+        break;
+
+    case 4u:
+        printf("recover 4: panel power cycle - LCD_ONOFF (PQ3) low 200ms\r\n");
+        HAL_GPIO_WritePin(GPIOQ, GPIO_PIN_3, GPIO_PIN_RESET);
+        HAL_Delay(200u);
+        HAL_GPIO_WritePin(GPIOQ, GPIO_PIN_3, GPIO_PIN_SET);
+        break;
+
+    case 5u:
+        printf("recover 5: backlight cycle - LCD_BL_CTRL (PQ6) low 200ms\r\n");
+        HAL_GPIO_WritePin(GPIOQ, GPIO_PIN_6, GPIO_PIN_RESET);
+        HAL_Delay(200u);
+        HAL_GPIO_WritePin(GPIOQ, GPIO_PIN_6, GPIO_PIN_SET);
+        break;
+
+    case 6u:
+        printf("recover 6: full LCD_Init() re-run\r\n");
+        LCD_Init(FRAME_WIDTH, FRAME_HEIGHT);
+        HAL_LTDC_SetAddress(&hltdc, BUFFER_ADDRESS, LTDC_LAYER_1);
+        break;
+
+    case 7u:
+        /* Conventional 800x480 blanking, replacing the 812x492 total the
+         * board currently runs. Written straight to the registers rather than
+         * through HAL_LTDC_Init() so that this is the ONLY thing that changes
+         * from rung 6 — same clock, same layer, same buffer, same everything
+         * else. If the picture appears here and nowhere else, the panel was
+         * never able to lock to 12 pixels of horizontal blanking from cold.
+         *
+         *   HSW  4   HBP  46  active 800  HFP 206   -> total 1056
+         *   VSW  4   VBP  23  active 480  VFP  18   -> total  525
+         *
+         * At the existing 25 MHz pixel clock that is 45 Hz, which is fine.
+         * All four registers hold (value - 1), and the back-porch and active
+         * fields are ACCUMULATED, not per-region. */
+        printf("recover 7: relaxed blanking - 1056x525 total "
+               "(was 812x492)\r\n");
+        LTDC->SSCR = (3u << 16) | 3u;           /* HSW 4,  VSW 4            */
+        LTDC->BPCR = (49u << 16) | 26u;         /* +HBP 46, +VBP 23         */
+        LTDC->AWCR = (849u << 16) | 506u;       /* +800 active, +480 active */
+        LTDC->TWCR = (1055u << 16) | 524u;      /* total 1056 x 525         */
+        __HAL_LTDC_RELOAD_CONFIG(&hltdc);
+        printf("recover: ladder complete - if the screen is still grey, "
+               "nothing in software fixed it\r\n");
+        break;
+
+    default:
+        break;
+    }
+}
+#endif /* MS_DISPLAY_RECOVER */
+
+static void display_watch_poll(void)
+{
+    static uint32_t last_tick   = 0u;
+    static uint32_t last_sum    = 0u;
+    static uint32_t last_frames = 0u;
+    static bool     primed      = false;
+
+    uint32_t now = HAL_GetTick();
+    if (primed && ((now - last_tick) < MS_DISPLAY_WATCH_MS)) {
+        return;
+    }
+    last_tick = now;
+
+    uint32_t sum    = framebuffer_sample_checksum();
+    uint32_t frames = NbMainFrames;
+
+    uint32_t seen  = 0u;
+    uint32_t moves = ltdc_scan_activity(&seen);
+
+    printf("watch %lums: fb=%08lX %s | px title=%04X bg=%04X reg=%04X "
+           "disp=%04X dlg=%04X | scan moves=%lu seen=%lX | frames=%lu (+%lu)\r\n",
+           (unsigned long)now,
+           (unsigned long)sum,
+           (primed && (sum != last_sum)) ? "CHANGED" : "same",
+           framebuffer_peek(400u,  20u),   /* teal title strip, expect 0566 */
+           framebuffer_peek(400u, 200u),   /* page background               */
+           framebuffer_peek(120u, 300u),   /* REGISTER button               */
+           framebuffer_peek(600u, 300u),   /* DISPENSE button               */
+           framebuffer_peek(400u, 430u),   /* dialog box                    */
+           (unsigned long)moves,
+           (unsigned long)seen,
+           (unsigned long)frames,
+           (unsigned long)(frames - last_frames));
+
+    printf("            LTDCEN=%lu LEN=%lu CFBAR=%08lX PF=%lu CACR=%lX "
+           "BFCR=%lX | pixclk=%luHz | SSCR=%08lX BPCR=%08lX AWCR=%08lX "
+           "TWCR=%08lX GCR=%08lX | ONOFF=%lu BL=%lu DE=%lu\r\n",
+           (unsigned long)(LTDC->GCR & LTDC_GCR_LTDCEN),
+           (unsigned long)(LTDC_Layer1->CR & LTDC_LxCR_LEN),
+           (unsigned long)LTDC_Layer1->CFBAR,
+           (unsigned long)LTDC_Layer1->PFCR,
+           (unsigned long)LTDC_Layer1->CACR,
+           (unsigned long)LTDC_Layer1->BFCR,
+           (unsigned long)HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_LTDC),
+           (unsigned long)LTDC->SSCR,
+           (unsigned long)LTDC->BPCR,
+           (unsigned long)LTDC->AWCR,
+           (unsigned long)LTDC->TWCR,
+           (unsigned long)LTDC->GCR,
+           (unsigned long)HAL_GPIO_ReadPin(GPIOQ, GPIO_PIN_3),
+           (unsigned long)HAL_GPIO_ReadPin(GPIOQ, GPIO_PIN_6),
+           (unsigned long)HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_13));
+
+    /* Layer geometry. A layer can be enabled, correctly formatted and
+     * scanning, and still put nothing on the glass if its window is empty or
+     * its line count is zero — none of which the registers above would show.
+     *
+     * BCCR is worth having for a different reason: LCD_Init() sets the LTDC
+     * background colour to bright GREEN (Backcolor.Green = 0xFF). So if the
+     * layer were not being composited at all, the panel would be green, not
+     * grey. "Grey" already tells us this is not a compositing problem — but
+     * print it so that stays a measurement rather than an inference. */
+    printf("            WHPCR=%08lX WVPCR=%08lX CFBLR=%08lX CFBLNR=%08lX "
+           "BCCR=%06lX L2CR=%lX SCR=%lX\r\n",
+           (unsigned long)LTDC_Layer1->WHPCR,
+           (unsigned long)LTDC_Layer1->WVPCR,
+           (unsigned long)LTDC_Layer1->CFBLR,
+           (unsigned long)LTDC_Layer1->CFBLNR,
+           (unsigned long)(LTDC->BCCR & 0xFFFFFFu),
+           (unsigned long)(LTDC_Layer2->CR & LTDC_LxCR_LEN),
+           /* SCR bit 2 is SLEEPDEEP. If it is set, WFI enters Stop mode
+            * rather than Sleep, stopping the bus clocks the LTDC needs.
+            * Nothing in the tree sets it; measure it, do not assume. */
+           (unsigned long)SCB->SCR);
+
+    last_sum    = sum;
+    last_frames = frames;
+    primed      = true;
+}
+#endif /* MS_DISPLAY_WATCH */
+
+/* ════════════════════════════════════════════════════════════════════════
+ * ms_configure_sleep_clocks() — what has to keep running while the CPU sleeps
+ *
+ * THE BUG THIS FIXES. Session 12 added a WFI to the kernel idle path and, on
+ * this board, that broke the display: from a cold boot the home screen drew,
+ * glitched, and greyed out within a couple of seconds, while UART, touch, the
+ * SD card, the NPU and every task carried on perfectly.
+ *
+ * WFI on the STM32N6 enters CSleep, which stops the CPU — and, for every
+ * peripheral, bus and memory whose LPEN bit is clear, stops its clock too.
+ * The framebuffer lives at 0x34200000, in AXISRAM3-6. So each time the idle
+ * task slept, the LTDC's DMA lost either its own clock, the AXI bus matrix
+ * clock, or the RAM it was reading from. It kept scanning and kept driving
+ * sync — every register we measured said the display was healthy — but it was
+ * fetching nothing, so the panel starved and went grey. With the CPU idle
+ * ~85% of the time, that is almost continuously.
+ *
+ * Why it looked like a hardware fault for six rounds:
+ *   - The CPU's own reads of the framebuffer were always correct, because the
+ *     CPU only reads when it is awake. The picture really was in RAM.
+ *   - Every LTDC register read correct, for the same reason.
+ *   - It vanished under the debugger: a halted core never executes WFI.
+ *   - It vanished on a warm re-run, because those runs were being driven from
+ *     the debugger too.
+ * The measurement that finally isolated it was removing the WFI and changing
+ * nothing else.
+ *
+ * WHAT THIS SETS. Only what a bus master genuinely needs while the CPU is
+ * asleep — every extra bit here is power the device burns for nothing:
+ *
+ *   BUSLPENR   ACLKN, ACLKNC   the AXI bus matrix itself. Without this no
+ *                              master reaches memory at all during sleep.
+ *   MEMLPENR   AXISRAM3-6      the framebuffer (0x34200000) and the NPU
+ *                              activation pools that share it.
+ *   APB5LPENR  LTDC            the display controller.
+ *              DCMIPP, CSI     the camera pipeline: it DMAs into the same
+ *                              buffer during preview, while the UI task is
+ *                              blocked and the CPU is therefore asleep.
+ *   AHB5LPENR  DMA2D           the mascot blitter.
+ *              SDMMC2          audit-log writes complete while the logger
+ *                              task waits and the CPU sleeps.
+ *              NPU             inference runs for hundreds of ms with every
+ *                              task blocked on the AI event flag.
+ *
+ * Each of those is a master that moves data with no CPU involvement. Any one
+ * of them left gated would produce the same class of fault as the display
+ * did — silent, intermittent, and impossible to see in a register dump.
+ *
+ * DO NOT reduce this set without re-testing the flow that uses it, from a
+ * COLD boot. That is the only condition under which the original fault ever
+ * appeared.
+ * ════════════════════════════════════════════════════════════════════════ */
+static void ms_configure_sleep_clocks(void)
+{
+    RCC->BUSLPENR  |= RCC_BUSLPENR_ACLKNLPEN
+                    | RCC_BUSLPENR_ACLKNCLPEN;
+
+    RCC->MEMLPENR  |= RCC_MEMLPENR_AXISRAM3LPEN
+                    | RCC_MEMLPENR_AXISRAM4LPEN
+                    | RCC_MEMLPENR_AXISRAM5LPEN
+                    | RCC_MEMLPENR_AXISRAM6LPEN;
+
+    RCC->APB5LPENR |= RCC_APB5LPENR_LTDCLPEN
+                    | RCC_APB5LPENR_DCMIPPLPEN
+                    | RCC_APB5LPENR_CSILPEN;
+
+    RCC->AHB5LPENR |= RCC_AHB5LPENR_DMA2DLPEN
+                    | RCC_AHB5LPENR_SDMMC2LPEN
+                    | RCC_AHB5LPENR_NPULPEN;
+
+    /* Read back so the writes have landed before the first WFI can happen. */
+    (void)RCC->AHB5LPENR;
+
+    printf("sleep clocks: BUSLPENR=%08lX MEMLPENR=%08lX "
+           "APB5LPENR=%08lX AHB5LPENR=%08lX\r\n",
+           (unsigned long)RCC->BUSLPENR,  (unsigned long)RCC->MEMLPENR,
+           (unsigned long)RCC->APB5LPENR, (unsigned long)RCC->AHB5LPENR);
+}
+
 static void task_heartbeat_fn(void *arg)
 {
     (void)arg;
@@ -257,6 +650,13 @@ static void task_heartbeat_fn(void *arg)
     for (;;) {
         BSP_LED_Toggle(LED_RED);
         osal_delay_ms(500u);
+
+#if MS_DISPLAY_WATCH
+        display_watch_poll();
+#endif
+#if MS_DISPLAY_RECOVER
+        display_recover_poll();
+#endif
 
         uint32_t now = HAL_GetTick();
         if ((now - last_report_tick) >= MS_IDLE_REPORT_MS) {
@@ -319,6 +719,50 @@ int main(void)
     PeriphCommonClock_Config();
 
     /* USER CODE BEGIN SysInit */
+
+    /* ════════════════════════════════════════════════════════════════════
+     * Session 12 fix: declare EVERY I/O supply domain valid before touching
+     * a single GPIO.
+     *
+     * The STM32N6's high-numbered GPIO banks are split across separately
+     * supplied I/O domains (VDDIO2..VDDIO5), and a bank whose domain has not
+     * been declared valid does not drive its pins. `ENGINEERING_LESSONS.md`
+     * already records this from Session 06, where a missing
+     * HAL_PWREx_EnableVddIO5() left the SDMMC2 pins unpowered and the driver
+     * hung forever waiting on hardware that could not answer.
+     *
+     * The same trap was still live for the display, and much harder to see.
+     * Mapping the domains from the ST BSP's own call sites:
+     *
+     *     VDDIO2 -> GPIOO      (BSP_LED_Init)
+     *     VDDIO3 -> GPION      (SD card-detect)
+     *     VDDIO4 -> GPIOH      (I2C1, camera)
+     *     VDDIO5 -> GPIOC/E    (SDMMC2)
+     *
+     * LTDC's MspInit configures PE11 (LCD_VSYNC), PE1 (touch NRST) and
+     * PH3/PH4/PH6 (colour bits B4/R4/B5) — i.e. pins in the VDDIO5 and
+     * VDDIO4 domains — and enables NEITHER. Nothing enabled VDDIO5 until the
+     * SD card was initialised, long after the panel had been configured and
+     * the LTDC had started scanning out.
+     *
+     * Why this hid for so long: the PWR SVMCR "supply valid" bits live in the
+     * always-on power domain and are NOT cleared by a system reset — only by
+     * actually removing power. So once any run had enabled them, every
+     * subsequent flash-and-run inherited valid domains and the display came up
+     * fine. The bug only appears on a true cold boot, which is exactly the
+     * situation the display fails in: dark, ghosting, fading out, while UART
+     * (USART1, on the main VDD domain) carries on perfectly.
+     *
+     * Enabling all four here, once, before any peripheral init, removes the
+     * ordering dependency entirely. The bits are idempotent, every one of
+     * these rails is populated and powered on the STM32N6570-DK, and the BSP's
+     * own later calls become harmless no-ops.
+     * ════════════════════════════════════════════════════════════════════ */
+    HAL_PWREx_EnableVddIO2();
+    HAL_PWREx_EnableVddIO3();
+    HAL_PWREx_EnableVddIO4();
+    HAL_PWREx_EnableVddIO5();
+
     BSP_LED_Init(LED_GREEN);
     BSP_LED_Init(LED_RED);
 
@@ -353,7 +797,12 @@ int main(void)
 
     /* Per-step blink through the six camera/LCD bring-up calls below. RED
      * stays solid throughout (it only starts BLINKING if Error_Handler()
-     * fires); count the GREEN blinks to see exactly how far boot gets. */
+     * fires); count the GREEN blinks to see exactly how far boot gets.
+     *
+     * NOTE: this is now purely visual. The *timing* those blinks used to
+     * provide has been separated out into _MS_SETTLE() below — see the
+     * MS_BOOT_SETTLE_MS comment. Turning the blinks on or off no longer
+     * changes whether the display comes up. */
 #if MS_BOOT_LED_CHECKPOINTS
 #define _MS_BLINK() do { BSP_LED_On(LED_GREEN); HAL_Delay(120); \
                           BSP_LED_Off(LED_GREEN); HAL_Delay(500); } while (0)
@@ -361,17 +810,91 @@ int main(void)
 #define _MS_BLINK() do { } while (0)
 #endif
 
+/* ════════════════════════════════════════════════════════════════════════
+ * Boot settling — kept as a knob, set to zero, and here is why
+ *
+ * Sessions 07-11 had ~4.7 s of accidental delay through the camera/LCD
+ * bring-up below: six _MS_BLINK() calls at 620 ms plus a 1 s LED burst before
+ * the scheduler, all of it Session 11 bring-up instrumentation. Session 12
+ * gated the blinks off as dead weight, the display started failing from a
+ * cold boot, and the obvious conclusion was that the delay had been
+ * load-bearing. So it was reinstated here as an explicit, measured,
+ * bisectable value.
+ *
+ * That conclusion was WRONG, and this is the record of it. The fault was
+ * reproduced on hardware with 5.6 s of settling applied and it still failed.
+ * The real cause was the WFI added to the kernel idle path gating the clocks
+ * the LTDC needs — see ms_configure_sleep_clocks() below and
+ * session_12_notes.md Addendum 9. No part of the bring-up sequence needs any
+ * settling time at all, which is why both values are now zero: boot goes
+ * straight through in a few hundred milliseconds.
+ *
+ * The knobs stay because they cost nothing and because a future bring-up on
+ * different hardware may genuinely want them. But do not reach for them to
+ * explain a fault. The lesson from this session is the opposite one: when
+ * something that worked stops working, suspect what you changed, and measure
+ * before theorising. Four hardware-shaped theories were wrong here before a
+ * single measurement settled it.
+ * ════════════════════════════════════════════════════════════════════════ */
+#ifndef MS_BOOT_SETTLE_MS
+#define MS_BOOT_SETTLE_MS          0u     /* none needed - see the note above */
+#endif
+#ifndef MS_BOOT_PRESCHED_SETTLE_MS
+#define MS_BOOT_PRESCHED_SETTLE_MS 0u     /* none needed - see the note above */
+#endif
+
+/* Boot progress over UART, with timings. Cheap, one line per step, and it is
+ * what makes MS_BOOT_SETTLE_MS tunable instead of guessed. On by default
+ * while the cold-boot display fault is being confirmed fixed. */
+#ifndef MS_BOOT_TRACE
+#define MS_BOOT_TRACE 0
+#endif
+
+#if MS_BOOT_TRACE
+#define _MS_SETTLE(step)                                                      \
+    do {                                                                      \
+        uint32_t _t_done = HAL_GetTick();                                     \
+        printf("boot: %-22s done at %lums (step took %lums), settling %ums\r\n", \
+               (step), (unsigned long)_t_done,                                \
+               (unsigned long)(_t_done - _ms_boot_mark), MS_BOOT_SETTLE_MS);  \
+        _MS_BLINK();                                                          \
+        HAL_Delay(MS_BOOT_SETTLE_MS);                                         \
+        _ms_boot_mark = HAL_GetTick();                                        \
+    } while (0)
+#else
+#define _MS_SETTLE(step)                                                      \
+    do { _MS_BLINK(); HAL_Delay(MS_BOOT_SETTLE_MS); } while (0)
+#endif
+
+    /* Timing mark used by _MS_SETTLE()'s trace. */
+    uint32_t _ms_boot_mark = HAL_GetTick();
+    (void)_ms_boot_mark;
+
+#if MS_BOOT_TRACE
+    printf("boot: starting camera/LCD bring-up at %lums "
+           "(settle %ums/step, %ums pre-scheduler)\r\n",
+           (unsigned long)_ms_boot_mark, MS_BOOT_SETTLE_MS,
+           MS_BOOT_PRESCHED_SETTLE_MS);
+#endif
+
+    /* Let the board's supplies settle before the first peripheral touches a
+     * pin. On a cold boot everything below runs within milliseconds of VDD
+     * coming up; on a warm re-run the rails have been stable for minutes,
+     * which is a large part of why this fault only ever appeared cold. */
+    HAL_Delay(MS_BOOT_SETTLE_MS);
+    _ms_boot_mark = HAL_GetTick();
+
     /* Initialize all configured peripherals */
     MX_DCMIPP_Init();
-    _MS_BLINK();   /* blink #1: MX_DCMIPP_Init() returned */
+    _MS_SETTLE("MX_DCMIPP_Init");
 
     /* Initialize the IMX335 Sensor */
     IMX335_Probe(IMX335_R2592_1944, IMX335_RAW_RGGB10);
-    _MS_BLINK();   /* blink #2: IMX335_Probe() returned */
+    _MS_SETTLE("IMX335_Probe");
 
     /* USER CODE BEGIN 2 */
     LCD_Init(FRAME_WIDTH, FRAME_HEIGHT);
-    _MS_BLINK();   /* blink #3: LCD_Init() returned */
+    _MS_SETTLE("LCD_Init");
 
     /* Fill init struct with Camera driver helpers */
     appliHelpers.GetSensorInfo     = GetSensorInfoHelper;
@@ -384,19 +907,19 @@ int main(void)
     if (ISP_Init(&hcamera_isp, &hdcmipp, 0, &appliHelpers, ISP_IQParamCacheInit[0]) != ISP_OK) {
         Error_Handler();
     }
-    _MS_BLINK();   /* blink #4: ISP_Init() returned ISP_OK */
+    _MS_SETTLE("ISP_Init");
 
     if (HAL_DCMIPP_CSI_PIPE_Start(&hdcmipp, DCMIPP_PIPE1, DCMIPP_VIRTUAL_CHANNEL0,
                                    BUFFER_ADDRESS, DCMIPP_MODE_CONTINUOUS) != HAL_OK) {
         Error_Handler();
     }
-    _MS_BLINK();   /* blink #5: HAL_DCMIPP_CSI_PIPE_Start() returned HAL_OK */
+    _MS_SETTLE("DCMIPP_PIPE_Start");
 
     /* Start the Image Signal Processing */
     if (ISP_Start(&hcamera_isp) != ISP_OK) {
         Error_Handler();
     }
-    _MS_BLINK();   /* blink #6: ISP_Start() returned ISP_OK — camera pipeline is fully up */
+    _MS_SETTLE("ISP_Start");
 
     /* Session 04: initialise DMA2D for mascot alpha-blending */
     hdma2d.Instance          = DMA2D;
@@ -461,6 +984,17 @@ int main(void)
         BSP_LED_Toggle(LED_RED);
         HAL_Delay(100);
     }
+#else
+    /* The settle the LED burst above used to provide — see MS_BOOT_SETTLE_MS. */
+    HAL_Delay(MS_BOOT_PRESCHED_SETTLE_MS);
+#endif
+    /* Must run before the scheduler, because the very first thing the idle
+     * task does is sleep. See the comment on this function. */
+    ms_configure_sleep_clocks();
+
+#if MS_BOOT_TRACE
+    printf("boot: handing off to the scheduler at %lums\r\n",
+           (unsigned long)HAL_GetTick());
 #endif
 
     /* ── Hand control to the RTOS scheduler — does not return ───────────── */
@@ -787,6 +1321,72 @@ void Error_Handler(void)
 #ifdef USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line)
 {
-    while (1) {}
+    printf("\r\n*** HAL ASSERT FAILED: %s:%lu ***\r\n",
+           file ? (const char *)file : "?", (unsigned long)line);
+    Error_Handler();
 }
 #endif /* USE_FULL_ASSERT */
+
+/**
+ * @brief  Session 12: replace newlib's assert() handler with one that says
+ *         something useful.
+ *
+ * The ST Edge AI runtime asserts rather than returning an error when the NPU's
+ * epoch-controller blobs in external OSPI flash do not match the ones the
+ * running binary expects. Stock newlib prints the raw expression and aborts:
+ *
+ *     assertion "ret == 1" failed: file ".../ll_aton_runtime.c", line 454,
+ *     function: LL_ATON_RT_Init_Network
+ *
+ * which says nothing about the actual cause. That exact line has now cost this
+ * project real bench time three separate times — session_08B_notes.md
+ * Addendum 1 (weights never flashed), Addendum 2 (a second, undiscovered
+ * weight pool), and session_12_notes.md Addendum 5 (the Release build laying
+ * the blobs out in a different order than the flashed image). Every one of
+ * them was the same underlying condition: **flash content does not match this
+ * binary.**
+ *
+ * Providing this symbol overrides libc's copy at link time, because the
+ * linker resolves objects before searching libraries.
+ *
+ * Ends in Error_Handler() (blinking RED) rather than a bare while(1), so a
+ * board with no serial attached still shows that something failed rather than
+ * appearing merely frozen.
+ */
+void __assert_func(const char *file, int line, const char *func,
+                   const char *failedexpr)
+{
+    printf("\r\n"
+           "*** ASSERTION FAILED ***\r\n"
+           "  expr : %s\r\n"
+           "  at   : %s:%d\r\n"
+           "  in   : %s\r\n",
+           failedexpr ? failedexpr : "?",
+           file ? file : "?", line,
+           func ? func : "?");
+
+    /* Recognise the one that keeps happening and say what to do about it. */
+    if ((func != NULL) && (strstr(func, "LL_ATON_RT_Init_Network") != NULL))
+    {
+        printf(
+          "\r\n"
+          "  DIAGNOSIS: the NPU epoch-controller blobs in external OSPI NOR\r\n"
+          "  flash do not match this binary. The linker script marks OSPI_NOR\r\n"
+          "  (NOLOAD), so a normal Debug/Run NEVER programs them - they are\r\n"
+          "  flashed once, by hand, and must be re-flashed whenever the model\r\n"
+          "  files or their link order change.\r\n"
+          "\r\n"
+          "  FIX: re-flash the weight images with STM32_Programmer_CLI in\r\n"
+          "  HOTPLUG mode, then FULLY POWER CYCLE the board (unplug USB - a\r\n"
+          "  debugger reset is not enough):\r\n"
+          "    STM32CubeIDE/FSBL/Debug/weights_flash/xspi2_weights.bin  -> 0x71000000\r\n"
+          "    STM32CubeIDE/FSBL/Debug/weights_flash/fd_data.xSPI2.bin  -> 0x70380000\r\n"
+          "    STM32CubeIDE/FSBL/Debug/weights_flash/faceid_data.xSPI2.bin -> 0x72000000\r\n"
+          "  See AI_LESSONS.md and milestones/session_08B_notes.md Addenda 1-2.\r\n");
+    }
+
+    Error_Handler();
+
+    /* Error_Handler() never returns; this satisfies the noreturn contract. */
+    while (1) { }
+}

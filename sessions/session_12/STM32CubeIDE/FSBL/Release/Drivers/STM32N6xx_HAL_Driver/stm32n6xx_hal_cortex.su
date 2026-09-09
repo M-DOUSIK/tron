@@ -1,5 +1,3 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:718:13:MPU_ConfigRegion	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:748:13:MPU_ConfigMemoryAttributes	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:227:6:HAL_NVIC_SetPriorityGrouping	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:250:6:HAL_NVIC_SetPriority	24	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:274:6:HAL_NVIC_EnableIRQ	0	static,ignoring_inline_asm
@@ -13,8 +11,8 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:427:6:HAL_NVIC_ClearPendingIRQ	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:445:10:HAL_NVIC_GetActive	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:459:6:HAL_SYSTICK_CLKSourceConfig	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:480:13:HAL_SYSTICK_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:471:6:HAL_SYSTICK_IRQHandler	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:480:13:HAL_SYSTICK_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:491:6:HAL_CORTEX_ClearEvent	0	static,ignoring_inline_asm
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:508:6:HAL_MPU_Enable	0	static,ignoring_inline_asm
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:535:6:HAL_MPU_Enable_NS	0	static,ignoring_inline_asm
@@ -28,3 +26,5 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:677:6:HAL_MPU_ConfigRegion_NS	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:689:6:HAL_MPU_ConfigMemoryAttributes	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:701:6:HAL_MPU_ConfigMemoryAttributes_NS	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:718:13:MPU_ConfigRegion	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_cortex.c:748:13:MPU_ConfigMemoryAttributes	16	static

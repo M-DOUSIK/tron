@@ -590,6 +590,29 @@ static void osal_init_cycle_counter(void)
     s_cyccnt_ok = (DWT->CYCCNT != a);
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+ * MS_OSAL_IDLE_WFI — bench experiment, Session 12 display fault
+ *
+ * Set to 0 to keep every other part of the idle path (the accounting, the
+ * PRIMASK/BASEPRI dance, the timing) and remove ONLY the sleep instruction.
+ *
+ * Why: the cold-boot display fade is the only fault on this board that
+ * survives a full LCD re-init and a panel power cycle, and the WFI idle is
+ * the only thing Session 12 added that runs continuously afterwards. It is
+ * also the only mechanism yet proposed that explains "it works if I pause in
+ * the debugger for a few seconds" without hand-waving: a halted core does not
+ * execute WFI at all.
+ *
+ * If the screen survives with this at 0, sleep is the cause and the fix is to
+ * find what the LTDC loses during CSleep. If it still fades, put this back to
+ * 1 immediately — a device that never sleeps fails TRON rule 1.4's power
+ * criterion, and Session 12's measured 89.6% idle figure is a headline
+ * result, not something to trade away for a diagnostic.
+ * ════════════════════════════════════════════════════════════════════════ */
+#ifndef MS_OSAL_IDLE_WFI
+#define MS_OSAL_IDLE_WFI 1
+#endif
+
 void ms_osal_low_power_idle(void)
 {
     uint32_t before         = DWT->CYCCNT;
@@ -600,7 +623,11 @@ void ms_osal_low_power_idle(void)
     __set_BASEPRI(0u);        /* every enabled IRQ is a wake-up event again   */
     __DSB();
 
+#if MS_OSAL_IDLE_WFI
     __WFI();
+#else
+    __NOP();   /* experiment: everything but the sleep */
+#endif
 
     __set_BASEPRI(saved_basepri);   /* re-mask BEFORE re-enabling, so the     */
     __set_PRIMASK(saved_primask);   /* woken exception is taken in dispatch.S */

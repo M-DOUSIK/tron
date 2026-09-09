@@ -20,8 +20,8 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:429:6:osal
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:459:6:SysTick_Handler	1
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:488:6:ms_osal_clean_dcache	5
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:578:13:osal_init_cycle_counter	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:593:6:ms_osal_low_power_idle	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:616:6:ms_osal_idle_stats	4
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:668:13:osal_hal_tick_cychdr	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:676:13:osal_start_hal_tick_bridge	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:698:12:usermain	9
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:616:6:ms_osal_low_power_idle	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:643:6:ms_osal_idle_stats	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:695:13:osal_hal_tick_cychdr	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:703:13:osal_start_hal_tick_bridge	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ms_osal.c:725:12:usermain	9

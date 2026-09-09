@@ -25,19 +25,27 @@ with a mature, well-documented API, while guaranteeing the final TRON-mandated s
 
 ## 2. Folder Structure
 
+**Corrected in Session 12 against the files that actually exist.** Earlier
+revisions of this tree listed four modules that were designed and never
+written — `camera_lcd.c`, `interactive_gui.c`, `schedule_time_source.c` and
+`patient_profile.h` — and used a `tron/` root that was never the real path.
+Where a planned module was absorbed elsewhere, this now says where.
+
 ```
-tron/
-  session_01/ ... session_14/      -- one full project snapshot per completed session
-                                       (session_15/ optional, post-submission)
-Core/
+sessions/
+  session_01/ ... session_15/      -- one full project snapshot per completed
+                                       session; the rollback trail
+FSBL/
   Inc/
   Src/
-    main.c
+    main.c                          -- clock/peripheral bring-up, task creation.
+                                        Also holds the camera + LTDC init that an
+                                        early plan put in a camera_lcd.c that was
+                                        never written.
     ms_osal.c / ms_osal.h          -- OS Abstraction Layer (Session 07+)
-    camera_lcd.c/.h                 -- Session 03 (built on the jpcano/STM32N6-digits
-                                        LCD reference, see ENGINEERING_LESSONS.md)
     ui/
-      anime_ui.c/.h                 -- Session 04 (mascot rendering, states driven Session 05+)
+      anime_ui.c/.h                 -- Session 04 (mascot rendering; idle state only,
+                                        by decision — see §5)
       touch_driver.c/.h             -- Session 05 (GT911 touch controller, I2C2, PD14/PD4)
       gui_draw.c/.h                 -- Session 05+ (screen drawing primitives, the
                                         elderly-friendly palette and every full-screen
@@ -56,15 +64,22 @@ Core/
                                         no second model runs on the NPU. Consumption
                                         is confirmed by a manual "I Took It" button
                                         instead (Session 10).
-    schedule_time_source.c/.h       -- Session 10 (swappable fast-timer/RTC abstraction)
+    schedule_time_source.c/.h       -- DESIGNED, NOT YET WRITTEN. Planned for
+                                        Session 10, never built because nothing
+                                        needed a schedule; Session 15's carer mode
+                                        and scheduled dosing is what finally
+                                        requires it.
+    dispenser.c/.h                  -- Session 14 (stepper turntable + IR pill
+                                        counter; closed-loop count)
     state_machine.c/.h              -- Session 10 (dispense-flow orchestration —
                                         simulated dispense only, see §7);
                                         Session 12 added the error/alert states and
                                         made the capture states non-blocking (§9)
-  Inc/
-    patient_profile.h               -- Session 09 (shared patient-record struct)
-docs/                               -- this documentation set, kept current
 ```
+
+The patient record lives in `ai_vision.h`, not in a separate
+`patient_profile.h` — an early plan named that file and it was never created,
+because the gallery and the record are owned by the same module. See §6.
 
 ## 3. Module Boundary Rules
 
@@ -157,7 +172,7 @@ deferring real object creation to its own `usermain()` (called by the kernel
 once it's up, before any application task runs). This is purely an
 `ms_osal.c`-internal detail — the OSAL API and every caller are unaffected.
 
-## 5. Mascot State Enum (introduced Session 05, driven by real events from Session 10)
+## 5. Mascot State Enum (introduced Session 05 — only MASCOT_IDLE is ever used)
 
 ```c
 typedef enum {
@@ -168,21 +183,24 @@ typedef enum {
 } mascot_state_t;
 ```
 
-`registration_ui.c` owns state transitions triggered by touch;
-`state_machine.c` (from Session 10 onward) owns state transitions triggered by system
-events (face-match results, simulated-dispense/OK-confirmation results). All funnel
-through the same OSAL queue into `anime_ui.c`'s renderer — `anime_ui.c` itself never
-decides *why* the state changed, only *how* to render it.
+**Only `MASCOT_IDLE` is ever selected, and that is the intended design.**
+`anime_ui_set_state()` exists but is called from nowhere, and the three
+non-idle state functions render the identical idle animation. Earlier
+revisions of this section said Session 10/11 would drive
+`MASCOT_SUCCESS`/`MASCOT_ERROR` from real system events; that never happened,
+and Session 12 decided not to build it rather than leave the claim standing.
+
+The reason: every outcome those states would signal is already signalled by a
+**full-screen state change** — the dispensing screen, the "I Took It"
+confirmation, the FACE NOT RECOGNISED retry screen, the alert screens. A
+parallel mascot channel repeating the same information adds animation work and
+framebuffer traffic without adding information. The enum and the stubs stay
+because they cost nothing and record the intent; see `MASCOT_UI_DESIGN.md` §4.
 
 ## 6. Patient Profile Data Model (Session 09, as actually implemented)
 
 ```c
-/* ai_vision.h — the real, shipped struct. Simpler than an earlier draft of this
- * doc's patient_profile_t (which had a per-medicine hopper_id schedule array and
- * a phone_number field) — that draft assumed physical multi-hopper hardware and a
- * phone-notification feature, both since cut (see MASTER_PROJECT_PLAN.md's
- * Changelog). With no hopper to map a schedule entry to, "one daily pill count per
- * patient" is all the data model needs. */
+/* ai_vision.h — the real, shipped struct. */
 #define EMBEDDING_SIZE    128
 #define MAX_PATIENTS      10
 #define PATIENT_NAME_MAX  32
@@ -191,10 +209,38 @@ typedef struct {
     uint8_t   valid;
     char      name[PATIENT_NAME_MAX];
     int8_t    embedding[EMBEDDING_SIZE];   // from ai_vision.c, Session 08B
-    uint8_t   pill_count;                  // daily pill count, set at registration
-    uint8_t   pills_remaining;             // decremented per confirmed dose (Session 10+)
+    uint8_t   pill_count;                  // pills per DOSE - fixed, never decremented
 } PatientRecord;
 ```
+
+**`pill_count` is the dose (corrected in Session 12).** It is how many pills
+this patient takes in one sitting: a fixed property of their prescription, set
+once at registration, unchanged by dispensing. A patient registered for 3 pills
+gets 3 pills every time.
+
+Sessions 10-12 carried a second field, `pills_remaining`, initialised to
+`pill_count` and decremented **by one** per confirmed dose. That was wrong
+twice over - it treated a per-dose quantity as a stock level, then drew that
+"stock" down one pill at a time regardless of the dose size - and the visible
+symptom was the dispense screen announcing "3 pills" while the number fell
+3 -> 2 -> 1. It is gone, along with the "refill needed" alerts built on it.
+
+There is **no stock counter in the data model at all**, deliberately. The
+firmware has no way to know when a carer tops the hopper up, so any software
+count would drift from reality immediately. Real hopper-level knowledge arrives
+in Session 14, where the IR break-beam counter measures pills physically
+dropping - a short dispense after a full actuator cycle *is* an empty hopper,
+measured rather than assumed.
+
+**On-card format.** `patients.dat` is a small versioned header
+(`GalleryFileHeader`: magic, format version, record size, record count)
+followed by `MAX_PATIENTS` records. Before Session 12 the raw array was written
+with no header and accepted only if the file length happened to match, so "file
+from older firmware", "truncated file", "file from another device" and "no
+file" were indistinguishable and all silently produced an empty gallery. The
+header makes a mismatch say which one it is - which mattered immediately, since
+dropping `pills_remaining` changed the record size from 163 to 162 bytes and
+invalidated every existing card.
 
 Defined once in `ai_vision.h` so `sd_logger.c` (storage, via `gallery_save()`/
 `gallery_init()`), `ai_vision.c` (embedding shape, gallery matching), and
@@ -246,7 +292,8 @@ above to `MASCOT_ERROR` unless noted:
 - Missed dose (fast-timer/RTC schedule window elapses with no Dispense Medicine tap) →
   `MASCOT_ERROR` + SD log, remain `STATE_HOME`.
 - Unrecognized/no face at the face-check step → `MASCOT_ERROR`, local alert (LCD +
-  buzzer, not a phone push — see `MASTER_PROJECT_PLAN.md` §7), SD log, no dispense,
+  on-screen only — there is no buzzer and no audio in this project, see
+  `MASTER_PROJECT_PLAN.md` §7), SD log, no dispense,
   camera OFF, return to `STATE_HOME`.
 - Missed consumption confirmation (neither "I Took It" nor "Skip" tapped within a
   timeout) → `MASCOT_ERROR` + SD log, camera OFF, `STATE_HOME`. There is no jam/sensor
@@ -347,3 +394,36 @@ Constraints on anything added to that function, all of them hard:
   on this board), no `tk_*` call, nothing unbounded.
 - The measurement is read out from **task** context — `task_heartbeat_fn()`
   prints an idle-percentage figure every 10 s — never from the hook itself.
+
+### The other half of the WFI: `ms_configure_sleep_clocks()`
+
+`WFI` on this part enters CSleep, which stops the CPU **and the clock of every
+peripheral, bus and memory whose `LPEN` bit is clear**. That is not a detail of
+the idle hook; it is a change to the operating conditions of every DMA master
+in the system, and it must be configured before the scheduler ever runs.
+
+Session 12 shipped the `WFI` without it and broke the display for six rounds of
+diagnosis. The framebuffer is at `0x34200000` (AXISRAM3-6), so every idle tick
+cost the LTDC either its own clock, the AXI bus matrix clock, or the RAM it was
+reading. The panel starved and greyed out while every register the CPU could
+read said the display was healthy — because the CPU only reads when it is
+awake. `session_12_notes.md` Addendum 9 is the full account.
+
+`ms_configure_sleep_clocks()` in `main.c` sets the `LPEN` bits for exactly the
+masters that move data while the CPU sleeps:
+
+| Register | Bits | What it protects |
+|---|---|---|
+| `BUSLPENR` | `ACLKN`, `ACLKNC` | the AXI bus matrix — without it no master reaches memory at all |
+| `MEMLPENR` | `AXISRAM3-6` | the framebuffer and the NPU activation pools sharing it |
+| `APB5LPENR` | `LTDC`, `DCMIPP`, `CSI` | display, and the camera DMAing into the same buffer during preview |
+| `AHB5LPENR` | `DMA2D`, `SDMMC2`, `NPU` | mascot blitter, audit-log writes, inference |
+
+The set is deliberately wider than the display. Each entry is a master that
+moves data with no CPU involvement during a window when every task is blocked
+and the CPU is therefore asleep — a face capture, an SD write, a mascot redraw.
+The display was simply the one failure visible to the naked eye.
+
+**Rule for future sessions:** anything that adds a new DMA-driven peripheral
+must add its `LPEN` bit here in the same change, and must be tested from a
+**cold boot** — the only condition under which the original fault appeared.

@@ -13,9 +13,9 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:785:9:MX66UW1G45G_WriteEnable	10
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:873:9:MX66UW1G45G_WriteDisable	4
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:924:9:MX66UW1G45G_ReadStatusRegister	8
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:995:9:MX66UW1G45G_WriteStatusRegister	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:1072:9:MX66UW1G45G_WriteCfgRegister	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:1153:9:MX66UW1G45G_ReadCfgRegister	8
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:995:9:MX66UW1G45G_WriteStatusRegister	7
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:1224:9:MX66UW1G45G_WriteCfg2Register	6
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:1290:9:MX66UW1G45G_ReadCfg2Register	8
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/BSP/Components/mx66uw1g45g/mx66uw1g45g.c:1361:9:MX66UW1G45G_WriteSecurityRegister	4

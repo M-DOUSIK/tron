@@ -1,3 +1,4 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_float.c:45:12:helper_emit_shape_index_axis	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_float.c:67:6:ll_sw_forward_conv	528	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_float.c:143:6:ll_sw_forward_gemm	448	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ai/ll_sw_float.c:197:6:ll_sw_forward_matmul	360	static

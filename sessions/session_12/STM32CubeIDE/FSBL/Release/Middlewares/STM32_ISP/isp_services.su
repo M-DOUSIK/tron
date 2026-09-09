@@ -1,6 +1,13 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:150:13:To_Shift_Multiplier	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:167:17:From_Shift_Multiplier	12	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:175:16:To_CConv_Reg	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:185:16:From_CConv_Reg	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:195:16:GetAvgStats	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:235:13:SetStatConfig	20	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:227:13:ReadStatHistogram	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:235:13:SetStatConfig	20	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:243:32:GetNextStatStage	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:364:32:GetStatCycleStart	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:399:32:GetStatCycleEnd	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:434:9:LuminanceFromRGB	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:440:9:LuminanceFromRGBMono	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:456:19:ISP_SVC_ISP_SetDemosaicing	40	static
@@ -14,7 +21,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Libr
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:821:19:ISP_SVC_ISP_GetBadPixel	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:851:19:ISP_SVC_ISP_SetBlackLevel	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:894:19:ISP_SVC_ISP_GetBlackLevel	24	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:922:19:ISP_SVC_ISP_SetGain	56	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:922:19:ISP_SVC_ISP_SetGain	24	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:965:19:ISP_SVC_ISP_GetGain	32	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:992:19:ISP_SVC_ISP_SetColorConv	48	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1055:19:ISP_SVC_ISP_GetColorConv	48	static
@@ -47,7 +54,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Libr
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1641:19:ISP_SVC_IQParam_Init	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1655:21:ISP_SVC_IQParam_Get	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1668:6:ISP_SVC_Stats_Init	0	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1680:6:ISP_SVC_Stats_Gather	88	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1680:6:ISP_SVC_Stats_Gather	80	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1909:19:ISP_SVC_Stats_ProcessCallbacks	32	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1955:19:ISP_SVC_Stats_GetLatest	8	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Middlewares/ST/STM32_ISP_Library/isp/Src/isp_services.c:1981:19:ISP_SVC_Stats_GetNext	28	static

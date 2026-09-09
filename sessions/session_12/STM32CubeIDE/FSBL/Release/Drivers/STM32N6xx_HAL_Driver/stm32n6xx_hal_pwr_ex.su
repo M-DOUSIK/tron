@@ -56,6 +56,7 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1209:6:HAL_PWREx_EnableVddAVMEN	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1218:6:HAL_PWREx_DisableVddAVMEN	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1230:19:HAL_PWREx_ConfigPVM	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1450:6:HAL_PWREx_PVD_PVM_IRQHandler	16	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1624:13:HAL_PWREx_VDDCORE_Rising_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1635:13:HAL_PWREx_VDDCORE_Falling_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1646:13:HAL_PWREx_USBVM_Rising_Callback	0	static
@@ -70,4 +71,3 @@ C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1745:13:HAL_PWREx_IO5VM_Falling_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1756:13:HAL_PWREx_ADCVM_Rising_Callback	0	static
 C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1767:13:HAL_PWREx_ADCVM_Falling_Callback	0	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_pwr_ex.c:1450:6:HAL_PWREx_PVD_PVM_IRQHandler	16	static
