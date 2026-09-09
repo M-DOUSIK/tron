@@ -86,3 +86,33 @@ enough not to visibly stall the mascot animation or camera preview (Session 04
 already establishes non-blocking rendering via DMA2D — inference must not violate
 that). Profile actual NPU inference time in Session 08A/08B and record it here once
 measured; don't guess a number in advance.
+
+**Measured, Session 13, on hardware (DEBUG build, -O0):**
+
+| Path | Wall-clock | Notes |
+|---|---|---|
+| Successful capture (face found, embedded) | **209 ms** | Identical to the millisecond across four separate captures - registration and dispense, three different faces/poses (detector confidence 0.76, 0.78, 0.83, 0.89) |
+| Failed capture (no face, 3 attempts) | **1111 ms** | 3 x detector + the two 500 ms inter-attempt waits; the embedder never runs |
+
+209 ms is the figure to quote. It is measured from
+`ai_vision_capture_request()` to the result being ready, so it includes the
+CenterFace detector pass, the MobileFaceNet embedder pass, and the
+event-flag IPC and task scheduling between the UI task and the AI task - not
+just the two NPU calls in isolation. The real inference time is therefore
+somewhat under 209 ms.
+
+Two things worth noting about that number:
+
+- **It was taken from a `-O0` DEBUG build.** The Release build is untested
+  for latency; it will not be slower.
+- **The invariance is the interesting part.** Four captures, four different
+  images, four different confidences, and the same 209 ms every time. The
+  Neural-ART runtime executes a fixed epoch schedule for a fixed input
+  shape, so the cost does not depend on image content - which is exactly
+  what makes it safe to hold the UI still for the capture window rather
+  than showing an indeterminate spinner.
+
+Against the target: 209 ms is well inside "does not visibly stall the UI",
+and the measured idle figure over the same runs was 86.7-88.9% (the
+`power: idle N% of last 10s` lines), i.e. the NPU work is not displacing
+the rest of the system.

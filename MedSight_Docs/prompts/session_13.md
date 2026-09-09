@@ -148,32 +148,30 @@ those, since they are the smallest targets in the product.
 
 ---
 
-## Part C — The mascot stays idle-only (do not build the other states)
+## Part C — The mascot
 
-`mascot_state_t` has four values, but `anime_ui_set_state()` is never called
-from anywhere and the three non-idle state functions all render the identical
-idle animation. The mascot has been frozen in `MASCOT_IDLE` since Session 04.
+> **Superseded during the session.** This part originally read "the mascot
+> stays idle-only — do not build the other states", carrying forward a
+> Session 12 decision. The project owner overrode it partway through Session
+> 13 after seeing the redesigned screens: `MASCOT_ERROR` was built from the
+> designer's three-frame crying pose and wired to `STATE_FACE_RETRY`. The
+> paragraphs below are kept only as a record of what the brief said; they are
+> not a live instruction, and nothing forbids adding `MASCOT_ACTIVE` or
+> `MASCOT_SUCCESS` later.
 
-**This was decided in Session 12 and the answer is: leave it that way.** The
-documents that claimed otherwise — `MASCOT_UI_DESIGN.md` §4 and
-`SOFTWARE_ARCHITECTURE.md` §5, both of which said Session 11 wires
-`MASCOT_SUCCESS`/`MASCOT_ERROR` to real events — have been corrected and now
-state the idle-only design as intentional.
+`mascot_state_t` has four values. Before this session `anime_ui_set_state()`
+was never called from anywhere and the three non-idle state functions all
+rendered the identical idle animation — the mascot had been frozen in
+`MASCOT_IDLE` since Session 04.
 
-The reasoning, so nobody re-opens it: the UI already signals every one of those
-outcomes with a **full-screen state change** — the dispensing screen, the
-"I Took It" confirmation, the FACE NOT RECOGNISED retry screen, the alert
-screens. A mascot animation saying the same thing again is a second channel
-carrying no additional information, and it would compete for exactly the
-framebuffer bandwidth Part A is trying to free up.
+**What this session should do about the mascot:** make sure the idle
+animation is *well integrated* into the new visual system — correct
+placement, correct background, no tearing against the redesigned screens —
+and that it still runs at its intended 4 FPS.
 
-**What this session should do about the mascot instead:** make sure the idle
-animation is *well integrated* into the new visual system — correct placement,
-correct background, no tearing against the redesigned screens — and that it
-still runs at its intended 4 FPS. Nothing more.
-
-**Do not** add new mascot animations, and do not "helpfully" wire
-`anime_ui_set_state()` while you are in the file.
+**What it actually did, in addition:** cut the designer's three error frames
+into sprites, added a `MASCOT_ERROR` loop over them, and drove it from
+`STATE_FACE_RETRY` with a reset to idle on every exit.
 
 ---
 
@@ -232,8 +230,9 @@ still runs at its intended 4 FPS. Nothing more.
 - [ ] **Part B**: one design system; no screen visually out of place; text
       centring measured rather than hardcoded; Register and Dispense
       distinguishable.
-- [ ] **Part C**: mascot still idle-only; its idle animation integrated
-      cleanly into the new visual system. No new states built.
+- [ ] **Part C**: the idle animation integrated cleanly into the new visual
+      system, plus (added mid-session by the project owner) an animated
+      `MASCOT_ERROR` on the face-retry screen.
 - [ ] **Part D**: debug output gated; privacy rule re-verified against a real
       UART capture; the Release `-DDEBUG` inversion fixed.
 - [ ] **Part E**: `README.md`, `DESIGN_PROTOTYPE.md`, `DEMO_SCRIPT.md` written;

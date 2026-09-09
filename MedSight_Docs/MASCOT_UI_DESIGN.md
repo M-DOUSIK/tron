@@ -36,31 +36,28 @@ Visual qualities to aim for (describe these, don't cite a source IP):
 - 2–3 flat colors, high contrast against the camera-preview background for visibility.
 - Simple facial expression set: neutral/waiting, happy/success, concerned/warning.
 
-## 4. Animation States (Session 04 built idle; Session 13 wires the rest)
+## 4. Animation States (Session 04 built idle; Session 13 added the error state)
 
-> **Status, stated accurately (corrected Session 12). The mascot is
-> idle-only, by decision.**
+> **Status, as of Session 13. Two of the four states are real.**
 >
-> For eight sessions this table said Session 11 would drive
-> `MASCOT_SUCCESS`/`MASCOT_ERROR` from real system events. It never happened:
-> `anime_ui_set_state()` is not called from anywhere in the codebase, and
-> `anime_ui_state_active()`, `_success()` and `_error()` all render the
-> identical idle animation. The mascot has had exactly one state since
-> Session 04.
+> Sessions 04-12 shipped an idle-only mascot: `anime_ui_set_state()` was
+> never called and `_active()`/`_success()`/`_error()` all rendered the same
+> idle animation. Session 12 wrote that up as a deliberate design decision
+> and Session 13's brief repeated it.
 >
-> **That is now the intended design, not a gap.** The alternative — building
-> the three animations and wiring them — was considered in Session 12 and
-> deliberately declined: the UI already signals success and failure clearly
-> through full-screen state changes (the dispensing screen, the "I Took It"
-> confirmation, the FACE NOT RECOGNISED retry screen, the alert screens), so a
-> second, parallel channel saying the same thing adds animation work without
-> adding information. The idle mascot's job is presence and warmth, and it does
-> that job in one state.
+> **The project owner overrode that during Session 13.** `MASCOT_ERROR` is
+> now a real, animated state: the three frames of the designer's crying pose,
+> looping at 4 FPS on the FACE NOT RECOGNISED screen, in its own 150×153 box
+> beside the advice text. `state_machine.c` sets it on entry to
+> `STATE_FACE_RETRY` and returns the mascot to `MASCOT_IDLE` on all three
+> exits (TRY AGAIN, CANCEL, and the 30 s timeout).
 >
-> **The table below therefore describes the enum, not device behaviour.** The
-> four `mascot_state_t` values still exist in the code; only `MASCOT_IDLE` is
-> ever selected. Anyone reviving this should read §6's rendering constraints
-> first — every frame is CPU-drawn into a framebuffer the NPU also uses.
+> `MASCOT_ACTIVE` and `MASCOT_SUCCESS` are still unbuilt — no artwork has
+> been cut for them and they fall through to the idle loop. That is a
+> "not done yet", not a prohibition. Anyone adding one should read §6's
+> rendering constraints first: every frame is CPU-drawn into the same
+> framebuffer the NPU uses for its activation scratch, so nothing may draw
+> while a capture is in flight.
 
 Maps directly onto the `mascot_state_t` enum defined in `SOFTWARE_ARCHITECTURE.md` §5:
 
@@ -71,10 +68,10 @@ Maps directly onto the `mascot_state_t` enum defined in `SOFTWARE_ARCHITECTURE.m
 | `MASCOT_SUCCESS` | Patient matched; registration saved; dose confirmed | Happy animation, green accent |
 | `MASCOT_ERROR` | No face found; no gallery match; gallery full; SD card unavailable; dispenser jam or short dispense (Session 14); missed dose window (Session 15) | Concerned animation, amber/red accent |
 
-Session 04 implemented `MASCOT_IDLE` and stubbed the other three. Nothing since
-has driven them, and nothing is planned to — see the status note above. The
-enum and the stubs stay in place because they cost nothing and document the
-intent, but the shipped device shows one animation.
+Session 04 implemented `MASCOT_IDLE`; Session 13 implemented `MASCOT_ERROR`
+from the designer's three error frames and wired it to `STATE_FACE_RETRY`.
+`MASCOT_ACTIVE` and `MASCOT_SUCCESS` remain stubs that render the idle loop —
+see the status note above.
 
 ## 5. Touch/Button Layer (Session 05)
 

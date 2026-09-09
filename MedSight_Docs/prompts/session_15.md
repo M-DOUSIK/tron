@@ -422,8 +422,18 @@ the sake of a plan that looks ambitious.
 - **No audio.** The buzzer claim was dropped from the docs in Session 12 rather
   than implemented. If a scheduled alert really needs sound, that is Part D
   roadmap material, not a late addition here.
-- **No mascot animation work.** The mascot is idle-only by decision — see
-  `MASCOT_UI_DESIGN.md` §4.
+- **The carer-mode hook already exists in the UI.** Session 13 drew the
+  pill-count screen as four hopper slots with only slot A live; B, C and D
+  are greyed with a "SOON" label and a caption pointing at the carer app.
+  If this session builds any part of carer mode, that screen needs colours
+  and touch targets turned on (`HOPPER_LIVE` in `registration_ui.c`), not a
+  redesign — and the per-patient record needs a hopper field before it can
+  mean anything.
+- **No mascot animation work — in this session.** Not a standing rule: the
+  mascot has two live states (`MASCOT_IDLE`, `MASCOT_ERROR`) as of Session
+  13, and `MASCOT_ACTIVE`/`MASCOT_SUCCESS` are unbuilt rather than
+  forbidden. Building either needs new artwork and is out of scope here.
+  See `MASCOT_UI_DESIGN.md` §4.
 - **No overclaiming.** No regulatory language, no "PMDA-compliant", no implying
   a feature exists because it is in the Program Plan.
 - **No scope the calendar cannot hold.** The honest failure mode of this

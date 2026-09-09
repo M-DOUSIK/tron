@@ -39,6 +39,7 @@ here too.
 | NPU runtime | ST Edge AI / X-CUBE-AI runtime (`ll_aton_*`, `NetworkRuntime1200_CM55_GCC.a`) | STMicroelectronics | ST SLA0044 |
 | AI models | CenterFace detector, MobileFaceNet embedder (ST Edge AI generated) | STMicroelectronics | ST SLA0044 |
 | Filesystem | FatFs R0.15 | ChaN | FatFs licence (BSD-style, 1-clause) |
+| UI font | DejaVu Sans Bold Oblique (rasterised into `ui_assets.c`) | DejaVu authors; Bitstream Inc. | Bitstream Vera / DejaVu licence (permissive, embedding allowed) |
 | C library | newlib-nano (via GNU Tools for STM32 14.3.rel1) | Red Hat, Inc. and contributors | BSD-style / GPL-compatible |
 
 **Everything else in the firmware is original MedSight code** written across

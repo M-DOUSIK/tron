@@ -172,7 +172,7 @@ deferring real object creation to its own `usermain()` (called by the kernel
 once it's up, before any application task runs). This is purely an
 `ms_osal.c`-internal detail — the OSAL API and every caller are unaffected.
 
-## 5. Mascot State Enum (introduced Session 05 — only MASCOT_IDLE is ever used)
+## 5. Mascot State Enum (introduced Session 05; IDLE and ERROR are live)
 
 ```c
 typedef enum {
@@ -183,19 +183,21 @@ typedef enum {
 } mascot_state_t;
 ```
 
-**Only `MASCOT_IDLE` is ever selected, and that is the intended design.**
-`anime_ui_set_state()` exists but is called from nowhere, and the three
-non-idle state functions render the identical idle animation. Earlier
-revisions of this section said Session 10/11 would drive
-`MASCOT_SUCCESS`/`MASCOT_ERROR` from real system events; that never happened,
-and Session 12 decided not to build it rather than leave the claim standing.
+**Two of the four are real.** `MASCOT_IDLE` is the 8-frame idle loop
+(214×213, home and instruction screens). `MASCOT_ERROR` is the designer's
+three-frame crying pose (150×153), animated on the FACE NOT RECOGNISED
+screen; `state_machine.c` selects it on entry to `STATE_FACE_RETRY` and
+resets to `MASCOT_IDLE` on all three exits from that screen.
 
-The reason: every outcome those states would signal is already signalled by a
-**full-screen state change** — the dispensing screen, the "I Took It"
-confirmation, the FACE NOT RECOGNISED retry screen, the alert screens. A
-parallel mascot channel repeating the same information adds animation work and
-framebuffer traffic without adding information. The enum and the stubs stay
-because they cost nothing and record the intent; see `MASCOT_UI_DESIGN.md` §4.
+`MASCOT_ACTIVE` and `MASCOT_SUCCESS` still render the idle loop — no artwork
+exists for them yet. Sessions 12 and 13 originally recorded "idle-only" as a
+closed design decision; the project owner reopened it in Session 13 and
+`MASCOT_ERROR` was built. The remaining two are unbuilt, not forbidden.
+
+The one hard constraint on any new state is memory, not policy: mascot frames
+are CPU-drawn into `BUFFER_ADDRESS`, which the NPU also uses as activation
+scratch, so nothing may animate while a capture is in flight. See
+`MASCOT_UI_DESIGN.md` §4 and §6.
 
 ## 6. Patient Profile Data Model (Session 09, as actually implemented)
 
