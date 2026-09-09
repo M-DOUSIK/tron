@@ -9,3 +9,5 @@
 # and a fresh clone builds and flashes without it. It only matters if you
 # want to regenerate the sprites and fonts from the original PNGs.
 /scratch/
+/.metadata/
+/.vscode/
