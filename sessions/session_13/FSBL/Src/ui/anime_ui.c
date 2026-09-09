@@ -4,7 +4,7 @@
  * designer's actual artwork. Sessions 04-12 approximated the character with
  * ~150 lines of circles, ovals and triangles — a reasonable stand-in while
  * no asset pipeline existed, but it never looked like the reference sheets.
- * tools/gen_ui_assets.py now crops the designer's PNGs and packs them into
+ * scratch/gen_ui_assets.py now crops the designer's PNGs and packs them into
  * 4bpp palettised sprites, and this file just places them.
  *
  * THE IDLE LOOP. The designer drew the mascot as a two-frame animation
