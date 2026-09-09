@@ -202,8 +202,8 @@ mascot never targets a stale buffer address.
 
 ## Part E — Contest documentation
 
-`README.md` (repo root), `MedSight_Docs/DESIGN_PROTOTYPE.md`,
-`MedSight_Docs/DEMO_SCRIPT.md` were written. `DESIGN_PROTOTYPE.md` is
+`README.md` (repo root), `documents/DESIGN_PROTOTYPE.md`,
+`documents/DEMO_SCRIPT.md` were written. `DESIGN_PROTOTYPE.md` is
 explicit that no CAD render image exists yet — only the unrun
 `RAGNAR_CAD_PROMPT.md` text prompt — and that whether Session 14's physical
 hopper is built depends on whether `sessions/session_14/` exists in a given
@@ -309,7 +309,7 @@ compensate for an 8x8 bitmap font scaled by integer replication.** Scale-3
 text is 24px glyphs built from 3x3 blocks; that reads as "unfinished"
 regardless of where it is positioned.
 
-Session 13 therefore added a real asset pipeline, `scratch/gen_ui_assets.py`:
+Session 13 therefore added a real asset pipeline, `tools/gen_ui_assets.py`:
 
 | Asset | Source | Size |
 |---|---|---|
@@ -451,7 +451,7 @@ told this session not to reopen it. The project owner reopened it directly:
 > frame for try again or cancel) … i want u to make it dynamic with the three
 > frames … ignore my previous instruction of not having multple states"
 
-So `MASCOT_ERROR` is now real. `scratch/gen_ui_assets.py` cuts all three frames
+So `MASCOT_ERROR` is now real. `tools/gen_ui_assets.py` cuts all three frames
 of the designer's error GIF using **one shared bounding box** `(279, 646,
 867, 1247)` so they register against each other — cropping each frame to its
 own content would have made the cat jump between frames. They land as

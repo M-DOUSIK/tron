@@ -26,7 +26,7 @@ no cloud dependency and no biometric data ever leaving the board.
   gallery persistence.
 - Session 14 (where it has run) adds a single-hopper pill dispenser: a
   28BYJ-48 stepper turntable + a 3-pin IR break-beam sensor module. See
-  [`MedSight_Docs/DESIGN_PROTOTYPE.md`](MedSight_Docs/DESIGN_PROTOTYPE.md)
+  [`documents/DESIGN_PROTOTYPE.md`](documents/DESIGN_PROTOTYPE.md)
   for exactly what is physically built versus still design intent.
 - No Wi-Fi/Ethernet/BLE — this device never connects to a network, by
   design (see Privacy & Security below).
@@ -42,7 +42,7 @@ no cloud dependency and no biometric data ever leaving the board.
   wrapper is the API surface, not a separate model — the two networks above
   are the actual architecture). One model pipeline; no pill-type
   classification or action recognition model was built (evaluated and
-  dropped early — see `MedSight_Docs/AI_PIPELINE.md`).
+  dropped early — see `documents/AI_PIPELINE.md`).
 - A small hand-rolled UI layer (`ui/gui_draw.c`, `ui/registration_ui.c`,
   `ui/anime_ui.c`, `ui/state_machine.c`) drawing directly into a 800×480
   RGB565 framebuffer, scanned out by the LTDC. As of Session 13 the UI owns
@@ -71,13 +71,13 @@ no cloud dependency and no biometric data ever leaving the board.
     -import "<repo>/sessions/session_13/STM32CubeIDE/FSBL" \
     -cleanBuild "MedSight_Session13_FSBL"     # builds both Debug and Release
   ```
-  See `MedSight_Docs/ENGINEERING_LESSONS.md` for the full rationale and the
+  See `documents/ENGINEERING_LESSONS.md` for the full rationale and the
   folder-copy/`.d`-file hygiene needed after copying a session folder.
 - Both `Debug` and `Release` configurations build clean, 0 errors. Verified
   from a fresh clone into an empty workspace, not just in place.
 - **UI assets are pre-generated and committed.** The sprites and fonts in
   `FSBL/Inc/ui/ui_assets.h` and `ui_assets_data.inc` are produced from the
-  designer's PNGs by a script that lives in `scratch/`, which is not
+  designer's PNGs by a script that lives in `tools/`, which is not
   version-controlled. Nothing about the build depends on it - a clone
   compiles and flashes as-is. You only need the generator (and the original
   artwork) to change the artwork.
@@ -86,7 +86,7 @@ no cloud dependency and no biometric data ever leaving the board.
 
 - **Single hopper only** (or none, if Session 14 hasn't run in this
   checkout) — the 6–8 independently-addressable hopper architecture in
-  `MedSight_Docs/MECHANICAL_DESIGN.md` is documented design intent, not
+  `documents/MECHANICAL_DESIGN.md` is documented design intent, not
   built. Adding hoppers is meant to be additive, not a firmware rewrite.
 - **No on-device patient deletion** — removing a patient currently means
   physically pulling the SD card and editing/removing `patients.dat`
@@ -103,23 +103,23 @@ No network stack exists on this device — Wi-Fi/Ethernet/BLE are never
 initialized, by design, so there is no path for biometric data to leave the
 board. Face embeddings are never written to UART or any log; only names,
 gallery slot indices, dose counts, and match confidence scores are
-printed/logged. See `MedSight_Docs/COMPLIANCE_PRIVACY_POSTURE.md` for the
+printed/logged. See `documents/COMPLIANCE_PRIVACY_POSTURE.md` for the
 full posture and its known gaps.
 
 **No µT-Kernel 3.0 API was changed.** The vendored `mtk3_bsp2/` tree and
 kernel-facing internals in `ms_osal.c` are treated as fixed dependencies
-across every session — see `MedSight_Docs/ENGINEERING_LESSONS.md` and
-`MedSight_Docs/milestones/session_11_notes.md`/`session_12_notes.md` for the
+across every session — see `documents/ENGINEERING_LESSONS.md` and
+`documents/milestones/session_11_notes.md`/`session_12_notes.md` for the
 integration history.
 
 Third-party components and their licenses are inventoried in
-[`MedSight_Docs/THIRD_PARTY_SOFTWARE.md`](MedSight_Docs/THIRD_PARTY_SOFTWARE.md).
+[`documents/THIRD_PARTY_SOFTWARE.md`](documents/THIRD_PARTY_SOFTWARE.md).
 
 ## Documentation
 
-Project history and design rationale live in `MedSight_Docs/` — start with
+Project history and design rationale live in `documents/` — start with
 `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`, and
 `HARDWARE_ARCHITECTURE.md`. Every development session has a prompt
-(`MedSight_Docs/prompts/session_NN.md`) and, once complete, a notes file
-(`MedSight_Docs/milestones/session_NN_notes.md`) recording what actually
+(`documents/prompts/session_NN.md`) and, once complete, a notes file
+(`documents/milestones/session_NN_notes.md`) recording what actually
 happened on real hardware, including bugs found and fixed.

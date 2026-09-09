@@ -8,7 +8,7 @@ with FreeRTOS fully removed.
 
 **Before writing any code or taking any action**, acquire full context:
 
-1. **READ ALL DOCUMENTATION**: every markdown file in `MedSight_Docs/` —
+1. **READ ALL DOCUMENTATION**: every markdown file in `documents/` —
    especially `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`,
    `HARDWARE_ARCHITECTURE.md`, `ENGINEERING_LESSONS.md`, `AI_LESSONS.md`,
    `AI_PIPELINE.md`, and `COMPLIANCE_PRIVACY_POSTURE.md`.
@@ -395,7 +395,7 @@ others used in the program:
 3. a written guarantee that copyrights and other rights have been handled per
    the Application Rules.
 
-Create `MedSight_Docs/THIRD_PARTY_SOFTWARE.md` and inventory what this project
+Create `documents/THIRD_PARTY_SOFTWARE.md` and inventory what this project
 actually links. Gather it from the build, not from memory — walk
 `Debug/objects.list`, the `-l` flags in the link line, and the licence headers
 in the source tree. At minimum it will include: CMSIS and STM32N6xx CMSIS
@@ -442,7 +442,7 @@ while the code is fresh.
       the system**; a real idle-time or current-draw measurement recorded.
 - [ ] **Part C**: all six hardening items done; `disk_read`/`disk_write`
       tracing behind a default-off guard.
-- [ ] **Part D**: `MedSight_Docs/THIRD_PARTY_SOFTWARE.md` written, including
+- [ ] **Part D**: `documents/THIRD_PARTY_SOFTWARE.md` written, including
       the µT-Kernel modification table and the API-unchanged statement.
 - [ ] Build 100% clean — zero errors, zero warnings.
 - [ ] **The Session 10 dispense flow still works end-to-end on hardware**,
@@ -450,7 +450,7 @@ while the code is fresh.
       whole session.
 - [ ] Zero `tk_*` calls outside `ms_osal.c` (grep-verified).
 - [ ] No face-embedding bytes in a real UART capture.
-- [ ] `MedSight_Docs/milestones/session_12_notes.md` written, recording every
+- [ ] `documents/milestones/session_12_notes.md` written, recording every
       deviation, every idiom evaluated-and-skipped and why, and the measured
       numbers from Parts B and C.
 - [ ] `SOFTWARE_ARCHITECTURE.md` §4's OSAL table updated to match the widened

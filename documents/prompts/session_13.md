@@ -14,7 +14,7 @@ since Session 08B and is the worst thing a judge will see.
 
 **Before writing any code or taking any action**, acquire full context:
 
-1. **READ ALL DOCUMENTATION** in `MedSight_Docs/` — especially
+1. **READ ALL DOCUMENTATION** in `documents/` — especially
    `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`, `MASCOT_UI_DESIGN.md`,
    `ENGINEERING_LESSONS.md`, and `COMPLIANCE_PRIVACY_POSTURE.md`.
 
@@ -205,12 +205,12 @@ into sprites, added a `MASCOT_ERROR` loop over them, and drove it from
    Link to `THIRD_PARTY_SOFTWARE.md` and state plainly that no µT-Kernel 3.0
    API specification was changed. Clear English, written for an international
    audience.
-2. **`MedSight_Docs/DESIGN_PROTOTYPE.md`** — the physical design story, now
+2. **`documents/DESIGN_PROTOTYPE.md`** — the physical design story, now
    partly real. Session 14 builds a working single-hopper turntable dispenser;
    `MECHANICAL_DESIGN.md`'s multi-hopper scaling remains design intent.
    Be precise about which is which, and include the 3D renders from
    `RAGNAR_CAD_PROMPT.md`.
-3. **`MedSight_Docs/DEMO_SCRIPT.md`** — a shot list for the demo video: boot,
+3. **`documents/DEMO_SCRIPT.md`** — a shot list for the demo video: boot,
    register a patient, dispense to them (face recognition → dispense →
    confirm), show the SD log on a PC, and — if Session 14 has run — the
    physical dispense. Include the failure paths, because they demonstrate the
@@ -242,7 +242,7 @@ into sprites, added a `MASCOT_ERROR` loop over them, and drove it from
 - [ ] **The full flow still works end-to-end on hardware.** This is the
       regression bar, and after a UI rewrite it is a real risk, not a
       formality.
-- [ ] `MedSight_Docs/milestones/session_13_notes.md` written.
+- [ ] `documents/milestones/session_13_notes.md` written.
 - [ ] `UI_SCREEN_INVENTORY.md` updated to describe the new UI.
 
 ---

@@ -24,7 +24,7 @@
 
 /*
  * MedSight Session 12 modification (vendored-BSP change #4 — see
- * MedSight_Docs/THIRD_PARTY_SOFTWARE.md's µT-Kernel modification table).
+ * documents/THIRD_PARTY_SOFTWARE.md's µT-Kernel modification table).
  * No tk_* API signature or semantic is changed; low_pow() is a BSP-supplied
  * power hook, not part of the µT-Kernel 3.0 API specification.
  *

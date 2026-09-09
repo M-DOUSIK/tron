@@ -14,7 +14,7 @@
  * removed in Session 11, so there is no longer a second backend to keep the
  * surface narrow for, and the AI request/response handshake introduced this
  * session is a genuine multi-condition wait — exactly what µT-Kernel's
- * event flags exist for. See MedSight_Docs/milestones/session_12_notes.md
+ * event flags exist for. See documents/milestones/session_12_notes.md
  * for the design reasoning, including the idioms that were evaluated and
  * deliberately NOT adopted.
  *

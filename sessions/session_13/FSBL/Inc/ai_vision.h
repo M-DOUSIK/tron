@@ -2,7 +2,7 @@
  *
  * Session 09B (clean do-over of 08B): real one-shot face recognition + small-
  * gallery matching, replacing the Session 08A throwaway NPU test model.
- * See MedSight_Docs/AI_PIPELINE.md and MedSight_Docs/prompts/session_08B.md.
+ * See documents/AI_PIPELINE.md and documents/prompts/session_08B.md.
  */
 #ifndef AI_VISION_H
 #define AI_VISION_H

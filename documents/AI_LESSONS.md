@@ -101,7 +101,7 @@ in generated-source comments like `file postfix=xSPI2 name=octoFlash
 offset=0x70380000` — grep the model's `.c` file for `offset=0x` if
 detection/inference runs but produces garbage/NaN output; it's very likely
 a missing weight region at one of these addresses, not a code bug. Full
-story in `MedSight_Docs/milestones/session_08B_notes.md`.
+story in `documents/milestones/session_08B_notes.md`.
 
 ### 3. If the board hangs at boot after flashing external memory
 

@@ -281,7 +281,7 @@ two. `AI_PIPELINE.md` has been updated to match.
     Plan either — that described a camera-only verification device — so this
     is scope added beyond what was promised, not restored.
   - **Session 15 added:** reconcile the finished system against that original
-    Program Plan (`scratch/Program Plan 54916.pdf`), which is the document the
+    Program Plan (`tools/Program Plan 54916.pdf`), which is the document the
     judges have already read and which promised at least two things that were
     never built — pill/packet classification and schedule validation — then
     spend whatever time remains on the single highest-value item rather than a

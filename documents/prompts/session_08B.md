@@ -6,12 +6,12 @@ Hello! We are doing a clean do-over of Session 08B for the MedSight project.
 
 **Before writing any code or taking any action**, you must acquire full context:
 
-1. **READ ALL DOCUMENTATION**: Read every markdown file in `MedSight_Docs/` —
+1. **READ ALL DOCUMENTATION**: Read every markdown file in `documents/` —
    especially `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`,
    `HARDWARE_ARCHITECTURE.md`, `ENGINEERING_LESSONS.md`, and `AI_LESSONS.md`.
 
 2. **READ PAST SESSION PROMPTS**: Read session prompts `session_01.md` through
-   `session_08A.md` in `MedSight_Docs/prompts/` to understand what is already built.
+   `session_08A.md` in `documents/prompts/` to understand what is already built.
 
 3. **READ THE REFERENCE IMPLEMENTATION** (do this before touching any code):
    A working STM32N6 face recognition project lives at:
@@ -270,7 +270,7 @@ Fix ALL errors before moving on. Common errors and fixes:
 - [ ] UART shows `det_run done rc=0` and `emb_run done rc=0` (not hanging)
 - [ ] With face: `"Detector: Face detected!"` prints
 - [ ] Without face (cover lens): `"Detector: No face found."` prints  
-- [ ] `MedSight_Docs/milestones/session_08B_notes.md` written with: which model files
+- [ ] `documents/milestones/session_08B_notes.md` written with: which model files
   were used, confidence threshold and reasoning, NPU latency for detector + embedder
 
 ---

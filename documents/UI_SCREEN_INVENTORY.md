@@ -58,7 +58,7 @@ Plus two overlays that are not states of their own:
 ## 2. Design system (Session 13)
 
 The whole UI is now drawn from the project designer's artwork, cut into
-sprites and fonts at build time by `scratch/gen_ui_assets.py` and packed into
+sprites and fonts at build time by `tools/gen_ui_assets.py` and packed into
 `Inc/ui/ui_assets.h` + `ui_assets_data.inc` (~157 KB of ROM).
 
 - **One frame**, `gui_draw_frame()` — a blush card with a rounded white

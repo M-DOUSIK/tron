@@ -13,7 +13,7 @@ extern "C" {
  * MedSight design system (Session 13)
  *
  * The visual language comes from the project designer's own reference
- * artwork (scratch/mascot_and_frames_design/): a white page inside a thick
+ * artwork (tools/mascot_and_frames_design/): a white page inside a thick
  * blush-pink rounded card frame, a heart and a pill-capsule motif in
  * opposite corners, bold italic type, soft rounded buttons, and the Lumio
  * mascot as real artwork rather than procedural shapes.

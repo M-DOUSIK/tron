@@ -62,7 +62,7 @@ Every dimension in it is explicitly flagged as a placeholder pending real
 caliper measurements of the board, panel, and camera module.
 
 If renders are generated before submission, they belong alongside this
-document (e.g. `MedSight_Docs/renders/`) with a short caption naming which
+document (e.g. `documents/renders/`) with a short caption naming which
 prompt revision produced them; none exist as of this writing.
 
 ## Honest summary for a judge

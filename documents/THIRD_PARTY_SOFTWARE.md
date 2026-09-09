@@ -46,7 +46,7 @@ here too.
 Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 `sd_diskio.c`, `ui/state_machine.c`, `ui/gui_draw.c`, `ui/anime_ui.c`,
 `ui/touch_driver.c`, `ui/registration_ui.c`, and the documentation set in
-`MedSight_Docs/`.
+`documents/`.
 
 ---
 
@@ -116,7 +116,7 @@ Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 | **Name** | ST Edge AI runtime, version 1.1.3-262 (`LL_ATON_VERSION` in `ll_aton_version.h`): sources `ll_aton*.c`, `ll_sw_float.c`, `ll_sw_integer.c`, `ecloader.c`, `mcu_cache.c`, `npu_cache.c`, `lc_print.c`, `ai_device_adaptor.c`, plus the precompiled archive `NetworkRuntime1200_CM55_GCC.a` |
 | **Rights holder** | STMicroelectronics |
 | **Licence** | ST SLA0044 |
-| **Acquisition** | X-CUBE-AI / ST Edge AI Core, obtained as part of ST's `x-cube-n6-ai-h264-usb-uvc` application package, via the reference project kept at `scratch/PeleAB_repo/` (Session 08B). |
+| **Acquisition** | X-CUBE-AI / ST Edge AI Core, obtained as part of ST's `x-cube-n6-ai-h264-usb-uvc` application package, via the reference project kept at `tools/PeleAB_repo/` (Session 08B; that folder was named `scratch/` at the time). |
 | **Function** | Drives the Neural-ART accelerator: epoch-controller microcode loading, buffer/cache management and the synchronous `stai_*_run()` execution path. Configured `LL_ATON_OSAL_BARE_METAL` (`ll_aton_config.h`), which is why the three `ll_aton_osal_{freertos,threadx,zephyr}.c` files compile to genuinely empty translation units — they are in the build but contribute no code, and in particular the FreeRTOS-named one does **not** make this firmware depend on FreeRTOS. |
 | **Modified?** | No. |
 
@@ -126,8 +126,8 @@ Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 |---|---|
 | **Name** | **CenterFace** face detector (`centerface_OE_3_3_1.onnx` → `fd.c`, `fd_ecblobs.h`, `stai_fd.c/.h`) and **MobileFaceNet** face embedder (`mobilefacenet_int8_faces_OE_3_3_1.onnx` → `faceid.c`, `faceid_ecblobs.h`, `stai_faceid.c/.h`), both INT8, both compiled to Neural-ART by ST's AtoNN compiler |
 | **Rights holder** | STMicroelectronics (`Copyright (c) 2023-2024 STMicroelectronics` in every generated file) |
-| **Licence** | ST SLA0044 — `scratch/PeleAB_repo/Model/LICENSE.md` places that repository's whole `Model/` directory under SLA0044 |
-| **Acquisition** | Copied verbatim in Session 08B from the `Model/` directory of ST's `x-cube-n6-ai-h264-usb-uvc` application (kept locally at `scratch/PeleAB_repo/`), together with its prebuilt constant-data blobs `fd_data.xSPI2.bin` and `faceid_data.xSPI2.bin`. The generated sources record their own provenance in their header comments (`--onnx-input`, `--network-name`, `--json-quant-file`), which is where the model identities above were confirmed. |
+| **Licence** | ST SLA0044 — `tools/PeleAB_repo/Model/LICENSE.md` places that repository's whole `Model/` directory under SLA0044 |
+| **Acquisition** | Copied verbatim in Session 08B from the `Model/` directory of ST's `x-cube-n6-ai-h264-usb-uvc` application (kept locally at `tools/PeleAB_repo/`; that folder was named `scratch/` at the time), together with its prebuilt constant-data blobs `fd_data.xSPI2.bin` and `faceid_data.xSPI2.bin`. The generated sources record their own provenance in their header comments (`--onnx-input`, `--network-name`, `--json-quant-file`), which is where the model identities above were confirmed. |
 | **Function** | CenterFace locates a face in the camera frame; MobileFaceNet turns that face crop into a 128-dimensional embedding. MedSight's own `ai_vision.c` does everything else — the frame snapshot, the CenterFace box decode, L2 normalisation and int8 quantisation of the embedding, cosine-similarity gallery matching, and SD-card persistence. |
 | **Modified?** | The generated sources were edited in two mechanical ways only, both documented in `milestones/session_08B_notes.md`: internal helper functions were made `static` to resolve multiple-definition errors when both models are linked together, and large weight arrays were tagged `__attribute__((section(".xspi2")))` so they land in external OSPI NOR, which the NPU's data masters can actually reach. No model weights or graph structure were altered. |
 
@@ -289,6 +289,6 @@ regenerated at any time with a recursive diff against the pristine upstream
 tree:
 
 ```bash
-diff -rq scratch/mtk3bsp2_samples/Examples/prj_stm32n6_cam/extracted/prj_stm32n6_cam/FSBL/mtk3_bsp2 \
+diff -rq tools/mtk3bsp2_samples/Examples/prj_stm32n6_cam/extracted/prj_stm32n6_cam/FSBL/mtk3_bsp2 \
          sessions/session_NN/FSBL/mtk3_bsp2
 ```

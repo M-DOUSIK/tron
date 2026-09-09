@@ -5,9 +5,9 @@
  * pipeline: CenterFace face detector -> FaceID embedder -> gallery match.
  * Model wrapper code (stai_fd.*, stai_faceid.*, fd.c, faceid.c, *_ecblobs.h)
  * is copied verbatim from the proven PeleAB reference project
- * (scratch/PeleAB_repo/Model) per MedSight_Docs/prompts/session_08B.md; only
- * this file, ai_vision.h, and the sd_logger.c file-I/O additions are original
- * to MedSight.
+ * (tools/PeleAB_repo/Model; that folder was named scratch/ at the time) per
+ * documents/prompts/session_08B.md; only this file, ai_vision.h, and the
+ * sd_logger.c file-I/O additions are original to MedSight.
  *
  * IMPORTANT MEMORY HAZARD (found during this session, not in the original
  * briefing): both generated networks' activation scratch pools are hardcoded

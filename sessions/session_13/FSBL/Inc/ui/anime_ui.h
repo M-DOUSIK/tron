@@ -43,7 +43,7 @@ typedef enum
  *
  * Session 13: Lumio is no longer drawn from circles and triangles — the
  * renderer blits the project designer's own artwork, cropped and packed into
- * ui_sprite_mascot_idle by scratch/gen_ui_assets.py. The geometry below tracks
+ * ui_sprite_mascot_idle by tools/gen_ui_assets.py. The geometry below tracks
  * that sprite and gui_draw.h's MASCOT_BG_* box, which is where every screen
  * reserves space for it.
  *

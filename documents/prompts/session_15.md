@@ -6,7 +6,7 @@ Sessions 01–14 built the thing. This session asks two questions that nobody ha
 asked since March:
 
 1. **Does what we built match what we promised?** The Program Plan submitted
-   for round 1 (`scratch/Program Plan 54916.pdf`) is what won the board and the
+   for round 1 (`tools/Program Plan 54916.pdf`) is what won the board and the
    place in round 2. Judges have read it. Several things in it were never
    built, and several things that were built are not in it. Some of those
    divergences are improvements worth stating proudly; at least one is a
@@ -51,10 +51,10 @@ asking about the missing classifier. A vague one is not.
 
 ## How to Start This Session
 
-1. **READ `scratch/Program Plan 54916.pdf` IN FULL.** It is four pages. It is
+1. **READ `tools/Program Plan 54916.pdf` IN FULL.** It is four pages. It is
    the single most important input to this session and the only document in the
    project the judges have already seen.
-2. **READ ALL DOCUMENTATION** in `MedSight_Docs/`, and
+2. **READ ALL DOCUMENTATION** in `documents/`, and
    `milestones/session_11_notes.md` through `session_14_notes.md`.
 3. **READ THE CONTEST RULES AGAIN**, in particular rule 1.4's evaluation
    criteria for the RTOS Application category — real-time performance, power
@@ -66,7 +66,7 @@ asking about the missing classifier. A vague one is not.
 
 ## Part A — Program Plan reconciliation (do this first)
 
-Produce `MedSight_Docs/PROGRAM_PLAN_RECONCILIATION.md`: a clause-by-clause
+Produce `documents/PROGRAM_PLAN_RECONCILIATION.md`: a clause-by-clause
 comparison of what was promised against what exists, with a decision for each
 gap. **Be honest in both directions** — a submission that quietly drops a
 promised feature reads far worse than one that says "we replaced X with Y, here
@@ -311,7 +311,7 @@ model does not fit, here is the map" is a good thing to be able to say.
 ### B5. Measure the current draw, if the instrumentation cooperates
 
 Session 12 measured ~89.6% CPU idle but nobody has measured actual **current**.
-`scratch/x-cube-n6-ai-power-measurement` has been sitting in this repo unused
+`tools/x-cube-n6-ai-power-measurement` has been sitting in this repo unused
 since the beginning. Rule 1.4 names power saving explicitly, and "42 mA idle
 against 180 mA during inference" is a categorically stronger claim than a
 percentage. Cheap if it works; **abandon it quickly if it does not** — it is a

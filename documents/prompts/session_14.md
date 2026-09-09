@@ -8,7 +8,7 @@ opposite, in strong terms.
 
 The history, so nobody has to reconstruct it:
 
-- The **original Program Plan** (submitted March 2026, `scratch/Program Plan
+- The **original Program Plan** (submitted March 2026, `tools/Program Plan
   54916.pdf`) described a **camera-only verification device**. No dispensing at
   all. MedSight looked at a pill you were holding and told you whether it was
   the right one.
@@ -33,7 +33,7 @@ is not, and never will be.**
 
 ## How to Start This Session
 
-1. **READ ALL DOCUMENTATION** in `MedSight_Docs/` — especially
+1. **READ ALL DOCUMENTATION** in `documents/` — especially
    `MASTER_PROJECT_PLAN.md` (v11 changelog first), `HARDWARE_ARCHITECTURE.md`,
    `MECHANICAL_DESIGN.md`, `SOFTWARE_ARCHITECTURE.md` and
    `ENGINEERING_LESSONS.md`.

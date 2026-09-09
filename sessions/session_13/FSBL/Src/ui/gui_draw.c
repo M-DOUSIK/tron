@@ -12,7 +12,7 @@
  *      layout was arranged — 24px text made of 3x3 blocks reads as a
  *      prototype. gui_font_* draws 4bpp anti-aliased proportional glyphs.
  *   2. Real artwork. The mascot and corner motifs are cropped from the
- *      designer's PNGs at build time by scratch/gen_ui_assets.py.
+ *      designer's PNGs at build time by tools/gen_ui_assets.py.
  *   3. One shape language. Everything is a rounded rectangle with a light
  *      fill, a saturated edge and ink text — see gui_draw.h's colour rules.
  */
@@ -28,7 +28,7 @@
  * .project, and an IDE that already has the project open keeps a stale copy
  * of that file in memory, so the unit silently never compiles and the link
  * fails on every asset symbol. Including into a file already in the build
- * removes that failure mode. See scratch/gen_ui_assets.py. */
+ * removes that failure mode. See tools/gen_ui_assets.py. */
 #include "ui/ui_assets_data.inc"
 
 static uint32_t s_gui_buffer = 0;

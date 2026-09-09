@@ -89,7 +89,7 @@ extern DCMIPP_HandleTypeDef hdcmipp;
 #define CONFIRM_TAKEN_TIMEOUT_MS  30000u
 
 /* Session 09B: set around ai_vision_run_pipeline() calls. Named per
- * MedSight_Docs/prompts/session_08B.md step 6; the actual hardware freeze is
+ * documents/prompts/session_08B.md step 6; the actual hardware freeze is
  * camera_stop() below (DCMIPP DMA into BUFFER_ADDRESS must really stop, not
  * just be flagged) — this flag is bookkeeping/diagnostic on top of that. */
 static volatile bool g_isp_suspend = false;

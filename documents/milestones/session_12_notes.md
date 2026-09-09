@@ -21,7 +21,7 @@ Session 12 did four things, in the order `prompts/session_12.md` lays them out:
   prompt predicted it might — **Addendum 1** has the root cause (BASEPRI masks
   the very SysTick that would wake the core) and the fix.
 - **Part C** hardened six things, and **Part D** produced
-  `MedSight_Docs/THIRD_PARTY_SOFTWARE.md` — including the µT-Kernel
+  `documents/THIRD_PARTY_SOFTWARE.md` — including the µT-Kernel
   modification table contest rule 1.3 requires, built from a recursive diff
   against pristine upstream rather than from memory.
 
@@ -650,7 +650,7 @@ polish pass, which is already tasked with guarding debug output behind
 
 ## Part D — `THIRD_PARTY_SOFTWARE.md`
 
-Written to `MedSight_Docs/THIRD_PARTY_SOFTWARE.md`, compiled from the build
+Written to `documents/THIRD_PARTY_SOFTWARE.md`, compiled from the build
 rather than from memory: `Debug/objects.list`'s 321 objects grouped by
 directory, the `-l`/`-L` flags on the real link line, and the licence headers in
 the tree. It covers all three things rule 1.3 requires — the name/rights
@@ -797,8 +797,8 @@ verified by grep across every `.mk`, `makefile`, `.project`, `.cproject` and
 
 **Documentation:**
 
-- `MedSight_Docs/THIRD_PARTY_SOFTWARE.md` — new.
-- `MedSight_Docs/milestones/session_12_notes.md` — this file.
+- `documents/THIRD_PARTY_SOFTWARE.md` — new.
+- `documents/milestones/session_12_notes.md` — this file.
 - `SOFTWARE_ARCHITECTURE.md` — §4 OSAL table widened and the
   adopted/skipped idioms recorded; new §9 (task set, priority derivation,
   frame-buffer ownership) and §10 (power saving); §2/§3/§5/§7 brought in line

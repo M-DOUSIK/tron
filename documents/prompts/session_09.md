@@ -8,15 +8,15 @@ pipeline.
 
 **Before writing any code or taking any action**, acquire full context:
 
-1. **READ ALL DOCUMENTATION**: every markdown file in `MedSight_Docs/` —
+1. **READ ALL DOCUMENTATION**: every markdown file in `documents/` —
    especially `MASTER_PROJECT_PLAN.md`, `SOFTWARE_ARCHITECTURE.md`,
    `HARDWARE_ARCHITECTURE.md`, `ENGINEERING_LESSONS.md`, `AI_LESSONS.md`,
    `AI_PIPELINE.md`, and `COMPLIANCE_PRIVACY_POSTURE.md`.
 
 2. **READ PAST SESSION PROMPTS**: `session_01.md` through `session_08A.md`
-   in `MedSight_Docs/prompts/`, to understand what's already built.
+   in `documents/prompts/`, to understand what's already built.
 
-3. **READ `MedSight_Docs/milestones/session_08B_notes.md` IN FULL.** This is
+3. **READ `documents/milestones/session_08B_notes.md` IN FULL.** This is
    not optional background — it documents five hard-won hardware bugs found
    and fixed during Session 08B's actual bring-up (a stale-flash boot
    assertion, a *second* undiscovered NPU weight pool at a separate flash
@@ -208,7 +208,7 @@ Zero errors, zero warnings before declaring anything done.
       confirm it's no longer "intruder" but shows their name)
 - [ ] Gallery-full case shows a clear message, doesn't crash
 - [ ] No face embedding bytes ever appear in UART output
-- [ ] `MedSight_Docs/milestones/session_09_notes.md` written: what states
+- [ ] `documents/milestones/session_09_notes.md` written: what states
       were added, any deviations from this plan, and the actual hardware
       test result of the register-then-dispense end-to-end check above
 
