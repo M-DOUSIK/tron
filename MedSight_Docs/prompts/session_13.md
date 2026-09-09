@@ -24,7 +24,19 @@ since Session 08B and is the worst thing a judge will see.
 
 3. **READ PAST SESSION PROMPTS** `session_01.md` through `session_12.md`.
 
-4. **READ `milestones/session_12_notes.md` IN FULL**, especially:
+4. **READ `milestones/session_12_notes.md` IN FULL** — it has ten addenda, and
+   these four are hard constraints on this session:
+   - **Addendum 9 — READ THIS FIRST AND DO NOT UNDO IT.** The cold-boot grey
+     screen took six rounds and five wrong diagnoses to find. `WFI` on this
+     part stops the clock of every peripheral, bus and memory whose `LPEN` bit
+     is clear, and the framebuffer is in AXISRAM3-6, so sleeping was starving
+     the LTDC. `ms_configure_sleep_clocks()` in `main.c` is what makes the
+     display work at all. **If this session adds any new DMA-driven peripheral
+     — DMA2D paths, a second layer, anything that moves pixels without the CPU
+     — its `LPEN` bit must be added there in the same change**, and the result
+     must be tested from a genuine COLD boot (power physically removed). A
+     warm re-run and a debugger session both hide this class of fault
+     completely.
    - **Addendum 1** — the idle path's `WFI` masking. Do not touch
      `ms_osal_low_power_idle()`.
    - **Addendum 2** — `disk_ioctl()`'s six-session-old bug, and the lesson
@@ -32,6 +44,17 @@ since Session 08B and is the worst thing a judge will see.
    - **Part A1's frame-buffer ownership analysis** — this is the constraint
      that shapes the single most valuable fix in this session. Read it before
      designing anything that draws during a face capture.
+   - **Addendum 10** — what is verified on hardware and what is not. Gallery-
+     full is NOT individually evidenced; do not claim it. The 20-30 minute
+     idle soak is still outstanding and is the test that matters most for
+     Addendum 9's fix — if this session touches anything that draws, run it.
+
+   Also note the diagnostics left gated off in `main.c`: `MS_DISPLAY_WATCH`
+   (framebuffer checksum, live pixel samples, LTDC scan activity and every
+   relevant register) and `MS_DISPLAY_RECOVER` (an escalating recovery
+   ladder). If anything visual misbehaves in this session, set
+   `MS_DISPLAY_WATCH` to 1 before theorising — it was built for exactly that,
+   and it is the reason Addendum 9 was eventually found.
 
 5. **READ THE WORKING CODE** in `sessions/session_12/FSBL/`:
    `Src/ui/gui_draw.c`, `Src/ui/registration_ui.c`, `Src/ui/anime_ui.c`,
