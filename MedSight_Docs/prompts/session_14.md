@@ -20,7 +20,7 @@ The history, so nobody has to reconstruct it:
   "this is a cut, not a 'not yet' — reject it as scope creep" banner.
 - **That constraint has now changed**: a teammate capable of designing and
   building the hardware has joined. A single-hopper turntable driven by a
-  **28BYJ-48 stepper**, with a **hand-built IR break-beam** counting pills as
+  **28BYJ-48 stepper**, with a **3-pin IR sensor module** counting pills as
   they drop, is buildable within the remaining time.
 
 So this is not scope creep, and not a reversal on the merits — it is the
@@ -97,31 +97,65 @@ correct as written. What it means for firmware:
 - **Open-loop is exactly why the IR counter exists.** Steps commanded is not
   pills dispensed. Never infer a count from step count.
 
-### The sensor: a hand-built IR break beam
+### The sensor: a 3-pin IR module (VCC / GND / OUT)
 
-Your teammate is soldering this from discrete parts rather than using a
-packaged module: an **IR emitter LED** and an **IR receiver** (photodiode or
-phototransistor) facing each other across the chute, each with its series /
-pull-up resistor, so a pill falling between them momentarily breaks the beam.
+**Changed after Session 13, by the project owner:** this was specified as a
+hand-built emitter/receiver pair soldered from discrete parts. It is now an
+off-the-shelf IR sensor module - a small PCB with three pins, an IR emitter
+and detector, an LM393 comparator and a trim pot, of the kind sold for a
+few rupees as an obstacle / speed / photo-interrupter sensor.
 
-Firmware consequences of a discrete build, all of which matter:
+That is a straightforward win. The comparator, the pull-ups, the resistor
+network and the threshold all live on the module, so the firmware sees a
+clean digital line and the electrical risk mostly disappears.
 
-- **Confirm the idle polarity on a scope or a meter before writing the ISR.**
-  With a pull-up on the receiver, a phototransistor typically pulls the line
-  **LOW while the beam is unbroken** and lets it rise **HIGH when a pill
-  interrupts it** — but that inverts depending on how the receiver is wired.
-  Measure it; do not assume. Getting this backwards means counting the gaps
-  between pills instead of the pills.
-- **Configure the pin as a plain input** — the pull-up is external, so do not
-  also enable the internal one unless your teammate asks for it.
-- **A hand-built beam is noisier than a packaged module.** Expect a dirtier
-  edge than a datasheet would suggest, and see Part A item 1 on debouncing.
-- **Ambient IR is a real failure mode.** Sunlight and some indoor lighting emit
-  IR strongly enough to hold the receiver saturated so the beam never reads as
-  broken. Test under the lighting the demo will actually use. If it is a
-  problem, the fixes are mechanical (shroud the beam path) before they are
-  electrical.
-- **Check the VddIO domain of whichever pin you pick** —
+**Which module, though - this part matters more than the price.** Two shapes
+are sold under similar names:
+
+- **Slot type** (U-shaped gap, often sold as a "speed sensor" or
+  "photo-interrupter" for encoder wheels). The emitter and detector face each
+  other across a fixed few-millimetre gap. A pill falling through the slot
+  breaks the beam cleanly, every time, at a known geometry.
+- **Reflective type** (FC-51 and lookalikes, emitter and detector side by side
+  on the front edge, aimed outward). It detects light bounced back off an
+  object in front of it. Range depends on the object's size, colour and
+  reflectivity, and is set by a trim pot.
+
+**Prefer the slot type for counting pills.** A pill is small, fast, and may be
+white, translucent or dark; a reflective sensor asked to detect it in mid-fall
+is being asked to do the hardest version of its job, and a translucent capsule
+may simply not return enough light. If only a reflective module is available,
+say so in the notes and design the chute so the pill passes within a few
+millimetres of the face against a matte dark backdrop.
+
+Firmware consequences:
+
+- **Confirm the output polarity before writing the ISR.** Most of these
+  modules are **active LOW** - OUT sits HIGH and is pulled LOW when the beam
+  is broken or an object is detected - and many have an onboard LED that
+  lights on detection, which makes this a ten-second check with a pill and
+  your eyes rather than a scope. Check it anyway; do not assume. Getting it
+  backwards counts the gaps between pills instead of the pills.
+- **Power it at 3.3 V, not 5 V.** Most of these modules run happily from 3.3 V.
+  If you power it at 5 V its OUT swings to 5 V, and unless the pin you chose
+  is 5 V tolerant that is a way to damage the MCU. If it must run at 5 V, level
+  shift it - a divider is enough for a digital output.
+- **Configure the pin as a plain input.** The module drives the line actively
+  (or open-collector with its own pull-up); do not add the internal pull-up
+  unless the module needs it.
+- **Still debounce.** The LM393 gives you hysteresis and a much cleaner edge
+  than a discrete build, but a pill tumbling past can still produce a short
+  double-break. Keep Part A item 1's minimum-pulse-width filter; the module
+  makes it easier, not unnecessary.
+- **The trim pot is a physical calibration step**, and it is now part of the
+  build procedure rather than a firmware constant. Set it with a real pill,
+  and write down where it ended up - "we turned it until it worked" is not
+  reproducible.
+- **Ambient IR is still a real failure mode.** Sunlight and some indoor
+  lighting can hold the detector saturated so the beam never reads as broken.
+  Test under the lighting the demo will actually use. The fixes are mechanical
+  (shroud the beam path) before they are electrical.
+- **Check the VddIO domain of whichever pin you pick** -
   `ENGINEERING_LESSONS.md`'s Session 06 finding. A GPIO in an unpowered domain
   reads a constant value and looks exactly like a sensor that never triggers.
 
@@ -134,11 +168,14 @@ ground. Confirm this with your teammate before powering anything.
 
 ### Deliverable for Part 0, before any driver code
 
-Write down in the session notes: the measured idle/broken polarity of the beam,
-the pins chosen for the four coil lines and the sensor (with their VddIO domain
-confirmed), the step rate that runs without stalling, and how many half-steps
-of turntable rotation reliably releases exactly one pill. That last number is
-the one the whole dispense loop is built on.
+Write down in the session notes: the exact sensor module used (slot or
+reflective, and its markings), its measured idle/broken polarity, its supply
+voltage and whether any level shifting was needed, the trim-pot setting and
+how it was arrived at, the pins chosen for the four coil lines and the sensor
+(with their VddIO domain confirmed), the step rate that runs without
+stalling, and how many half-steps of turntable rotation reliably releases
+exactly one pill. That last number is the one the whole dispense loop is
+built on.
 
 ---
 
@@ -177,8 +214,8 @@ Requirements:
 
 1. **IR sensor on a GPIO EXTI interrupt**, not polled. Each beam break
    increments a `volatile` counter. **Debounce it, and expect to need it** — a
-   pill tumbling through the beam produces multiple edges, and a hand-built
-   beam is noisier than a packaged module, so a naive counter will over-count.
+   pill tumbling through the beam can produce multiple edges even with the
+   module's comparator hysteresis, so a naive counter will over-count.
    Debounce in the ISR with a timestamp comparison (`HAL_GetTick()` is safe to
    read from an ISR); **do not `printf`, do not call any `tk_*`/`osal_*`
    blocking call there** — `session_11_notes.md` Addendum 8 is the record of

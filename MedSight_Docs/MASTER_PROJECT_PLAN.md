@@ -86,7 +86,7 @@ sessions (08A/08B AI, 11 µT-Kernel migration, 14 hardware bring-up).
 | 6–7 | 11 | µT-Kernel 3.0 migration (contest compliance gate) — done |
 | 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory — **done, see `milestones/session_12_notes.md`** |
 | 7–8 | 13 | UI/UX overhaul: one visual system, the framebuffer glitch, mascot states, contest documentation packaging |
-| 8 | 14 | Physical dispensing hardware: 28BYJ-48 stepper turntable + hand-built IR break-beam pill counter, closed-loop count (with the hardware teammate) |
+| 8 | 14 | Physical dispensing hardware: 28BYJ-48 stepper turntable + 3-pin IR break-beam sensor module, closed-loop pill count (with the hardware teammate) |
 | 8 | 15 | Program Plan reconciliation, highest-value remaining feature, submission materials (last session in the plan) |
 
 **Cut order if time runs short**, most-expendable first: Session 15's optional
@@ -269,8 +269,8 @@ two. `AI_PIPELINE.md` has been updated to match.
     build the hardware has joined, so the resource assumption behind that cut
     no longer holds. **Session 14** interfaces a 28BYJ-48 stepper-driven
     turntable (exactly the mechanism `MECHANICAL_DESIGN.md` already specified)
-    and a hand-built IR break-beam sensor — discrete emitter and receiver LEDs
-    with their resistors — that counts each pill as it physically drops — a
+    and a packaged 3-pin IR break-beam sensor module (slot type preferred over
+    reflective) that counts each pill as it physically drops — a
     closed loop, so the actuator stops on a real count rather than a timer,
     which is the whole argument `MECHANICAL_DESIGN.md` makes for why a gate
     mechanism was rejected. The 6-8 hopper architecture stays design intent.

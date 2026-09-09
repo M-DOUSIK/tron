@@ -25,7 +25,7 @@ no cloud dependency and no biometric data ever leaving the board.
 - **microSD** card (SDMMC2) for the append-only audit log and patient
   gallery persistence.
 - Session 14 (where it has run) adds a single-hopper pill dispenser: a
-  28BYJ-48 stepper turntable + IR break-beam pill counter. See
+  28BYJ-48 stepper turntable + a 3-pin IR break-beam sensor module. See
   [`MedSight_Docs/DESIGN_PROTOTYPE.md`](MedSight_Docs/DESIGN_PROTOTYPE.md)
   for exactly what is physically built versus still design intent.
 - No Wi-Fi/Ethernet/BLE — this device never connects to a network, by

@@ -14,6 +14,12 @@
 > the direct justification for the closed-loop design in
 > `prompts/session_14.md`. **The specification below is correct; build it.**
 >
+> **One implementation change, made after Session 13:** the break beam is a
+> packaged 3-pin IR sensor module rather than a discrete emitter/receiver pair.
+> Slot type preferred over reflective — see `HARDWARE_ARCHITECTURE.md`. This
+> changes nothing about the mechanism or §3's argument; it changes the part
+> that gets mounted, and the CAD mount (`RAGNAR_CAD_PROMPT.md`) accordingly.
+>
 > **What remains design intent:** the 6–8 independently addressable hopper
 > architecture, the per-hopper duplication, and the multi-medication data
 > model. Those stay illustrated by `RAGNAR_CAD_PROMPT.md`'s renders and

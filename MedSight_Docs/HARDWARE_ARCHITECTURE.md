@@ -44,19 +44,30 @@ Four GPIO lines drive the coils directly in a half-step sequence; there is no
 STEP/DIR driver IC. The motor is open-loop and stalls silently, which is
 precisely why the count comes from the sensor and never from the step count.
 
-**The IR break beam is hand-built from discrete parts** rather than a packaged
-module: an IR emitter LED and an IR receiver facing each other across the pill
-chute, each with its series/pull-up resistor. `prompts/session_14.md` Part 0
-covers what that means for firmware — chiefly that the idle polarity must be
-measured rather than assumed, that the edge will be noisier than a datasheet
-would suggest, and that ambient IR can saturate the receiver.
+**The IR beam is a packaged 3-pin module** (VCC / GND / OUT) — a small PCB
+carrying the emitter, the detector, an LM393 comparator and a threshold trim
+pot. This replaces the hand-built discrete emitter/receiver pair originally
+specified; the project owner changed it after Session 13. The comparator and
+its pull-ups live on the module, so the firmware sees a clean digital line and
+most of the electrical risk goes away.
+
+The **slot type** (U-shaped gap, sold as a speed sensor or photo-interrupter)
+is preferred over the **reflective type** (FC-51 and lookalikes): a pill is
+small, fast, and may be white, translucent or dark, and a reflective sensor
+asked to detect one in mid-fall is doing the hardest version of its job.
+
+`prompts/session_14.md` Part 0 covers what this means for firmware — chiefly
+that the output polarity must be checked rather than assumed (most modules are
+active LOW), that the module should be powered at 3.3 V so its output cannot
+over-drive a non-tolerant pin, that debouncing is still required, and that
+ambient IR can still saturate the detector.
 
 The motor rail needs its own 5 V supply with grounds tied to the board's.
 
 | Component (not built) | Would be used for | Would interface via |
 |---|---|---|
 | 28BYJ-48 unipolar stepper + ULN2003 driver board, one pair per hopper | Drives that hopper's turntable, singulating and counting loose pills — direct duplicate of the Mr Innovative/UPV reference design (see `MECHANICAL_DESIGN.md` §3) | 4 GPIO lines per hopper to the ULN2003 board (direct coil-sequence drive, not STEP/DIR) |
-| IR break-beam sensor (emitter + receiver pair), one per hopper | Confirms and counts pills dropping from that specific hopper | GPIO EXTI (interrupt on beam break) per hopper |
+| IR break-beam sensor module (3-pin, slot type preferred), one per hopper | Confirms and counts pills dropping from that specific hopper | GPIO EXTI (interrupt on beam break) per hopper |
 | Shared 5V/6V motor power rail | Motors would draw current spikes the board's own regulator shouldn't supply | Separate buck supply or battery pack, grounds tied to the DK board ground |
 
 The only peripheral actually added to the DK board for this project is:

@@ -76,9 +76,12 @@ appearance. Use a light, clean color scheme (white/light grey) in the render.
      housed in a cavity beneath the turntable, accessible from the chassis
      underside for wiring to an external ULN2003 driver board.
    - A single exit guide channel (10mm wide) leading from the turntable's edge
-     to a small drop point, positioned so a 5mm IR emitter/receiver pair can be
-     mounted in aligned holes on either side of the drop point, break-beam
-     style, to count each pill as it exits this specific hopper.
+     to a small drop point, positioned so a **slot-type IR sensor module**
+     straddles the falling pill's path — the pill must pass through the
+     module's U-shaped gap. Provide a flat mounting shelf with two M3 (or
+     3mm) holes on the standard ~28mm pitch of these boards, plus a cable
+     exit for its 3-pin header. Do NOT model two aligned holes for a discrete
+     emitter/receiver pair; the sensor is a PCB now, not two loose LEDs.
    - Each hopper's drop point funnels into ITS OWN short local chute that then
      joins a shared, printed Y-funnel beneath both hoppers, merging into a
      single collection tray opening at the chassis front, accessible to the
