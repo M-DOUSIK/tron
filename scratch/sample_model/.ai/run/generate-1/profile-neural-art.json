@@ -1,8 +1,0 @@
-{
-  "Profiles": {
-    "user_profile": {
-      "memory_pool": "C:\\Users\\Dousik\\Workspace\\TRON\\scratch\\sample_model\\.ai\\run\\generate-1\\memory_pool.mpool",
-      "options": "--native-float --cache-maintenance --Ocache-opt --enable-virtual-mem-pools --Os --Oauto-sched --enable-epoch-controller"
-    }
-  }
-}

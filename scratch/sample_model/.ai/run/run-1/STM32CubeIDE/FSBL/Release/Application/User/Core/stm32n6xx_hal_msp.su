@@ -1,4 +1,0 @@
-../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1755:22:LL_AHB5_GRP1_EnableClock	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/FSBL/Core/Src/stm32n6xx_hal_msp.c:62:6:HAL_MspInit	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/FSBL/Core/Src/stm32n6xx_hal_msp.c:92:6:HAL_XSPI_MspInit	456	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/FSBL/Core/Src/stm32n6xx_hal_msp.c:214:6:HAL_XSPI_MspDeInit	8	static

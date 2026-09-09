@@ -1,2 +1,0 @@
-Generate Project
-Copying previous project files from C:\Users\Dousik\Workspace\TRON\scratch\sample_model\.ai\run\run-1 to C:\Users\Dousik\Workspace\TRON\scratch\sample_model\.ai\run\run-1\.ai\generate\backup

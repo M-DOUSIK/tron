@@ -1,9 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:47:6:npu_cache_enable	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:60:6:npu_cache_disable	16	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:72:6:npu_cache_invalidate	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:80:6:npu_cache_clean_range	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:91:6:npu_cache_clean_invalidate_range	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:120:13:npu_cache_enable_clocks_and_reset	0	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:105:13:HAL_CACHEAXI_MspInit	8	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:121:13:npu_cache_disable_clocks_and_reset	0	static
-C:/Users/Dousik/Workspace/TRON/scratch/sample_model/.ai/run/run-1/Appli/AI/App/npu_cache.c:111:13:HAL_CACHEAXI_MspDeInit	8	static
