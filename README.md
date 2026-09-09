@@ -73,7 +73,14 @@ no cloud dependency and no biometric data ever leaving the board.
   ```
   See `MedSight_Docs/ENGINEERING_LESSONS.md` for the full rationale and the
   folder-copy/`.d`-file hygiene needed after copying a session folder.
-- Both `Debug` and `Release` configurations build clean, 0 errors.
+- Both `Debug` and `Release` configurations build clean, 0 errors. Verified
+  from a fresh clone into an empty workspace, not just in place.
+- **UI assets are pre-generated and committed.** The sprites and fonts in
+  `FSBL/Inc/ui/ui_assets.h` and `ui_assets_data.inc` are produced from the
+  designer's PNGs by a script that lives in `scratch/`, which is not
+  version-controlled. Nothing about the build depends on it - a clone
+  compiles and flashes as-is. You only need the generator (and the original
+  artwork) to change the artwork.
 
 ## Known limitations and future work
 
