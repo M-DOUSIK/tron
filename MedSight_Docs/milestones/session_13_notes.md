@@ -766,3 +766,38 @@ diagnose from the log as it stood.
 ### Remaining
 
 Only the 20–30 minute idle soak.
+
+---
+
+## Addendum 12 — Definition of Done closed
+
+The 30-minute idle soak passed: the home screen held, the mascot kept
+animating, the heartbeat kept printing and the device still answered touch
+at the end. That was the last item outstanding from Session 12's Addendum
+10, where it had been flagged as never actually run — and it mattered most
+here, because this session rewrote the display path end to end.
+
+Every Definition-of-Done item for Session 13 is now closed:
+
+| Item | Result |
+|---|---|
+| Headless build, both configs, clean | 0 errors, Debug and Release |
+| Cold boot | Home screen correct, no stale frame |
+| Face capture without visible corruption | Panel blanks cleanly for ~750 ms and returns (Part A reverted, see Addendum 2) |
+| Full flow end-to-end | Register, dispense, unrecognised face, SD removed and reinserted |
+| 20-30 minute idle soak | Passed |
+| UART capture for the privacy re-check | Clean - names, slots, doses, confidences only |
+| NPU latency into AI_PIPELINE.md section 5 | 209 ms, measured |
+| QWERTY hit-testing at the new key size | Verified in use |
+
+Verified on hardware beyond the checklist: the animated `MASCOT_ERROR`
+retry screen, the SD reinsertion fix, the per-pill progress bar, and the
+RAM-only registration warning.
+
+**Reproducibility**, checked rather than assumed: a fresh clone into an empty
+workspace imports and builds with 0 errors. The binary is not byte-identical
+to the one in the repo, because `USE_FULL_ASSERT` bakes `__FILE__` into every
+`assert_param()` and the clone's path was 105 characters longer - 25 embedded
+paths, 2,624 bytes of `.text`. Same `data`, same `bss`, same code.
+
+Session 13 is complete and committed.
