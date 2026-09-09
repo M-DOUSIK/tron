@@ -1867,3 +1867,43 @@ documented to do.
 | 4 | `ai_vision_init()` races the first draw over `BUFFER_ADDRESS` | Wrong *for this fault*. The log showed NPU init finishing first. Hardening kept. |
 | 5 | Panel cannot lock to the BSP's 4/4/4 blanking | Untested — the rung that was meant to test it changed the porches without the layer window, so it was invalid. Moot now. |
 | 6 | WFI gates the clocks the LTDC needs | **This one.** |
+
+---
+
+## Addendum 10 — hardware verification closeout
+
+Run after the Addendum 9 fix, on the build committed as `6619af2`.
+
+### Confirmed working on hardware
+
+| Test | Result |
+|---|---|
+| Full flow, cold boot | Register → face detected 0.91 → patient saved → dispense → similarity 90/100 → confirm → home |
+| **Gallery persistence across a power cycle** | **Works.** `patients.dat` written in a previous session was read back and matched after power was removed. |
+| USER1 pressed *during* a face capture | Works — the deferred-cancel handshake honours the press once the AI task releases `BUFFER_ADDRESS`, without drawing over memory the NPU is using |
+| SD card hot-plug | Works — the lazy/retrying mount recovers |
+| 10 consecutive dispenses | Works |
+| Idle / power | 78–82% with diagnostics on; expected near 89% with them gated off |
+
+**The gallery persistence result matters more than its one line suggests.**
+Earlier in this session the user reported that SD data was *not* being used
+after a reset — which is what prompted the `disk_ioctl()` investigation in
+Addendum 2 and the versioned `patients.dat` header in Addendum 4. Both fixes
+are now confirmed on hardware together: the card survives a power cycle and the
+gallery loads from it. That closes the open item, and it is the strongest
+evidence the audit-trail and enrolment storage actually work as documented.
+
+### Reported covered, not individually evidenced
+
+- **Gallery-full behaviour.** Covered by the user's "all" but not separately
+  described, and filling the gallery takes a deliberate effort. The pre-check
+  in `state_machine.c` is in place and reviewed; treat this as untested until
+  someone actually fills it. Do not claim it in submission material.
+
+### Still open
+
+- **20–30 minute idle soak.** Deferred by the user for time. This is the one
+  test that matters most for the Addendum 9 fix specifically: the original
+  fault was density-of-sleep dependent, and the longest clean run so far is
+  well under a minute. **Run this before recording any hardware claim in the
+  submission**, and before the demo video.
