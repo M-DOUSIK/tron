@@ -168,8 +168,11 @@ are sold under similar names:
 
 - **Slot type** (U-shaped gap, often sold as a "speed sensor" or
   "photo-interrupter" for encoder wheels). The emitter and detector face each
-  other across a fixed few-millimetre gap. A pill falling through the slot
-  breaks the beam cleanly, every time, at a known geometry.
+  other across a fixed few-millimetre gap. A pill passing through the slot
+  breaks the beam cleanly, every time, at a known geometry — and because the
+  pills SLIDE down a ramp rather than falling, they cross it slowly, which
+  makes the break easier to detect rather than harder. See the ramp note in
+  Part B.
 - **Reflective type** (FC-51 and lookalikes, emitter and detector side by side
   on the front edge, aimed outward). It detects light bounced back off an
   object in front of it. Range depends on the object's size, colour and
@@ -267,15 +270,43 @@ most demonstrable engineering idea in this session; build it that way.
 Requirements:
 
 1. **IR sensor on a GPIO EXTI interrupt**, not polled. Each beam break
-   increments a `volatile` counter. **Debounce it, and expect to need it** — a
-   pill tumbling through the beam can produce multiple edges even with the
-   module's comparator hysteresis, so a naive counter will over-count.
-   Debounce in the ISR with a timestamp comparison (`HAL_GetTick()` is safe to
-   read from an ISR); **do not `printf`, do not call any `tk_*`/`osal_*`
-   blocking call there** — `session_11_notes.md` Addendum 8 is the record of
-   what a slow interrupt path costs on this hardware. Make the debounce window
-   a tunable constant with the reasoning written beside it; you will adjust it
-   on the bench.
+   increments a `volatile` counter. Debounce in the ISR with a timestamp
+   comparison (`HAL_GetTick()` is safe to read from an ISR); **do not
+   `printf`, do not call any `tk_*`/`osal_*` blocking call there** —
+   `session_11_notes.md` Addendum 8 is the record of what a slow interrupt
+   path costs on this hardware. Make the debounce window a tunable constant
+   with the reasoning written beside it; you will adjust it on the bench.
+
+   > **THE PILLS SLIDE DOWN A RAMP. THEY DO NOT FALL.** The project owner
+   > confirmed this, and it inverts what an earlier draft of this section
+   > assumed. Design for the ramp, not for free fall:
+   >
+   > * **A break lasts far longer.** A 10 mm pill in free fall crosses the
+   >   beam at 1–2 m/s — about 5–10 ms. Sliding, it may be moving at 0.2–0.5
+   >   m/s, so the beam is broken for 20–50 ms or more. A long break is the
+   >   SIGNAL here, not noise, and a debounce window sized for a drop would
+   >   throw away real counts.
+   > * **The dominant error flips from over-counting to UNDER-counting.**
+   >   Free fall separates pills — they are released at different instants
+   >   and arrive with gaps. On a ramp they can slide nose-to-tail in
+   >   contact, producing ONE continuous break for TWO pills. Aggressive
+   >   debouncing makes this worse, not better. Prefer the smallest window
+   >   that suppresses genuine sensor chatter, and treat an unusually LONG
+   >   break as suspicious — it may be two pills, not one.
+   > * **A pill can STALL in the beam.** Friction on a ramp can stop a pill
+   >   dead, and the beam then stays broken indefinitely. Free-fall designs
+   >   never meet this. Handle it explicitly: a beam broken for longer than
+   >   some bound is a JAM, reported as `DISPENSE_JAM`, not a count and not a
+   >   hang. This is a genuine advantage of the ramp — a stall is
+   >   *detectable*, where a pill that never left a hopper is invisible.
+   > * **Every timeout gets longer.** Slower pills mean the wait for the Nth
+   >   count must be generous. Derive the bound from the observed slide time
+   >   on the bench, not from a guess.
+   >
+   > Measure all of this rather than assuming it: on the bench, log the
+   > **duration of each break** as well as the count, and slide single pills
+   > and touching pairs deliberately. The break-duration histogram is what
+   > tells you where the debounce window and the jam bound belong.
 2. **Bounded everywhere.** Every wait has a timeout —
    `ENGINEERING_LESSONS.md`'s Session 06 rule about polling loops applies
    directly, and Session 12's Addendum 2 is a case study in what an unbounded
