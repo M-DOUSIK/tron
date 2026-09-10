@@ -185,6 +185,13 @@ and says which.
   boundary (`ms_osal.h`); no `tk_*` call appears anywhere outside
   `ms_osal.c`.
 - **FatFs** for the microSD filesystem.
+> **Building is not enough to get a working device.** The NPU weights live in
+> external flash and the linker marks those regions `(NOLOAD)`, so the
+> application build never writes them. Flash the five images in
+> [`weights/`](weights/README.md) once per board, then power-cycle. Without
+> them the firmware runs and both AI features return nonsense, with nothing in
+> the log to say why.
+
 - **ST Edge AI** on the Neural-ART NPU, **four models** by the end of Session
   16: a **CenterFace** detector and a **MobileFaceNet** embedder for the face,
   a **MediaPipe hand landmark** model (Apache-2.0, 224x224 INT8, 21 keypoints)

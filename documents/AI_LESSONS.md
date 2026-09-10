@@ -103,6 +103,12 @@ detection/inference runs but produces garbage/NaN output; it's very likely
 a missing weight region at one of these addresses, not a code bug. Full
 story in `documents/milestones/session_08B_notes.md`.
 
+> **The flashing instructions and the images themselves now live in
+> [`weights/`](../weights/README.md).** That directory is the authoritative
+> copy: five blobs, their addresses, their SHA-256 prefixes and the exact
+> programmer commands. What follows here is the engineering background — why
+> the addresses are what they are, and the traps found getting there.
+
 ### 2b. The four addresses this project actually uses
 
 Every one of these was found the hard way, and none of them is discoverable
