@@ -450,9 +450,60 @@ the LED colour the Program Plan already specifies:
 | Event | Suggested | LED |
 |---|---|---|
 | Dose ready / attention | two short rising chirps | — |
+| **Dose window closed, MISSED** | **three slow falling tones, lower and longer than the reminder** | **red** |
 | Pills dispensed, correct | one short confirming chirp | green |
 | Wrong patient / no match | two low buzzes | red |
 | Jam or short dispense | a longer, lower tone | red |
+
+**The reminder and the missed-dose alert must not sound alike**, and this is
+the one distinction in the table that carries real information. They are
+addressed to different people, which the note at the top of this prompt
+settles: the reminder asks the patient to come and take a dose; the
+missed-dose alert has already established that the patient did not respond, so
+it exists to fetch a carer. Rising and short for *come and do something*,
+falling and slow for *something did not happen* — a listener in another room
+should be able to tell them apart without looking at the device.
+
+Firing points already exist in `state_machine.c` and want no new logic:
+
+- reminder — where `SCHED_FLAG_OPEN` sets `MASCOT_ACTIVE`
+- missed — where `SCHED_FLAG_CLOSE` writes the `MISSED:` line and sets
+  `MASCOT_ERROR`; note that Session 16 bounded that sad face to
+  `MISSED_SAD_HOLD_MS`, and the tone should be a one-shot at the same moment
+  rather than anything that repeats for as long as the face is up
+- dispensed / wrong patient — the `CONFIRMED` and `INTRUDER` paths
+
+### E3b. Interface feedback — the small tones
+
+Separate from the alerts above, and worth doing because this is a touchscreen
+with no tactile feedback at all: a **very short, quiet click** on a registered
+touch. A button that answers audibly feels responsive in a way a silent one
+does not, and for an elderly user who is unsure whether a press registered,
+that is a genuine accessibility gain rather than decoration.
+
+| Interaction | Suggested |
+|---|---|
+| Any button press (`check_hit` succeeds) | one click, ~10 ms, high and quiet |
+| Keyboard key in name entry | the same click, or nothing — see the warning |
+| Invalid / ignored tap | nothing at all |
+
+**Three warnings, and the second one is the one that will bite.**
+
+1. **Keep it under ~10 ms and keep it quiet.** These fire constantly; anything
+   with a pitch that lingers becomes maddening within a minute.
+2. **Name entry is on the order of a HUNDRED taps** (`carer_ui.c` records that
+   measurement). A hundred clicks in twenty seconds is not feedback, it is a
+   noise. Prototype it, listen to a full name being typed, and be willing to
+   conclude that the keyboard should stay silent even though buttons do not.
+3. **A click must never delay the touch it is confirming.** Post it to the
+   Alert Task and return; `state_machine_update()` does not wait for tone
+   completion, ever. If a click cannot be made free, drop the feature — the
+   10 ms touch poll is what makes this device feel immediate and it is worth
+   more than any sound.
+
+Interface tones are the **first thing** the mute setting below should silence,
+and they should probably be independently mutable from the alerts: a carer who
+wants a silent bedroom at night still wants the missed-dose alert to work.
 
 Nothing long, nothing repeating indefinitely. This device may sit in a bedroom.
 
