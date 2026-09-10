@@ -1,0 +1,10 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:37:6:ai_overlay_stats	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:45:6:ai_overlay_reset	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:57:13:blit_square	56	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:73:13:map_rect	20	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:93:13:stroke_rect	40	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:102:13:marker	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:110:6:ai_overlay_draw_capture	152	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:146:6:ai_overlay_show_capture	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:160:20:state_word	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:176:6:ai_overlay_tick	112	static,ignoring_inline_asm

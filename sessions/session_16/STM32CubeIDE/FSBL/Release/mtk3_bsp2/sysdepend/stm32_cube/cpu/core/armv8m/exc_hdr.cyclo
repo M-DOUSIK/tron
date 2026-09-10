@@ -1,0 +1,8 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:43:23:knl_nmi_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:52:23:knl_hardfault_handler	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:78:23:knl_memmanage_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:88:23:knl_busfault_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:99:13:knl_usagefault_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:108:23:knl_svcall_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:117:23:knl_debugmon_handler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m/exc_hdr.c:126:23:knl_default_handler	2

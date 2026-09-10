@@ -140,6 +140,72 @@ Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 > `stai_faceid`, not the architecture). The correct description is
 > **CenterFace + MobileFaceNet**, and both documents have been corrected.
 
+### 2.7c The hand landmark model (Session 16, final)
+
+| | |
+|---|---|
+| **Name** | MediaPipe **hand landmarks**, `handlandmarks_full_224_int8.tflite` — 224×224, INT8, 21 keypoints (`hand.c`, `hand.h`, `stai_hand.c/.h`, `hand_atonbuf.xSPI2.raw`) |
+| **Source** | ST model zoo, `pose_estimation/handlandmarks/Public_pretrainedmodel_custom_dataset/custom_dataset_hands_21kpts/` |
+| **Licence** | **Apache-2.0** |
+| **Provenance** | PINTO model zoo `033_Hand_Detection_and_Tracking`, itself a conversion of Google's MediaPipe hand tracking (model card: *Hand Tracking (Lite/Full) with Fairness*, Oct 2021) |
+| **Redistribution** | Weights are flashed to external NOR, not committed; the generated C sits in `FSBL/Src/ai/`. |
+
+**This is a licensing improvement over §2.7b, and that is worth stating.**
+Apache-2.0 is unambiguous. The pill detector's entry above records an
+*unresolved* question — whether weights trained with Ultralytics YOLOv8 are a
+derivative work of an AGPL-3.0 framework — which this project chose to state
+openly rather than resolve in its own favour. The model that now makes the
+decision does not carry that question at all.
+
+**A limitation that belongs in the licence file because it is a property of
+the artefact, not of our integration.** In MediaPipe this model never sees a
+whole scene: a *palm detector* runs first and hands it a tight crop with the
+hand filling the frame. We do not ship that palm detector, so this model is
+used out of its intended pipeline. It reports hand presence reliably when the
+hand is centred and large in its input — which, the ROI being centred on the
+mouth, is exactly the case this device needs — and does **not** localise a
+hand elsewhere in the frame. `AI_PIPELINE.md` §7 states the same limitation
+in functional terms.
+
+### 2.7b The pill detector (Session 16)
+
+| Field | Value |
+|---|---|
+| **Name** | Single-class `pill` object detector — **YOLOv8n** architecture, 160×160, INT8, head cut (`pill.c`, `pill.h`, `stai_pill.c/.h`, `pill_atonbuf.xSPI2.raw`) |
+| **Rights holder** | Architecture and training framework: Ultralytics Inc. Trained weights: produced by this project. Generated Neural-ART sources: STMicroelectronics (ST Edge AI codegen). |
+| **Licence** | **Unresolved, and deliberately stated as such — see the note below.** Ultralytics YOLOv8 is **AGPL-3.0**. The generated C is ST Edge AI output under ST's terms. |
+| **Training data** | Roboflow Universe `pills-sxdht` (RF100), 451 images, **CC BY 4.0**, obtained via the HuggingFace mirror `Francesco/pills-sxdht`. Attribution: *"pills" dataset, Roboflow Universe, CC BY 4.0.* |
+| **Acquisition** | Trained by this project in Session 16 using `tools/action_recogntion/build_pill_detector.py`, which reproduces the whole path: dataset fetch → YOLO conversion → training → ONNX export → head cut → INT8 quantisation → validation → ST Edge AI generation. |
+| **Function** | Stage 1A of action recognition: locates a pill in a mouth-centred ROI. Everything downstream — the DFL box decode, the geometry and the intake state machine — is MedSight's own C. |
+| **Modified?** | The exported graph is **cut** after the six raw head convolutions; the decode tail runs on the Cortex-M55 instead. No weights or graph structure were otherwise altered. |
+
+> **An open licence question, recorded rather than resolved.**
+>
+> Every other third-party component in this firmware is SLA0044, BSD-style or
+> similarly permissive. The pill detector is the exception: its architecture
+> and the framework that trained it are **AGPL-3.0**, which is strong
+> copyleft, and the exporter stamps `license: AGPL-3.0` into the ONNX
+> metadata.
+>
+> Whether trained weights constitute a derivative work of the framework that
+> produced them is genuinely unsettled, and this project is not the place to
+> decide it. What can be said precisely is what was done: the training data is
+> CC BY 4.0 and attributed; the pipeline is published in full; nothing is
+> withheld.
+>
+> **The clean escape, if the organiser or the owner wants one:** substitute an
+> ST model-zoo detector under SLA0044, fine-tuned on the same CC BY dataset.
+> Nothing else changes — the head cut, the quantisation, the memory profile
+> and the C decode are all architecture-independent. That route was the
+> project owner's stated preference and was not taken in Session 16 only
+> because ST's zoo has no `pill` class, so it needs the same fine-tuning step
+> and the same data.
+>
+> A collaborator's pretrained detector (`tools/action_recogntion/models/
+> pill_detector/`) is present in the repository as the provenance of the
+> *design*. It is **not compiled into the firmware** — it was measured as
+> unusable outside its own training footage (`session_16_notes.md` Part A1).
+
 ### 2.8 FatFs
 
 | Field | Value |

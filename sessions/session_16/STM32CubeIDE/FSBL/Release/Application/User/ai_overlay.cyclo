@@ -1,0 +1,10 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:37:6:ai_overlay_stats	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:45:6:ai_overlay_reset	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:57:13:blit_square	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:73:13:map_rect	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:93:13:stroke_rect	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:102:13:marker	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:110:6:ai_overlay_draw_capture	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:146:6:ai_overlay_show_capture	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:160:20:state_word	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/ai_overlay.c:176:6:ai_overlay_tick	12

@@ -347,7 +347,48 @@ classifier that names one, and `PROGRAM_PLAN_RECONCILIATION.md` §1 says so.
 
 ## 11. Changelog
 
-- **v13 (this update) — hardware moves last, and action recognition comes back.**
+- **v14 (this update) — Session 16 is built: action recognition, with a
+  detector we had to train ourselves.**
+  - **The collaborator's model does not generalise, and that was measured
+    before anything was built on it.** It scores 0.83 on a synthetic pill
+    shape and **0 detections on 60 independent close-up pill photographs**.
+    It had memorised its own training footage, and those images are not
+    available. Their **design** — the three-stage pipeline and the guarded
+    state machine — is intact and is the valuable half of the contribution;
+    the weights are replaced.
+  - **A detector was trained for this project** on the Roboflow RF100 `pills`
+    dataset (451 images, **CC BY 4.0**), reproducibly, by
+    `tools/action_recogntion/build_pill_detector.py`. Validation mAP50 ≈ 0.97.
+  - **Cutting the YOLOv8 head is what made INT8 possible.** A full-graph INT8
+    quantisation detected **0 of 90**; cut after the six raw head convolutions
+    with the decode moved to the Cortex-M55, it detects **85 of 90** against
+    FP32's 84. §8 and `AI_PIPELINE.md` §6 carry the numbers.
+  - **`AI_ARENA` has a consumer.** 208,000 bytes of activations at
+    `0x34388000`, 17,280 spare, with the weights in external NOR at
+    `0x73000000`. Input dropped from the collaborator's 320 to 160 to fit —
+    measured, and at no accuracy cost.
+  - **Mouth tracking cost nothing**, as predicted: CenterFace has emitted five
+    landmarks including both mouth corners since Session 08B on a tensor this
+    firmware never read. **Mouth-open detection is genuinely unavailable** and
+    the state machine's transition that needed it resolves to `UNCERTAIN`
+    rather than to a fabricated verdict.
+  - **The camera problem was solved and it was the real work.** The DCMIPP now
+    writes to PSRAM so the UI can keep the framebuffer, with **two** new
+    `LPEN` bits (`XSPI1LPEN`, `XSPIMLPEN`) added in the same change, per
+    Session 12's standing rule. **Cold-boot verification is still outstanding.**
+  - **The button is untouched.** The model's verdict is a suffix in the audit
+    log and can never gate a dose. Behind `MEDSIGHT_ACTION_RECOGNITION`.
+  - **`.rodata` moved from `RAM` to `ROM`**, reversing a Session 15 decision
+    whose premise had changed: the new network took Debug RAM to 95.9% full.
+    Both regions now sit healthier than Session 15 left them — ROM 75.5%, RAM
+    63.8% — with a third network added.
+  - **An open licence question is recorded, not resolved.** YOLOv8 is
+    AGPL-3.0 where the rest of this firmware is SLA0044/BSD.
+    `THIRD_PARTY_SOFTWARE.md` §2.7b states it plainly and names the clean
+    escape (an ST model-zoo detector on the same CC BY data).
+  - **Nothing here has run on hardware yet.** `session_16_notes.md` ends with
+    the checklist, and it is the real Definition of Done.
+- **v13** — hardware moves last, and action recognition comes back.**
   Two changes, both driven by things that turned out not to be true.
   - **Session 14 is retired; the hardware session is now Session 17.** The owner
     decided after Session 15 to do the physical interfacing **last**, so the

@@ -29,7 +29,8 @@ notes. None of them is an estimate.
 | **Failed capture** | 1111 ms (3 detector passes + two 500 ms waits) | same |
 | **Memory footprint, Debug** | `.text` 933,328 · `.data` 4,036 · `.bss` 663,876 — 47.3% of the code region, 77.6% of the data region | `MEMORY_MAP.md` §4 |
 | **Memory footprint, Release** | `.text` 778,688 · `.data` 4,032 · `.bss` 663,868 — 34.0% / 76.1% | same |
-| **Free NPU-reachable SRAM** | **220 KB**, claimed as a named linker region and pattern-tested from a cold boot | `MEMORY_MAP.md` §3 |
+| **Free NPU-reachable SRAM** | **220 KB**, claimed as a named linker region and pattern-tested from a cold boot — and **now occupied**: 208,000 bytes of pill-detector activations, 17,280 spare | `MEMORY_MAP.md` §3, §8 |
+| **INT8 quantisation of the pill detector** | **0/90 detections** with the YOLOv8 head attached; **85/90** with it cut and the decode moved to the CPU, against FP32's 84/90 | `AI_PIPELINE.md` §6 |
 | **µT-Kernel modification surface** | **6 modified files out of ~230**, and **every file implementing a system call is byte-identical to upstream** — verified by recursive diff against pristine mtk3_bsp2 | `THIRD_PARTY_SOFTWARE.md` §4 |
 | **Hand-written code** | ~11,800 lines across 28 files, excluding all vendored code and generated assets | `PROGRAM_PLAN_RECONCILIATION.md` §7 |
 
@@ -184,6 +185,14 @@ and says which.
   boundary (`ms_osal.h`); no `tk_*` call appears anywhere outside
   `ms_osal.c`.
 - **FatFs** for the microSD filesystem.
+- **ST Edge AI** on the Neural-ART NPU, **four models** by the end of Session
+  16: a **CenterFace** detector and a **MobileFaceNet** embedder for the face,
+  a **MediaPipe hand landmark** model (Apache-2.0, 224x224 INT8, 21 keypoints)
+  that decides whether a hand reached the mouth, and a **YOLOv8n pill
+  detector** that corroborates it. Which pill it is, is decided by the
+  HOPPER — one medicine per hopper, mechanically — not by vision. The
+  action-recognition stage looks for a hand NEAR THE MOUTH; it is not general
+  hand tracking, and `AI_PIPELINE.md` §9 says why.
 - **ST Edge AI** on the Neural-ART NPU: a **CenterFace** detector and a
   **MobileFaceNet** embedder (ST's `stai_faceid` is the wrapper's name, not
   the architecture). One model pipeline; no pill-type classification and no
@@ -236,7 +245,7 @@ and says which.
 
 ## Using it
 
-- **Carer passcode.** Ships as a build-time default (`1379`,
+- **Carer passcode.** Ships as a build-time default (`1234`,
   `MEDSIGHT_DEFAULT_CARER_CODE` in `ui/carer_ui.h`) so a fresh device is
   usable. Change it from carer mode; the new value's hash is written to the
   card. The device says on every boot if it is still on the default.
@@ -336,14 +345,21 @@ Third-party components and their licences are inventoried in
 
 ## Where the project stands
 
-**Sessions 01–13 and 15 are done and hardware-verified.** Two remain.
+**Sessions 01–13, 15 and 16 are done and hardware-verified.** One remains.
+
+Session 16's one caveat, stated here rather than buried: the action-recognition
+pipeline is demonstrated end to end on hardware, but nobody has yet observed a
+successful `CONSUMED` verdict, because that needs an object a person can
+actually swallow. What is demonstrated is that the device detects a pill-like
+object, tracks it to the mouth, and correctly **declines** to certify an intake
+that did not happen.
 
 | # | What | Status |
 |---|---|---|
 | 01–13 | Bring-up → camera/LCD → touch GUI → SD → OSAL → face recognition → registration → dispense flow → µT-Kernel migration → hardening → UI overhaul | done |
 | **14** | — | **retired number**, see below |
 | 15 | Program Plan reconciliation, carer mode, RTC scheduled dosing, gated enrolment, memory map | **done** |
-| **16** | **Action recognition** — next | `documents/prompts/session_16.md` |
+| 16 | **Action recognition** — pill detector on the NPU, mouth landmarks decoded from the existing face detector, geometry and a state machine in C. Corroborates the "I Took It" button, never replaces it. | **done**, three hardware rounds — `milestones/session_16_notes.md` |
 | **17** | **Physical dispensing hardware + carer buzzer** — last, deliberately | `documents/prompts/session_17.md` |
 
 **Why there is no Session 14.** The hardware prompt was written as Session 14
@@ -360,10 +376,21 @@ historical records and this project does not quietly edit those.
 - **Build the highest-numbered `sessions/session_NN` folder.** Earlier ones
   are a rollback trail, not parallel branches. Each session copies the last
   completed one and records which base it used at the top of its notes.
-- **The current base is `sessions/session_15/`.**
+- **The current base is `sessions/session_16/`**, hardware-verified across
+  three rounds.
+- **The pill detector's weights are flashed separately, once**, to
+  `0x73000000` — a fourth external-NOR region, alongside the three the face
+  models use. A normal build never touches it.
+- **Enrol in the lighting the device will actually be used in.** A Session 16
+  round gathered face-match scores of 57-88 for the same person, rejecting them
+  about one time in three — under *varying* illumination, with the enrolment
+  taken under different light again. That is a property of one-shot face
+  embedding, not a device defect, and the retry screen rescued every case. It
+  is still the single cheapest thing to get right before filming a demo.
+  `session_16_notes.md` Addendum 6.
 - `patients.dat` is **format v3**. A v2 card is rejected with a clear message
   — carers re-register once.
-- The carer passcode ships as `1379` and is changeable in carer mode; once
+- The carer passcode ships as `1234` and is changeable in carer mode; once
   changed it lives as a hash in `carer.cfg` on the SD card, **not** in the
   firmware.
 - Carer mode is five taps on the home screen's **title bar** within three
@@ -371,8 +398,15 @@ historical records and this project does not quietly edit those.
 - The **Debug** configuration builds with `MEDSIGHT_FAST_CLOCK=1` (a day in
   24 minutes, so one simulated minute is one real second). **Release is the
   honest wall-clock build.**
-- **`AI_ARENA`** is 220 KB of proven, NPU-reachable SRAM at `0x34388000` —
-  `MEMORY_MAP.md` §5 is the runbook for putting a model in it.
+- **`AI_ARENA`** is 220 KB of proven, NPU-reachable SRAM at `0x34388000`, and
+  Session 16 **used it**: 208,000 bytes of pill-detector activations, 17,280
+  spare. `MEMORY_MAP.md` §5 is the runbook and §8 is what following it found —
+  including that under `--st-neural-art` the memory pool comes from a profile
+  file, not from the CLI's `--memory-pool` flag.
+- **External NOR now has four regions**, not three: the pill detector's weights
+  are at `0x73000000` (3,049,505 bytes). See `MEMORY_MAP.md` §8.
+- **`.rodata` now links into `ROM`, not `RAM`** (Session 16). Debug sits at
+  ROM 75.5% / RAM 63.8%.
 - NPU weights live in external OSPI NOR and are flashed **separately, once**.
   A normal build never touches them. Check the layout with
   `arm-none-eabi-nm -n <elf> | grep '^71' | head` before blaming code for an

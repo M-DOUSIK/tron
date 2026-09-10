@@ -124,6 +124,48 @@ rebuild was supposed to remove.
 
 - **Always Create New Folders for New Sessions:** When moving to a new session (e.g., from Session 06 to Session 07), NEVER work directly in the previous session's directory. Always copy the entire working project to a new directory (e.g., copy `session_06` to `session_07`), and import the new project into STM32CubeIDE before making any modifications. This ensures that past sessions remain fully intact and functional, and provides a safe rollback point if the new session's codebase gets corrupted or encounters unrecoverable errors.
 
+- **Rename the PROJECT IDENTITY as part of the copy, not "later".** A copied
+  session folder keeps the previous session's Eclipse project names and build
+  artefact name, and they do not fix themselves. This has now gone wrong
+  twice: Session 12 found `session_12/.project` still saying
+  `MedSight_Session06` — **carried forward for six sessions** — and fixed it;
+  Session 16 found the same drift again, one session on.
+
+  It matters because there are sixteen buildable session folders, and an
+  `.elf` whose name does not identify which folder produced it is a
+  straightforward way to flash the wrong firmware and then disbelieve a fix
+  that actually worked.
+
+  **Four files own the identity.** Edit them by name, immediately after the
+  copy, before the first build:
+
+  | File | Contains |
+  |---|---|
+  | `.project` | `MedSight_SessionNN` |
+  | `STM32CubeIDE/.project` | `MedSight_SessionNN_CubeIDE` |
+  | `STM32CubeIDE/FSBL/.project` | `MedSight_SessionNN_FSBL` |
+  | `STM32CubeIDE/FSBL/.cproject` | ~7 references to the FSBL name |
+
+  plus `STM32CubeIDE/FSBL/MedSight_SessionNN_FSBL.launch`, which needs both
+  its **contents** and its **filename** changed.
+
+  Then **delete** the generated `Debug/`+`Release/` `makefile`, `sources.mk`,
+  `objects.list` and the old-named `.elf`/`.map`/`.bin`/`.list`, and let the
+  IDE regenerate them from `.project`/`.cproject`. Do not hand-edit them —
+  hard rule 2 above. Preserve `Debug/weights_flash/`: the flashed NPU weight
+  blobs are not build artefacts.
+
+  **Do NOT do this with a tree-wide replace.** Source comments legitimately
+  cite previous sessions' notes (`session_15_notes.md` and friends), and a
+  blind `sed` turns those into references to documents that do not exist —
+  the same family of mistake as the `.o`-corruption incident below. Session 16
+  had three such citations in `intake.h`, `ai_vision.h` and
+  `intake_service.c`, all of which had to survive the rename untouched.
+
+  Finally: the IDE holds the old project name in its workspace. Close or
+  delete the stale project (**without** "delete contents on disk") and
+  re-import from the new folder.
+
 ## Stale GCC Dependency Files After Folder Rename / Copy
 
 ### What Went Wrong (Session 04 & 05)

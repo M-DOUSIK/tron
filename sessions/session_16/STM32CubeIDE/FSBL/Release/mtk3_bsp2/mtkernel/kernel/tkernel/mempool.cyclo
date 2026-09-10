@@ -1,0 +1,13 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:35:11:knl_memorypool_initialize	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:60:12:knl_appendFreeAreaBound	6
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:111:13:knl_get_blk	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:149:10:knl_rel_blk	8
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:194:13:knl_mpl_wakeup	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:222:12:init_mempool	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:240:12:tk_cre_mpl	15
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:336:12:tk_del_mpl	11
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:378:12:mpl_chg_pri	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:396:12:mpl_rel_wai	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:410:12:tk_get_mpl	15
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:460:12:tk_rel_mpl	12
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/mempool.c:501:12:tk_ref_mpl	12

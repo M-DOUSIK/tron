@@ -1,0 +1,7 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:24:7:knl_memset	6
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:65:7:knl_memcpy	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:79:4:knl_strlen	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:91:7:knl_strcpy	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:103:7:knl_strncpy	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:123:5:knl_strcmp	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/mtk3_bsp2/mtkernel/kernel/tstdlib/string.c:138:7:knl_strcat	3

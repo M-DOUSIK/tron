@@ -182,6 +182,54 @@ sprites and fonts at build time by `tools/gen_ui_assets.py` and packed into
   214×213 idle poses (arms down / arms up / blink) with sparkles and a
   breathing bob, and a 150×153 three-frame crying pose for `MASCOT_ERROR`.
 
+### Session 16 — the confirm screen is the only screen with a live camera
+
+`STATE_CONFIRM_TAKEN` is unchanged visually: the same large "✓ I Took It"
+button and the same small "Skip". What changed is behind it — the camera now
+runs for the whole 30-second window, watching for a pill going to the mouth,
+while this screen stays drawn.
+
+That is possible only because the DCMIPP writes into PSRAM instead of the
+display framebuffer (`FSBL/Inc/ai/intake_camera.h`). Every previous attempt to
+have a camera running behind a drawn screen erased it at ~30 fps — Session
+09's Bug 2 — which is why every other post-capture screen in this device is
+static UI.
+
+**Nothing on screen indicates the watching**, and that is a deliberate gap
+rather than an oversight: adding an indicator to the one screen where a
+patient is being asked to do something simple risks distracting them from
+doing it, and the verdict cannot change the outcome anyway. It is recorded in
+`COMPLIANCE_PRIVACY_POSTURE.md` §4b as something a carer should be told about
+in documentation instead.
+
+### Session 16 — the AI overlay, and the first camera image with anything drawn on it
+
+Behind `MEDSIGHT_AI_OVERLAY` (default 1). Two additions, neither of which
+replaces an existing screen — both draw into a 300x180 window positioned to
+clear the title bar above and the large confirm button below, because the
+elderly-friendly layout is the point and is not to be traded for diagnostics.
+
+**On DISPENSING** — a still of the exact crop the NPU ran on, with the
+detector's face box (green) and all five CenterFace landmarks (eyes and nose
+amber, the two mouth corners rose). It sits on the screen that already pauses
+for the dispense animation, so the evidence costs the patient no extra time.
+
+**On CONFIRM_TAKEN** — a live view at ~8 fps: camera frame from PSRAM, the ROI
+the detector searched (amber), the mouth position (rose), the pill box when
+detected (green), and the intake state machine's current state with frame
+counts.
+
+**That second one is a first for this device.** §3.2 below records that the
+framebuffer is shared between the DCMIPP and the UI, which is why every screen
+after a capture has been static UI since Session 09's "Bug 2". Session 16's
+camera-to-PSRAM path and the pill detector's placement in `AI_ARENA` together
+mean the UI owns the framebuffer during an intake watch, so a live image with
+overlays drawn on top is finally possible.
+
+**Layout caveat, honestly flagged:** the preview's coordinates were chosen
+against the design system's geometry, not verified against a running screen. If
+it collides with the title bar or the confirm button, it is one constant.
+
 ## 3. Known problems, current status
 
 Recorded from the code, session 13's changes, and what remains open.
@@ -261,3 +309,59 @@ QWERTY keys were raised from 70×56 to 70×60.
   stack buffer.
 - The dialog panel steps its font down to `ui_font_sm` when a message does
   not fit; messages longer than two lines still need shortening by hand.
+
+## 4. Session 16, second pass — one camera panel, three moments
+
+The device shows the camera on three screens, and they are now the same
+component appearing at three moments of one flow rather than three unrelated
+rectangles.
+
+**Shared geometry.** All three use `CAPRES_IMG_*`: a 300×300 panel at (56,110),
+the same centred-square crop of the camera frame, the same 4 px anti-aliased
+rounded border, and one caption line at the screen's bottom centre (400, 430)
+in `ui_font_md`. `CONFIRM_PV_*` is *defined as* `CAPRES_IMG_*` rather than
+repeating the numbers, so they cannot drift.
+
+| Screen | What it shows | Caption |
+|---|---|---|
+| Live face preview | camera from PSRAM, ~8 fps, greyed **NEXT** | "Keep your whole face inside the frame" |
+| Capture result | the frozen crop the NPU ran on, its box, five landmarks, green **NEXT** | "FACE FOUND *n*% CONFIDENT" |
+| Intake watch | camera from PSRAM, ROI, tracked box, mouth marker | "*STATE*  HAND/PILL  *n/m*" |
+
+The preview and the result are deliberately two *states of one screen*: nothing
+moves at the transition, the caption is replaced and the button turns from grey
+to green. A viewer reads that as the device having finished something.
+
+**Registration is reordered: name first.**
+`INSTRUCT → KEYBOARD → CAMERA → PILL COUNT → CONFIRM`. The camera screen can
+then greet the patient by name ("HOLD STILL, DOUSIK"), and being photographed
+by a machine that has not yet asked who you are is the wrong way round.
+`registration_ui_reset()` moved to the start of the flow — left where it was,
+it would have wiped the name that had just been typed. The instruction screen's
+text changed with it: it used to say "Face the camera, then press READY", which
+became false when the next screen became a keyboard.
+
+**New state: `STATE_CAPTURE_RESULT`.** Both face flows pass through it on
+success. It waits for **NEXT** rather than timing out — an automatic dwell has
+to pick one duration for a viewer who wants to study the picture and one who
+wants to get on, and it is wrong for both. The previous 1.8 s dwell was also
+*blocking*, so the screen was unresponsive for its whole duration, which on a
+device for elderly users reads as a freeze.
+
+**Greetings.** Register: "HOLD STILL, *name*" → "NICE TO MEET YOU, *name*".
+Dispense: "LOOK AT THE CAMERA" → "WELCOME BACK, *name*". Titles measure
+themselves and drop to the small font rather than running off both edges —
+`PATIENT_NAME_MAX` is 32 and `gui_draw_title_bar()` hardcodes the large face.
+
+**The live preview is possible at all because the camera can write elsewhere.**
+Before this, the seconds preceding a capture were a raw camera dump: the DCMIPP
+wrote all 800×480 continuously, so no chrome or text survived a frame. Pointing
+the camera at PSRAM lets the UI own `BUFFER_ADDRESS`. The cost is a handover —
+the capture reads `BUFFER_ADDRESS`, so `PREVIEW_SETTLE_MS` (150 ms, four
+frames) must elapse after the pipe is repointed before a capture is requested.
+
+**Three camera flashes were fixed**, each a different cause; see
+`session_16_notes.md` Addendum 14. The rule that came out of it: *after a
+capture, the only safe thing to do with the framebuffer is write all of it*,
+because the face networks' activations overlap `BUFFER_ADDRESS` and the panel
+will otherwise show NPU tensors.

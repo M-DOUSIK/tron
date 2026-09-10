@@ -70,16 +70,106 @@ Session 15 has since raised the ROM ceiling substantially — Debug now sits at
 than it was. The remaining reasons are the ones that actually decide it, and
 they are about calendar and evidence rather than bytes: see §8.
 
+### What Session 16 changes, and what it does not
+
+**Session 16 put a pill detector on the NPU.** A single-class YOLOv8n, INT8,
+trained for this project, that finds *a* pill in the camera frame — plus a
+geometric stage and a state machine that together decide whether that pill
+went to the patient's mouth.
+
+**It does not close this gap, and it must not be described as if it does.**
+A detector that finds *a* pill is not a classifier that names *which*
+medication. The Program Plan promised identification — "identify the pill,
+capsule, or medicine packet" — and identification is still not built. The
+residual risk is unchanged and specific: **a hopper loaded with the wrong
+medication would not be caught by anything this device does.**
+
+**What it does do is narrow the gap honestly, and the narrowing is worth
+stating.** The plan's device was camera-only, so classification was the whole
+of its assurance. The delivered device assembles that assurance from five
+independent things instead, and the chain is stronger than the single link
+it replaces:
+
+1. a **carer** fills a single-medication hopper, under their own supervision —
+   so what is in the hopper is known by procedure rather than inferred by a
+   model;
+2. the **mechanism** dispenses a counted dose of that one medicine;
+3. **face recognition** verifies which patient is standing there;
+4. the **schedule** verifies the dose is being taken inside its window;
+5. and now **the NPU sees a pill physically go to that patient's mouth**.
+
+Classification answers *"this looks like the right pill."* That chain answers
+*"this specific person was given three pills of the medication their carer
+loaded, inside their 08:00 window, and the camera watched them take it."* The
+second is a stronger adherence claim, and every link in it is measured rather
+than inferred.
+
+The honest caveat sits at step 1 and is not removable by software: the chain
+begins with a human act. That is a real dependency on caregiver diligence, and
+it is the thing pill classification would have checked. Saying so is the point
+of this document.
+
+### And a second caveat, which the literature makes precise
+
+**This prototype's single hopper holds ONE medication.** `pill_count` in the
+patient record means "how many tablets of that one drug per dose". A judge
+reading the adherence chain above should not be left to assume it covers a
+resident's whole regimen, because it does not, and the gap is quantifiable:
+
+| | |
+|---|---|
+| Median regular medications per care-home resident, per day | **8** |
+| Residents meeting the polypharmacy threshold (>=5 medications) | **78-86%** |
+| Medication administration rounds per day | **~4** |
+
+So the device as built serves **one of about eight** medications a real
+resident takes. `MECHANICAL_DESIGN.md`'s 6-8 hopper architecture is the design
+that matches this population — and it is worth noting that the 6-8 figure,
+chosen before anyone looked the numbers up, brackets the measured median of 8
+almost exactly. The single-hopper build is a deliberate prototype cut
+(`MASTER_PROJECT_PLAN.md` §6), not a claim about sufficiency.
+
+The same figures **validate** one decision that was previously asserted on
+plausibility alone: `MAX_DOSE_TIMES` is 4, and four administration rounds a day
+is exactly what care-home practice reports.
+
+Sources:
+
+- *Regular Medications Administered to Older Adults in Aged Care Facilities: A
+  Retrospective Descriptive Study* — median 8 regular medications per resident
+  per day; 78% polypharmacy.
+  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12666757/
+- *Daily Medication Use in Nursing Home Residents with Advanced Dementia* —
+  slightly over 8 oral medications per day in a nationally representative US
+  sample. https://pmc.ncbi.nlm.nih.gov/articles/PMC2910133/
+- *Medication burden attributable to chronic co-morbid conditions in the very
+  old and vulnerable*. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5912775/
+- *Comparing nursing medication rounds before and after implementation of
+  automated dispensing cabinets: a time and motion study* — ~4 administration
+  times per day. https://pmc.ncbi.nlm.nih.gov/articles/PMC11416501/
+- *Prescribing in the Nursing Facility* (AAFP FPM, 2024) — administration
+  timing set by facility routine.
+  https://www.aafp.org/pubs/fpm/issues/2024/0300/nursing-home-prescribing.html
+
+**A caveat on the caveat, because it matters for how these are quoted.** Every
+one of those studies counts *medications*, not *tablets*. One medication can be
+two tablets (2 x 500 mg), so pills-per-sitting is greater than or equal to
+medications-per-sitting, and the literature does not report the tablet figure
+directly. Do not quote "8 pills a day" — the defensible statement is "a median
+of 8 regular medications a day".
+
 ### The honest framing, and it is a strong one
 
-The delivered system verifies the **patient** by face and — once Session 17's
-IR break-beam counter lands — physically **counts** the pills that leave the
-hopper. Together those prove more about adherence than identifying a pill
-that a single-medication hopper already knows the identity of:
+The delivered system verifies the **patient** by face, watches the pill go to
+their mouth (Session 16), and — once Session 17's IR break-beam counter lands
+— physically **counts** the pills that leave the hopper. Together those prove
+more about adherence than identifying a pill that a single-medication hopper
+already knows the identity of:
 
 - classification answers *"this looks like the right pill"*;
-- face + count + schedule answers *"this specific person was given exactly
-  three pills, inside their 08:00 window, and here is the log entry"*.
+- face + gesture + count + schedule answers *"this specific person was given
+  exactly three pills, inside their 08:00 window, was seen to take them, and
+  here is the log entry"*.
 
 The second is a stronger adherence claim, and it is measured rather than
 inferred. What was lost is the ability to catch a hopper loaded with the
@@ -242,7 +332,7 @@ pack detection), or Bluetooth-based caregiver notifications."*
 | **Team of 4**, with named roles: Lead/RTOS, AI/Vision, Firmware/Drivers, UI/Testing | **Solo for Sessions 01–13.** A hardware teammate joined for Session 17. | State the truth. Worth noting that all four of the plan's role descriptions were genuinely covered — RTOS integration, AI/vision, firmware/drivers, UI/testing — by fewer people, over fifteen working sessions with the record of each one kept. |
 | **AI Framework: STM32Cube.AI / Renesas RA Smart Configurator + TensorFlow Lite for Microcontrollers** | **STM32Cube.AI / ST Edge AI only.** No TFLM, no Renesas toolchain — the board preference resolved to the STM32N6570-DK, so the RA-side alternatives never applied. | Neutral. The plan listed both board options' toolchains because the board had not been allocated yet. |
 | **Board preference: STM32N6570-DK / EK-RA8P1** | STM32N6570-DK throughout. | Neutral. |
-| **"Open Source Commitment:** full source code, model training scripts, and documentation released openly upon submission" | Source and documentation: delivered, including fifteen session prompts and fifteen milestone notes. **Model training scripts: not applicable** — no model was trained for this project. Both networks are pretrained, publicly available ONNX models converted with ST Edge AI; their provenance and licensing are in `THIRD_PARTY_SOFTWARE.md` §2.7. | Say it precisely rather than letting "training scripts" stand unqualified. There is nothing to withhold; there is nothing to release. |
+| **"Open Source Commitment:** full source code, model training scripts, and documentation released openly upon submission" | Source and documentation: delivered, including sixteen session prompts and sixteen milestone notes. **Model training scripts: now applicable, and delivered.** This row said "not applicable — no model was trained for this project" until Session 16, which trained one: `tools/action_recogntion/build_pill_detector.py` reproduces the pill detector end to end, from dataset download through training, ONNX export, head cut, INT8 quantisation and validation to ST Edge AI generation. The two face networks remain pretrained ST-supplied models (`THIRD_PARTY_SOFTWARE.md` §2.7); the pill detector is ours (§2.7b). | Favourable, and it closes a row that was previously answered by having nothing to release. **One packaging caveat:** `/tools/` is in `.gitignore`, so the script is not currently tracked. It must be included explicitly in the submission bundle, or the commitment is met in the repository and missed in the deliverable. |
 | **Physical dispensing** | **Not in the Program Plan at all** — the plan's device was camera-only verification. Session 17 builds a real single-hopper stepper turntable with an IR pill counter. | Favourable, and worth being explicit: this is scope *added* beyond what was promised, not scope restored. |
 | **"Privacy-First, Offline Design"** | Delivered exactly as described, and gone further: minimal collection (four fields, now five with the schedule), embeddings rather than photographs, and — Session 15 — a password-gated delete so a patient's face embedding can actually be removed. | Favourable. `COMPLIANCE_PRIVACY_POSTURE.md` is written strictly against what the code does, including the limitations. |
 | **"Real-time camera capture triggered by a scheduled RTOS task or user button press"** | Both, as of Session 15. Button press since Session 05; the scheduled half is §2. | Closed this session. |
@@ -285,9 +375,38 @@ so watching a patient during the confirm screen needs the camera writing
 elsewhere while the UI keeps drawing. That is a firmware question, not a model
 one. `MEMORY_MAP.md` §6b has the analysis.
 
-**What decides it is time, not memory.** The remaining calendar to the
-30 September deadline is measured in days, and integrating a third network on
-this board is not a small job with a known cost — the evidence is this
+> **SUPERSEDED BY SESSION 16 — read this box before the paragraphs below.**
+>
+> The verdict recorded here was **"it is a maybe, so no."** Session 16 built
+> it anyway, because the thing that made it a maybe — the cost of producing a
+> model — stopped applying when a collaborator delivered a design. The
+> analysis below is kept because its *reasoning* was sound and its warnings
+> were accurate; what changed is an input, not the logic.
+>
+> What actually happened, with measured numbers (`session_16_notes.md`):
+>
+> - **Memory was never the binding constraint**, exactly as the correction
+>   below says. Final figures: **208,000 bytes** of activations in `AI_ARENA`
+>   (17,280 spare) and **3,049,505 bytes** of weights in external NOR.
+> - **The camera was the real problem**, exactly as the paragraph below says.
+>   It was solved by pointing the DCMIPP at PSRAM and adding two `LPEN` bits.
+> - **The toolchain history below repeated itself, precisely.** A full-graph
+>   INT8 quantisation produced a model that detected nothing at all; the
+>   default memory pool silently placed activations inside the face networks'
+>   block; opset 12 could not express per-channel quantisation; unsigned
+>   activations were rejected outright. Every one of those cost a round. The
+>   warning was right.
+> - **One thing this analysis could not have predicted**: the collaborator's
+>   trained weights do not generalise beyond their own footage (0 detections
+>   on 60 independent pill photographs), so a detector had to be trained
+>   after all. The design was the gift; the weights were not.
+>
+> **The remaining gap is unchanged**: this is pill DETECTION, not pill
+> CLASSIFICATION. See §1.
+
+**What decided it at the time was time, not memory.** The remaining calendar to
+the 30 September deadline is measured in days, and integrating a third network
+on this board is not a small job with a known cost — the evidence is this
 project's own history:
 
 - Session 08A spent an entire session proving the toolchain path with a
@@ -299,9 +418,10 @@ project's own history:
   *opposite order*, so only one configuration could ever run against one
   flashed image.
 
-None of that is a memory problem, and all of it would recur. The owner's
-standing instruction is that a second model happens only if it is a certainty,
-not a maybe. **It is a maybe. So: no.**
+None of that is a memory problem, and all of it would recur. **It did recur** —
+see the box above. The owner's standing instruction was that a second model
+happens only if it is a certainty, not a maybe; a delivered design made it a
+certainty, and Session 16 ran.
 
 The result is recorded here so the next person inherits a foundation rather
 than a question: the arena exists, it is proven, its address and size are
@@ -317,12 +437,52 @@ create.
 |---|---|
 | Promised and delivered as described | 5 (offline operation, NPU inference, non-volatile caregiver record, multi-patient, RTOS task architecture) |
 | Promised and delivered **better than described** | 4 (event log vs. a flag; five derived tasks vs. four sketched; on-device log review; multi-patient shipped rather than deferred) |
-| Promised and **substituted**, with the reasoning stated | 1 (pill classification → face recognition — §1) |
+| Promised and **substituted**, with the reasoning stated | 1 (pill classification → face recognition — §1). **Narrowed in Session 16**: the NPU now detects *a* pill and watches it go to the patient's mouth. It still does not identify *which* medication, and §1 says so. |
 | Promised, **never built, and built in Session 15** | 1 (schedule validation — §2) |
 | Promised, dropped in Session 12, and **scheduled for Session 17** with the design decided | 1 (audio alerts — §3; a carer alert on the missed-dose edge) |
-| **Not promised** and delivered anyway | physical dispensing (Session 17), carer mode, gated enrolment, password-gated delete, the µT-Kernel migration itself |
+| **Not promised** and delivered anyway | physical dispensing (Session 17), carer mode, gated enrolment, password-gated delete, action recognition (Session 16), the µT-Kernel migration itself |
 
 The one thing this reconciliation cannot make favourable is §1, and the right
 response to a judge asking about it is the one in §1: we measured, we chose,
 and what we built proves more about adherence than what we promised would
 have.
+
+**Session 16 improves that answer without changing its shape.** The device now
+puts a pill detector on the NPU and watches the pill reach the patient's mouth,
+so the adherence chain is: a carer loads one known medication, the mechanism
+dispenses a counted dose of it, face recognition says who is taking it, the
+schedule says it is the right time, and the camera says it went in. That is
+five measured links where the Program Plan offered one inferred one.
+
+It is still not classification, and the residual risk — a hopper loaded with
+the wrong drug — is still unmitigated by anything the device does. A judge who
+asks the follow-up question deserves that sentence, not a deflection.
+
+---
+
+## The classification commitment, as finally delivered
+
+§1 above records that on-device CNN pill *classification* was never built, and
+that finding stands. What changed by the end of Session 16 is that the delivered
+system covers the intent by other means, and the combination is defensible on
+its own terms rather than as an apology.
+
+**Three models ship, and a mechanism does the fourth job:**
+
+| the plan said | what ships | why this is not a downgrade |
+|---|---|---|
+| CNN classifies which pill | **the hopper** classifies — one medicine per hopper | mechanically foolproof; a vision classifier can misread, a physical separation cannot |
+| — | **pill detector** (YOLOv8n, corroboration) | confirms a pill was present in the frame where the hand reached the mouth |
+| — | **hand landmark model** (MediaPipe, Apache-2.0) | confirms the dose was actually taken, which classification never addressed |
+| face recognition | **CenterFace + MobileFaceNet** | unchanged, and delivered |
+
+The plan's classifier answered *"which pill is this?"*. The hopper answers it
+by construction, before the pill is ever dispensed. What the plan never
+answered — *"did the patient actually take it?"* — is what action recognition
+now covers, and it is the harder and more clinically meaningful question.
+
+So the honest summary is not "classification was dropped". It is:
+**classification moved from software to mechanism, and the capacity it freed
+went to adherence.** `AI_PIPELINE.md` §9 is the model inventory; the limits of
+the action recognition stage are stated there rather than left to be
+discovered.

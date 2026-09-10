@@ -103,7 +103,149 @@ detection/inference runs but produces garbage/NaN output; it's very likely
 a missing weight region at one of these addresses, not a code bug. Full
 story in `documents/milestones/session_08B_notes.md`.
 
-### 3. If the board hangs at boot after flashing external memory
+### 2b. The four addresses this project actually uses
+
+Every one of these was found the hard way, and none of them is discoverable
+from the linker script alone. Flash all four on a fresh board.
+
+| Address | Bytes | What lives there | Source of the blob |
+|---|---|---|---|
+| `0x70380000` | 2,030,881 | CenterFace (face detector) constant pools | generated with the face networks, Session 08B |
+| `0x71000000` | 296,832 | NPU epoch-controller blobs, **both** face networks | linked `(NOLOAD)`; extract from the `.elf` |
+| `0x72000000` | 1,092,129 | MobileFaceNet (embedder) constant pools | generated with the face networks, Session 08B |
+| `0x73000000` | 3,221,233 | **hand landmark weights (Session 16 final)** | `tools/action_recogntion/build/generated_hand/hand_atonbuf.xSPI2.bin` |
+| `0x73400000` | 3,049,169 | **pill detector weights (Session 16 final)** | `tools/action_recogntion/build/generated_pill2/pill_atonbuf.xSPI2.bin` |
+
+> **The pill detector moved from `0x73000000` to `0x73400000`, and its
+> activations moved out of `AI_ARENA` into PSRAM.** Both were forced by the
+> hand model, which needs the whole 220 KB arena and 3.2 MB at `0x73000000`.
+> Rather than choose between the two networks, the pill detector was
+> regenerated against a memory pool that excludes AXISRAM6 entirely and places
+> its 208 KB of activations at `0x90A00000` in PSRAM. Nothing is shared:
+>
+> | | activations | weights |
+> |---|---|---|
+> | hand landmarks | 220 KB `AI_ARENA` + ~978 KB PSRAM `0x90500000` | `0x73000000` |
+> | pill detector | 208 KB, all PSRAM `0x90A00000` | `0x73400000` |
+>
+> The pill detector pays for coexistence by running out of PSRAM, which is
+> slower — and it is the stage that can afford it, because it only
+> corroborates and runs on one frame in four.
+>
+> **One generation flag had to be dropped for it**: `--Ocache-opt` makes the
+> Neural Art compiler abort with an internal assertion
+> (`check_npu_caching_of_output_live_buffers`) when every activation lives in
+> a cacheable external pool. The profile `medsight-pill2` omits it. That is a
+> compiler limitation, not a configuration error, and it costs only an
+> optimisation pass.
+
+The first three are Session 08B's and are documented above. The fourth is
+Session 16's and has its own runbook, below, because regenerating it is a
+three-step process with two traps in it.
+
+### 2c. Regenerating and flashing the pill detector (Session 16)
+
+The weights at `0x73000000` come from an ONNX model that has been through
+`export -> cut head -> INT8 quantise`. `tools/action_recogntion/summary.md`
+and `build_pill_detector.py` cover the model side; this is the device side.
+
+**Step 1 — generate the NPU sources.** Note the `--st-neural-art` argument:
+it is a *profile reference*, not a bare flag.
+
+```bash
+cd tools/action_recogntion
+"C:/ST/STEdgeAI/4.0/Utilities/windows/stedgeai.exe" generate \
+    --model models/pill_detector/pill_cut_int8_160_hn.onnx \
+    --target stm32n6 --name pill --no-report \
+    --st-neural-art "medsight-arena@medsight_neuralart.json" \
+    --workspace build/ws_hn --output build/generated_hn
+```
+
+> **TRAP 1 — the memory pool must come through the profile.** Plain
+> `--st-neural-art`, with no profile, uses ST's default pool, which places
+> activations at `0x342E0000` — *inside the face networks' scratch*. Nothing
+> warns you. The symptom is face recognition degrading after an intake watch.
+> `--memory-pool` is **not** the right flag either; it is silently ignored for
+> this target. Only the `profile@config.json` form works.
+
+Verify placement before believing the output — do not skip this:
+
+```bash
+python -c "import json;d=json.load(open('build/generated_hn/pill_c_info.json'));\
+print(d['memory_footprint'])"
+```
+
+Expect `activations` at or under **225,280** (the `AI_ARENA` size) and the
+first memory pool's `address` to read **876118016** — that is `0x34388000` in
+decimal, AXISRAM6, which is what `medsight_arena.mpool` asks for.
+
+**Step 2 — install the generated sources.** Four files, and the firmware must
+be rebuilt even when only the weights changed, because the INT8 quantisation
+scales are compiled into `stai_pill.h`:
+
+```bash
+G=tools/action_recogntion/build/generated_hn
+F=sessions/session_16/FSBL
+cp $G/pill.h $F/Inc/pill.h
+cp $G/stai_pill.h $F/Inc/stai_pill.h
+cp $G/pill.c $F/Src/ai/pill.c
+cp $G/stai_pill.c $F/Src/ai/stai_pill.c
+```
+
+`FSBL/Src/ai` is a **type-2 (folder) link** in `.project`, so new `.c` files
+there are picked up automatically. `FSBL/Src/ui` is not — a file added there
+needs its own `<link>` entry, which is Session 09's Bug 1.
+
+**Step 3 — flash the weight blob.**
+
+```bash
+cp $G/pill_atonbuf.xSPI2.raw $G/pill_atonbuf.xSPI2.bin
+```
+
+> **TRAP 2 — the `.raw` extension is rejected outright.**
+> `STM32_Programmer_CLI` answers *"the download command ... has a wrong
+> extension, please note that the supported extension are .bin, .hex,
+> .srec"*. ST Edge AI emits `.raw`; copy it to `.bin`. This is also the
+> convention the two face networks already follow
+> (`fd_data.xSPI2.bin`, `faceid_data.xSPI2.bin`).
+
+```powershell
+$cli = "C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.500.202603051304\tools\bin\STM32_Programmer_CLI.exe"
+$loader = "C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.500.202603051304\tools\bin\ExternalLoader\MX66UW1G45G_STM32N6570-DK.stldr"
+& $cli -c port=SWD mode=HOTPLUG -el $loader -w "<...>\pill_atonbuf.xSPI2.bin" 0x73000000
+```
+
+**Step 4 — verify the write, then power-cycle.** Reading back costs seconds
+and distinguishes "the flash is wrong" from "the code is wrong" later:
+
+```powershell
+& $cli -c port=SWD mode=HOTPLUG -el $loader -r32 0x73000000 8
+```
+
+Compare against the file's own first words:
+
+```bash
+python -c "import struct;print('0x%08X 0x%08X' % struct.unpack('<II', \
+    open('$G/pill_atonbuf.xSPI2.bin','rb').read(8)))"
+```
+
+Then **unplug the USB cable** — a full power cycle, not a debugger reset —
+before running the application. Back-to-back external-loader operations leave
+the flash chip's live bus state confused; see section 3 immediately below.
+
+Finally, rebuild the firmware in the IDE. A stale build against new weights
+produces plausible-looking but wrong detections, because the quantisation
+scales no longer match the tensors they are decoding.
+
+### 3. If the board hangs at boot after ANY external-memory operation
+
+> **Session 16 correction: this applies to READS as well as writes.** The
+> heading used to say "after flashing". It happened again after two `-r32`
+> verification reads on a live board — the log stopped right after
+> `ai_vision_init: DEBUG build (-O0)`, before `HAL_CACHEAXI_Enable`, which is
+> where XSPI is first touched, and the LCD held a stale frame. Verifying a
+> write is exactly when one is most tempted to leave the board running.
+> Power-cycle after **any** external-loader operation.
 
 A board that boots fine, then hangs (often inside a `HAL_XSPI_GET_FLAG`
 polling loop) right after flashing OSPI content — even though the flash

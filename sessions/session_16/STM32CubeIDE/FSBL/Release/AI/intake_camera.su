@@ -1,0 +1,5 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_camera.c:21:9:intake_camera_last_roi_mean	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_camera.c:26:6:intake_camera_start	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_camera.c:54:6:intake_camera_stop	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_camera.c:73:6:intake_camera_is_running	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_camera.c:146:6:intake_camera_grab_roi	72	static,ignoring_inline_asm

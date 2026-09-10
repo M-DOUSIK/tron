@@ -106,6 +106,48 @@ health-adjacent but not identifying on their own.) All of it gets the same treat
 - Nothing else in the firmware reads `patients.dat`. `ai_vision.c` owns the gallery;
   every other module reaches it through that module's API.
 
+## 4b. The camera now watches during the confirm screen (Session 16)
+
+This is a genuine increase in what the device observes, and it is recorded
+here rather than treated as an implementation detail.
+
+**What changed.** Until Session 16 the camera was used for exactly two
+moments — a face capture during registration and one during dispensing — and
+was stopped for the rest of the flow. Action recognition keeps it running for
+the whole `STATE_CONFIRM_TAKEN` window, up to 30 seconds, watching the patient
+bring a pill to their mouth.
+
+**What is retained, and it is nothing.**
+
+- **No frame is ever written to the SD card**, at any point. The camera writes
+  into PSRAM at `0x90400000`, one frame is overwritten by the next at ~30 fps,
+  and the region is never read by anything but the pill detector. There is no
+  code path that copies a frame to storage.
+- **What survives the window is a single enum**: `CONSUMED`,
+  `NOT_CONSUMED_*` or `UNCERTAIN`, which reaches the audit log as three words
+  — "gesture confirmed", "gesture NOT observed", "gesture uncertain". That is
+  the entire output.
+- **No face embedding is computed during the watch.** The pill detector is a
+  single-class object detector; it has no identity output and no face branch.
+  The mouth position it uses is decoded from the face detection that already
+  happened moments earlier at the dispense step.
+- **Zero-network is unaffected and permanent.** Nothing here can leave the
+  device, because nothing in this firmware can.
+
+**The honest framing of what a carer should be told.** A device that watches a
+patient swallow a pill is doing something a reasonable person would want to
+know about, even when it stores nothing. The mitigations above are real, but
+"we do not keep the video" is not the same as "we are not watching" — and the
+second is what a patient would care about. This is worth stating in any user
+documentation, and it is why the feature sits behind a build switch
+(`MEDSIGHT_ACTION_RECOGNITION`) rather than being unconditional.
+
+**A limitation that follows from the design, and is a privacy benefit.** There
+is no mouth-open detection on this device — CenterFace gives two mouth corners
+and no lip contour — so the device cannot and does not analyse facial
+expression. It measures one distance: pill to mouth centre, normalised by face
+width.
+
 ## 5. Two Controls This Document Used to Claim, and Why They Were Removed
 
 Recorded here rather than deleted silently, because a reader comparing an older

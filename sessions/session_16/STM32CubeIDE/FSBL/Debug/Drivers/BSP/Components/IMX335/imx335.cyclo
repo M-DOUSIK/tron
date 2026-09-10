@@ -1,0 +1,16 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:336:16:IMX335_WriteTable	4
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:361:16:IMX335_Delay	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:379:16:IMX335_ReadRegWrap	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:394:16:IMX335_WriteRegWrap	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:413:9:IMX335_RegisterBusIO	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:454:9:IMX335_Init	7
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:506:9:IMX335_DeInit	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:523:9:IMX335_ReadID	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:551:9:IMX335_GetCapabilities	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:589:9:IMX335_GetSensorInfo	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:623:9:IMX335_SetGain	6
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:668:9:IMX335_SetExposure	6
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:721:9:IMX335_SetFrequency	10
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:769:9:IMX335_SetFramerate	10
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:816:9:IMX335_MirrorFlipConfig	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/Drivers/BSP/Components/imx335/imx335.c:858:9:IMX335_SetTestPattern	5

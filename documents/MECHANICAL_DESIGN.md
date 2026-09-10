@@ -52,6 +52,18 @@ of each additional hopper is real, and a working 2–3-hopper demo with a docume
 genuinely scalable design is a stronger submission than an overextended, unreliable
 6–8-hopper build.
 
+> **The 6-8 figure was a guess, and Session 16 checked it.** Care-home
+> residents take a median of **8 regular medications a day**, with 78-86%
+> meeting the polypharmacy threshold of five or more. So the range chosen here
+> — before anyone looked a number up — brackets the real population almost
+> exactly. Sources and the important caveat (these studies count *medications*,
+> not *tablets*) are in `milestones/session_16_notes.md` Addendum 10.
+>
+> The corollary is the one worth stating in submission material: the
+> single-hopper prototype serves **one of about eight** medications a real
+> resident takes. That is a deliberate cut, not a claim of sufficiency, and
+> `PROGRAM_PLAN_RECONCILIATION.md` §1 now says so explicitly.
+
 ## 2. Chosen Design: Stacked Independent Hopper Modules
 
 Each medication gets its own small, self-contained dispensing module: a hopper body,

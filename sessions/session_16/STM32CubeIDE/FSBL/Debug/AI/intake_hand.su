@@ -1,0 +1,6 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:206:6:intake_hand_reset	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:222:6:intake_hand_stats	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:236:6:intake_hand_debug	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:250:9:intake_hand_mouth_cover	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:256:20:is_skin	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_hand.c:264:6:intake_hand_update	264	static

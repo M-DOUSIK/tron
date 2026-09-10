@@ -1,0 +1,15 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:320:13:schedule_alarm_handler	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:328:6:state_machine_service_init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:337:12:schedule_find_next	48	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:373:13:schedule_arm_next	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:443:13:camera_stop	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:447:13:camera_start	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:453:13:switch_ltdc_buffer	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:459:13:check_hit	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:485:13:show_alert	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:531:13:display_blank	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:547:13:begin_capture	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:563:28:poll_capture	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:601:6:state_machine_init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:696:13:schedule_service	208	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ui/state_machine.c:802:6:state_machine_update	240	static

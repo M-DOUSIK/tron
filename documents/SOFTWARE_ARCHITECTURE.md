@@ -132,6 +132,13 @@ because the gallery and the record are owned by the same module. See §6.
   switch (`MEDSIGHT_FAST_CLOCK`) chooses between a wall clock and a day compressed
   into four minutes without a single conditional anywhere above this module. The
   substitution point was the deliverable, not the timer.
+- `ai_overlay.c` (Session 16) reads `ai_vision.h`'s capture view and
+  `ai/intake.h`'s live view directly, and draws through `gui_draw.h`. It is a
+  render-only module with no state beyond a refresh throttle, called from
+  `state_machine.c` — so it does not breach the rule that `state_machine`
+  orchestrates. It touches no OS primitive and no hardware register, and it
+  deliberately avoids DMA2D so that it adds no bus master and therefore no new
+  `LPEN` obligation (§10).
 - `carer_ui.c` is a second documented exception of the same shape as
   `registration_ui.c`'s (above): it calls `ai_vision.h`'s
   `gallery_set_schedule()` / `gallery_set_dose()` / `gallery_delete_patient()`
@@ -395,6 +402,9 @@ STATE_CAMERA_DISPENSE -> STATE_DISPENSING (match found)
 STATE_DISPENSING -> STATE_CONFIRM_TAKEN
   -> large "✓ I Took It" button; a smaller "Skip" button is available for
      caretaker use and returns home without logging a confirmation
+STATE_CONFIRM_TAKEN -> (Session 16) camera streams to PSRAM; the AI task
+     watches for a pill going to the mouth while this screen stays drawn.
+     The verdict NEVER gates the button - it only chooses the log suffix.
 STATE_CONFIRM_TAKEN -> (button tapped) -> log "CONFIRMED: <name> took pills",
   decrement and re-save pills_remaining, camera OFF, STATE_HOME
 STATE_CONFIRM_TAKEN -> (timeout, no tap) -> MASCOT_ERROR, SD log, camera OFF, STATE_HOME
@@ -485,6 +495,16 @@ them. The previously vacant level 3 is now occupied.
 | 3 | `ai` | `ai_vision.c` | on demand | **No deadline.** Hundreds of milliseconds of solid NPU/CPU work per request, a few times per session, in response to a button press the user already expects to take a moment. Deliberately below the UI so it is preemptible — that is what keeps touch and the physical USER1 button alive during inference. Above the logger because a person is waiting on its result and nobody waits on a log line. |
 | 2 | `logger` | `sd_logger.c` | event-driven | Tolerates seconds of latency by construction; the async queue exists so no caller ever waits on a 10-50 ms SD write. |
 | 1 | `heartbeat` | `main.c` | 500 ms | No deadline at all. Deliberately lowest, so "the LED stopped blinking" means "something above me is starving the system" — which is exactly the signal it should carry. Also carries the periodic idle/power report (§10). |
+
+**Session 16 added no task either**, and for a stronger reason than Session
+15's. Action recognition runs on the **existing** `ai` task at priority 3,
+woken by a fourth bit (`AI_FLAG_INTAKE`) on the **same** event flag the
+capture handshake already uses. A second AI task would have made the
+frame-buffer ownership rule below a race instead of an invariant, because
+there would no longer be one thing that owns `BUFFER_ADDRESS` at a time. The
+event flag earns its keep again here: the AI task must block on "a capture
+request **or** an intake request" in one call, which is what an OR-wait
+expresses and what a queue or semaphore cannot.
 
 **Session 15 added no task**, and that was a decision rather than an oversight.
 Scheduled dosing looks at first like it wants one, but its work is an alarm
@@ -591,6 +611,28 @@ The display was simply the one failure visible to the naked eye.
 **Rule for future sessions:** anything that adds a new DMA-driven peripheral
 must add its `LPEN` bit here in the same change, and must be tested from a
 **cold boot** — the only condition under which the original fault appeared.
+
+**Session 16 needed TWO new bits, and they are in `ms_configure_sleep_clocks()`
+in the same change as the code that made them necessary.** Action recognition
+points the DCMIPP at external PSRAM (`0x90400000`, XSPI1) so the camera can
+run while the UI keeps drawing the confirm screen — the first new DMA
+destination since Session 12, and outside AXISRAM3–6, so this section's rule
+applies in full:
+
+| Register | Bit | What it protects |
+|---|---|---|
+| `AHB5LPENR` | `XSPI1LPEN` | the PSRAM controller |
+| `AHB5LPENR` | `XSPIMLPEN` | the **XSPI manager** — every memory-mapped access routes through it, so gating it stalls the transfer just as completely |
+
+The second is the one easy to miss. **Not yet verified from a cold boot** —
+that is the test that matters and it is listed in `session_16_notes.md`.
+
+Also found while checking, and recorded because it is the same fault shape:
+`XSPI2LPEN` is clear and the NPU reads its weights from OSPI NOR during
+inference. It has never bitten because the ST runtime is built
+`LL_ATON_OSAL_BARE_METAL` and **polls**, so the CPU is awake for the whole run.
+Latent, not live — but it stops being latent the moment inference blocks on an
+OS primitive instead of spinning.
 
 **Session 15 checked this rather than assuming it, and needed no new bit.** The
 new `AI_ARENA` region is at `0x34388000`, inside AXISRAM6, which these bits
