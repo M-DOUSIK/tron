@@ -95,7 +95,7 @@ sessions (08A/08B AI, 11 µT-Kernel migration, 14 hardware bring-up).
 | 7 | 12 | µT-Kernel-idiomatic integration (event flags, reasoned priorities), power saving (`low_pow`/WFI), system hardening (SD hot-plug, gallery-full/face-retry, pill-count tracking, log review), third-party software inventory — **done, see `milestones/session_12_notes.md`** |
 | 7–8 | 13 | UI/UX overhaul: one visual system, the framebuffer glitch, mascot states, contest documentation packaging |
 | 8 | 15 | Program Plan reconciliation, carer mode + RTC scheduled dosing, gated registration, the memory map, submission materials — **done, see `milestones/session_15_notes.md`** |
-| 8-9 | 16 | Action recognition: a collaborator's YOLOv8n pill detector on the NPU, mouth landmarks decoded from the CenterFace detector already running, geometry and a state machine in C. Corroborates the "I Took It" button, never replaces it. |
+| 8-9 | 16 | Action recognition. **As delivered:** a MediaPipe hand landmark model on the NPU decides whether a hand reached the mouth; the collaborator's YOLOv8n pill detector corroborates; mouth landmarks decoded free from the CenterFace detector already running; geometry and the state machine in C. Corroborates the "I Took It" button, never replaces it. See `AI_PIPELINE.md` §9. |
 | 9 | 17 | Physical dispensing hardware: 28BYJ-48 stepper turntable + 3-pin IR break-beam sensor module, closed-loop pill count, and the carer buzzer (with the hardware teammate). **Deliberately last.** |
 
 **Cut order if time runs short**, most-expendable first: **Session 16's action
@@ -280,7 +280,7 @@ Two successive scope cuts landed here, in order:
 
 **Net result as of Session 15:** the NPU pipeline runs exactly one model family —
 one-shot face recognition + small-gallery matching (Session 08B, real enrolment
-Session 09). **Session 16 adds a second: a single-class pill detector.** Pill
+Session 09). **Session 16 added two more: a single-class pill detector and a MediaPipe hand landmark model, taking the device to four networks on one NPU.** Pill
 *classification* — identifying which medication — remains unbuilt and remains the
 Program Plan's largest divergence; a detector that finds *a* pill is not a
 classifier that names one, and `PROGRAM_PLAN_RECONCILIATION.md` §1 says so.

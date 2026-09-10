@@ -120,7 +120,11 @@ Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 | **Function** | Drives the Neural-ART accelerator: epoch-controller microcode loading, buffer/cache management and the synchronous `stai_*_run()` execution path. Configured `LL_ATON_OSAL_BARE_METAL` (`ll_aton_config.h`), which is why the three `ll_aton_osal_{freertos,threadx,zephyr}.c` files compile to genuinely empty translation units — they are in the build but contribute no code, and in particular the FreeRTOS-named one does **not** make this firmware depend on FreeRTOS. |
 | **Modified?** | No. |
 
-### 2.7 The two AI models
+### 2.7 The two FACE models
+
+> Session 16 added two more networks with their own entries and licences:
+> §2.7b the pill detector, §2.7c the hand landmark model. This section covers
+> the face pair only.
 
 | Field | Value |
 |---|---|

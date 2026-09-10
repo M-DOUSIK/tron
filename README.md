@@ -29,7 +29,7 @@ notes. None of them is an estimate.
 | **Failed capture** | 1111 ms (3 detector passes + two 500 ms waits) | same |
 | **Memory footprint, Debug** | `.text` 933,328 · `.data` 4,036 · `.bss` 663,876 — 47.3% of the code region, 77.6% of the data region | `MEMORY_MAP.md` §4 |
 | **Memory footprint, Release** | `.text` 778,688 · `.data` 4,032 · `.bss` 663,868 — 34.0% / 76.1% | same |
-| **Free NPU-reachable SRAM** | **220 KB**, claimed as a named linker region and pattern-tested from a cold boot — and **now occupied**: 208,000 bytes of pill-detector activations, 17,280 spare | `MEMORY_MAP.md` §3, §8 |
+| **Free NPU-reachable SRAM** | **220 KB**, claimed as a named linker region and pattern-tested from a cold boot — and **now fully occupied** by the hand landmark model, which also spills ~978 KB of activations into PSRAM. The pill detector was relocated entirely to PSRAM so the two can coexist | `MEMORY_MAP.md` §3, §8 |
 | **INT8 quantisation of the pill detector** | **0/90 detections** with the YOLOv8 head attached; **85/90** with it cut and the decode moved to the CPU, against FP32's 84/90 | `AI_PIPELINE.md` §6 |
 | **µT-Kernel modification surface** | **6 modified files out of ~230**, and **every file implementing a system call is byte-identical to upstream** — verified by recursive diff against pristine mtk3_bsp2 | `THIRD_PARTY_SOFTWARE.md` §4 |
 | **Hand-written code** | ~11,800 lines across 28 files, excluding all vendored code and generated assets | `PROGRAM_PLAN_RECONCILIATION.md` §7 |
@@ -320,11 +320,11 @@ doing.
 
 | Item | Why it was deferred | What it needs first | Rough cost |
 |---|---|---|---|
-| **Audio alert — scheduled for Session 17, and it is a CARER alert, not a patient one** | The buzzer claim was dropped from the documents in Session 12 rather than half-built. Session 15 gave the device the one event that genuinely needs sound: a dose window closing unserved. **Decided:** the buzzer sounds on the *missed* edge, to bring a carer to the device, who then opens carer mode → DOSE HISTORY to see who missed. It never sounds at the patient — a device that beeps at someone who has already not responded is nagging, not helping. | Nothing. The hardware is on the board and untouched (`HAL_SAI_MODULE_ENABLED` is still commented out), and the firmware hook already exists: `schedule_service()`'s `SCHED_FLAG_CLOSE` branch in `state_machine.c` fires exactly once per missed window and is where the `MISSED:` line is written. | Small. One call at that branch, plus SAI bring-up, plus the rule that nothing ever plays from handler context. This also satisfies the Program Plan's "audio and/or visual alert feedback", which `PROGRAM_PLAN_RECONCILIATION.md` §3 currently records as dropped. |
+| **Audio alert — scheduled for Session 17, and it is a CARER alert, not a patient one** | The buzzer claim was dropped from the documents in Session 12 rather than half-built. Session 15 gave the device the one event that genuinely needs sound: a dose window closing unserved. **Decided:** the buzzer sounds on the *missed* edge, to bring a carer to the device, who then opens carer mode → DOSE HISTORY to see who missed. It never sounds at the patient — a device that beeps at someone who has already not responded is nagging, not helping. | Nothing. The hardware is on the board and untouched (`HAL_SAI_MODULE_ENABLED` is still commented out), and the firmware hook already exists: `schedule_service()`'s `SCHED_FLAG_CLOSE` branch in `state_machine.c` fires exactly once per missed window and is where the `MISSED:` line is written. | Small. One call at that branch, plus the buzzer driver, plus the rule that nothing ever plays from handler context. **Scope corrected: a passive buzzer on a timer PWM channel, not the SAI codec** — `session_17.md` Part E matches what the Program Plan actually committed to ("Buzzer, LED"), and a codec is neither needed nor in scope. This also satisfies the Program Plan's "audio and/or visual alert feedback", which `PROGRAM_PLAN_RECONCILIATION.md` §3 currently records as dropped. |
 | **Multi-hopper** — the 6–8 hopper architecture | Session 17 builds one. The data model and `dispenser_dispense()` were kept extensible on purpose. | The mechanical build, and a `hopper_id` field in `PatientRecord` (which forces `patients.dat` to v4). The UI already draws four hopper slots with three greyed out. | Mostly mechanical. The firmware change is genuinely additive. |
 | **Encrypted SD storage** | Prototype scope. It is the largest real privacy gap in the build. | An answer to key storage on a part with no secure element — which is a design question, not an implementation one. Without it, encryption moves the problem rather than solving it. | Small to write, hard to justify until the key question is answered. |
 | **Pill classification** — the Program Plan's original core function | Substituted by face recognition; see `PROGRAM_PLAN_RECONCILIATION.md` §1. **No longer blocked on memory** — Session 15 freed 539 KB of ROM and proved a 220 KB NPU-reachable arena. Blocked on *time*, and on this project's history of losing most of three sessions to NPU toolchain problems. **Note that Session 16 does NOT close this**: a single-class detector finds *a* pill; it does not identify *which* medication, which is what the plan promised. It narrows the gap honestly and no further. | The arena (done), a labelled multi-medication dataset that does not exist, and a session's calendar for the flashing and layout problems that will recur. `MEMORY_MAP.md` §5 is the runbook. | One session if everything goes right; three if it goes the way Sessions 08A/08B did. |
-| **Action recognition — now scheduled as Session 16** | Ruled out twice, and both reasons turned out to be wrong. It was not the temporal model's frame ring (that never had to be in SRAM — there is 16 MB of NPU-reachable PSRAM at `0x90000000`), and it was not training cost: **a collaborator has built and trained the vision half** (`tools/action_recogntion/`). It is not the temporal CNN this project always assumed — it is a YOLOv8n single-class **pill detector**, geometric features, and a **rule-based state machine**, of which only the detector needs the NPU. Mouth tracking is free: the CenterFace detector already emits both mouth corners on a tensor this firmware defines and has never read. **Decided: it corroborates the "I Took It" button, never replaces it** — the button stays the confirming action and the model's verdict becomes evidence in the log, behind `MEDSIGHT_ACTION_RECOGNITION` so it stays cuttable. | The **camera**, not the model. The DCMIPP DMAs into the display framebuffer and the camera is stopped for the whole dispense flow, because Session 09 found that resuming it overwrites the UI. Watching a patient during the confirm screen means the camera writing to PSRAM while the UI keeps drawing — plus re-deriving the `LPEN` question for that destination, which is the fault that cost six rounds in Session 12. | See `prompts/session_16.md`. `MEMORY_MAP.md` §5 is the runbook for the model; the camera path is the unknown. |
+| **Action recognition — ~~scheduled~~ DONE in Session 16.** The analysis below is kept as the reasoning that got us there; what actually shipped differs and `AI_PIPELINE.md` §9 is authoritative. In short: the pill detector could not carry the decision (an 8-px object at the deployment ROI), so a **MediaPipe hand landmark model** decides and the pill detector corroborates. | Ruled out twice, and both reasons turned out to be wrong. It was not the temporal model's frame ring (that never had to be in SRAM — there is 16 MB of NPU-reachable PSRAM at `0x90000000`), and it was not training cost: **a collaborator has built and trained the vision half** (`tools/action_recogntion/`). It is not the temporal CNN this project always assumed — it is a YOLOv8n single-class **pill detector**, geometric features, and a **rule-based state machine**, of which only the detector needs the NPU. Mouth tracking is free: the CenterFace detector already emits both mouth corners on a tensor this firmware defines and has never read. **Decided: it corroborates the "I Took It" button, never replaces it** — the button stays the confirming action and the model's verdict becomes evidence in the log, behind `MEDSIGHT_ACTION_RECOGNITION` so it stays cuttable. | The **camera**, not the model. The DCMIPP DMAs into the display framebuffer and the camera is stopped for the whole dispense flow, because Session 09 found that resuming it overwrites the UI. Watching a patient during the confirm screen means the camera writing to PSRAM while the UI keeps drawing — plus re-deriving the `LPEN` question for that destination, which is the fault that cost six rounds in Session 12. | See `prompts/session_16.md`. `MEMORY_MAP.md` §5 is the runbook for the model; the camera path is the unknown. |
 | **Caregiver notifications off-device** | Zero-network is a permanent design principle of this project, not an omission. | A deliberate connectivity and privacy decision — which would change what this project *is*, not just what it does. | Out of scope by choice, not by capacity. |
 | **Persisting the passcode lockout across a power cycle** | Deliberate: it would turn a wrong tap into an SD write, and give anyone a way to wear the card out or lock a device out permanently by pulling power at the right moment. | A place to keep a small counter that is neither the SD card nor volatile — the RTC backup registers are the obvious candidate and are already in use for the clock-set marker. | An hour, once someone decides the trade is worth it. |
 
@@ -366,7 +366,7 @@ that did not happen.
 | 01–13 | Bring-up → camera/LCD → touch GUI → SD → OSAL → face recognition → registration → dispense flow → µT-Kernel migration → hardening → UI overhaul | done |
 | **14** | — | **retired number**, see below |
 | 15 | Program Plan reconciliation, carer mode, RTC scheduled dosing, gated enrolment, memory map | **done** |
-| 16 | **Action recognition** — pill detector on the NPU, mouth landmarks decoded from the existing face detector, geometry and a state machine in C. Corroborates the "I Took It" button, never replaces it. | **done**, three hardware rounds — `milestones/session_16_notes.md` |
+| 16 | **Action recognition** — a MediaPipe **hand landmark** model on the NPU decides whether a hand reached the mouth; mouth landmarks decoded free from the existing face detector; a YOLOv8n **pill detector** corroborates. Geometry and the state machine in C. Corroborates the "I Took It" button, never replaces it. | **done** — `milestones/session_16_notes.md`, 27 addenda |
 | **17** | **Physical dispensing hardware + carer buzzer** — last, deliberately | `documents/prompts/session_17.md` |
 
 **Why there is no Session 14.** The hardware prompt was written as Session 14
@@ -406,8 +406,9 @@ historical records and this project does not quietly edit those.
   24 minutes, so one simulated minute is one real second). **Release is the
   honest wall-clock build.**
 - **`AI_ARENA`** is 220 KB of proven, NPU-reachable SRAM at `0x34388000`, and
-  Session 16 **used it**: 208,000 bytes of pill-detector activations, 17,280
-  spare. `MEMORY_MAP.md` §5 is the runbook and §8 is what following it found —
+  Session 16 **used it**, then outgrew it: the hand landmark model needs
+  1,197,952 bytes of activations, so ~220 KB sit here and ~978 KB in PSRAM,
+  and the pill detector moved to PSRAM entirely. `MEMORY_MAP.md` §5 is the runbook and §8 is what following it found —
   including that under `--st-neural-art` the memory pool comes from a profile
   file, not from the CLI's `--memory-pool` flag.
 - **External NOR now has four regions**, not three: the pill detector's weights
@@ -432,9 +433,20 @@ Start with
 [`SOFTWARE_ARCHITECTURE.md`](documents/SOFTWARE_ARCHITECTURE.md) and
 [`MEMORY_MAP.md`](documents/MEMORY_MAP.md).
 
-Every development session has a prompt (`documents/prompts/session_NN.md`)
-and, once complete, a notes file
+Every development session has a prompt (`documents/prompts/session_NN.md`).
+**Most, but not all, also have a notes file**
 (`documents/milestones/session_NN_notes.md`) recording what actually happened
 on real hardware — including the bugs, the wrong theories, and the order they
 were disproved in. Those notes are the honest record, not a summary written
 afterwards.
+
+**Which sessions have notes:** 06, 08B, 09, 10, 11, 12, 13, 15, 16.
+
+**Which do not:** 01, 02, 03, 04, 05, 07 and 08A. Each of those prompts asked
+for a notes file and it was never written. Their prompts are still the record
+of what was *intended*; what was actually built is only recoverable from the
+code and the git history. That is a real gap in the chain and it is stated
+here rather than left for someone to discover by searching for a file that
+does not exist. Those early prompts also refer to `docs/milestones/`, which
+was later renamed to `documents/`; the paths in them are stale and are left
+alone because they are historical documents.

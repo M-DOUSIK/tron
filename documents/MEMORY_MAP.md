@@ -433,7 +433,7 @@ has one now, and every number below is from `stedgeai analyze`, not arithmetic.
 
 | | Bytes | Where |
 |---|---|---|
-| Pill detector activations, INT8 @160 | **208,000** | `AI_ARENA`, `0x34388000` — **17,280 spare** |
+| Pill detector activations, INT8 @160 | **208,000** | `AI_ARENA`, `0x34388000` — 17,280 spare *(superseded: see §8b — the hand landmark model later took the whole arena and the pill detector moved to PSRAM at `0x90A00000`)* |
 | Pill detector weights, INT8 | **3,049,169** | external OSPI NOR, `0x73000000` |
 | Camera frame for action recognition | 768,000 | PSRAM, `0x90400000` |
 

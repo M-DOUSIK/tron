@@ -1,11 +1,14 @@
 # AI_PIPELINE.md — MedSight
 
-## 1. Two Model Families, One NPU
+## 1. Four Models, One NPU
 
-**Corrected in Session 16.** This section was headed "One Model, One NPU" from
-Session 08B until Session 16, and it is no longer true: a third network — a
-single-class **pill detector** — now runs on the same Neural-ART accelerator,
-on the same task, behind the same event-flag handshake. §6 covers it. The
+**Corrected twice in Session 16.** This was headed "One Model, One NPU" from
+Session 08B, then "Two Model Families" when a **pill detector** joined, and it
+ended the session at FOUR: CenterFace, MobileFaceNet, a MediaPipe **hand
+landmark** model that decides whether a dose was taken, and the pill detector
+demoted to corroboration. All four run on the same Neural-ART accelerator, on
+the same task, behind the same event-flag handshake. **§9 is the authoritative
+inventory**; §6 and §7 are the reasoning that got there. The
 face-recognition pipeline below is unchanged.
 
 **One-shot face recognition + small-gallery matching** — verifies which enrolled

@@ -251,7 +251,7 @@ intent:
   the `MISSED:` line is written. Session 17 adds one call there.
 
 Until that lands, the accurate statement remains: alerts are on-screen, the
-SAI codec and speaker are available and unused, and this document should be
+SAI codec and speaker are available and unused — and **Session 17 does not use them**: the Program Plan committed to "Buzzer, LED", so Part E builds a passive buzzer on a timer PWM channel and the codec stays unbuilt. This document should be
 revised — not quietly, but with the reason — when Session 17 builds it.
 
 ---
@@ -388,6 +388,10 @@ one. `MEMORY_MAP.md` §6b has the analysis.
 > - **Memory was never the binding constraint**, exactly as the correction
 >   below says. Final figures: **208,000 bytes** of activations in `AI_ARENA`
 >   (17,280 spare) and **3,049,505 bytes** of weights in external NOR.
+>   *(Superseded later in Session 16: the hand landmark model took the whole
+>   arena, the pill detector moved to PSRAM at `0x90A00000` and its weights
+>   to `0x73400000`, and the retrained blob is 3,049,169 bytes. See
+>   `MEMORY_MAP.md` §8b.)*
 > - **The camera was the real problem**, exactly as the paragraph below says.
 >   It was solved by pointing the DCMIPP at PSRAM and adding two `LPEN` bits.
 > - **The toolchain history below repeated itself, precisely.** A full-graph
