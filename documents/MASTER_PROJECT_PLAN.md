@@ -126,6 +126,30 @@ everything else is evaluation criteria.
    `sessions/session_(NN-1)/`.
 7. Move to the next prompt only after that session's Definition of Done is met.
 
+**Opening a new session chat.** Every session starts in a fresh agent chat
+with no memory of the last one, so the opening message has to carry enough to
+stop it reconstructing the project from scratch or, worse, guessing. The
+minimum it must state:
+
+- **Which session this is**, and that **14 is a retired number** — otherwise
+  the agent goes looking for `session_14.md` and draws the wrong conclusion
+  from its absence.
+- **Pick the base by evidence, not arithmetic**: `ls sessions/` and
+  `ls documents/milestones/`, take the highest-numbered `sessions/session_NN`
+  with a matching `session_NN_notes.md` recording a completed
+  hardware-verified run, copy it, and **say which base was chosen and why**.
+- **A reading order**, ending at that session's own prompt file, which is the
+  complete briefing.
+- **The standing constraints** that have already cost this project real time:
+  `session_12_notes.md` Addendum 9 (`LPEN` and `WFI`), `AI_LESSONS.md` (the
+  NPU flashing procedure), and `ENGINEERING_LESSONS.md` (the folder-copy and
+  `.d`-file hygiene, and the headless build).
+- **Anything the prompt could not know**, such as a collaborator's files
+  having landed in `tools/` since it was written.
+
+README.md's "Where the project stands" section is the short version of the
+first three, kept current, so a new chat can be pointed at it.
+
 ## 5. Non-Negotiable Rules for Every Antigravity Session
 
 - Stay inside the session's stated file scope. Don't let Antigravity "helpfully" refactor

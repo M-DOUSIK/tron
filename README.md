@@ -334,6 +334,54 @@ Full posture, including the gaps, in
 Third-party components and their licences are inventoried in
 [`documents/THIRD_PARTY_SOFTWARE.md`](documents/THIRD_PARTY_SOFTWARE.md).
 
+## Where the project stands
+
+**Sessions 01–13 and 15 are done and hardware-verified.** Two remain.
+
+| # | What | Status |
+|---|---|---|
+| 01–13 | Bring-up → camera/LCD → touch GUI → SD → OSAL → face recognition → registration → dispense flow → µT-Kernel migration → hardening → UI overhaul | done |
+| **14** | — | **retired number**, see below |
+| 15 | Program Plan reconciliation, carer mode, RTC scheduled dosing, gated enrolment, memory map | **done** |
+| **16** | **Action recognition** — next | `documents/prompts/session_16.md` |
+| **17** | **Physical dispensing hardware + carer buzzer** — last, deliberately | `documents/prompts/session_17.md` |
+
+**Why there is no Session 14.** The hardware prompt was written as Session 14
+and never run. After Session 15 the owner decided to do all hardware
+interfacing **last**, so that prompt became `session_17.md` and action
+recognition took the next slot as Session 16. **14 is retired, not reused** —
+there is no `session_14.md` and there will never be a `session_14_notes.md`.
+`MASTER_PROJECT_PLAN.md`'s v13 changelog entry records the move; the
+milestone notes and the older prompts still say "Session 14" because they are
+historical records and this project does not quietly edit those.
+
+### Facts a new session needs before it starts
+
+- **Build the highest-numbered `sessions/session_NN` folder.** Earlier ones
+  are a rollback trail, not parallel branches. Each session copies the last
+  completed one and records which base it used at the top of its notes.
+- **The current base is `sessions/session_15/`.**
+- `patients.dat` is **format v3**. A v2 card is rejected with a clear message
+  — carers re-register once.
+- The carer passcode ships as `1379` and is changeable in carer mode; once
+  changed it lives as a hash in `carer.cfg` on the SD card, **not** in the
+  firmware.
+- Carer mode is five taps on the home screen's **title bar** within three
+  seconds, then the passcode.
+- The **Debug** configuration builds with `MEDSIGHT_FAST_CLOCK=1` (a day in
+  24 minutes, so one simulated minute is one real second). **Release is the
+  honest wall-clock build.**
+- **`AI_ARENA`** is 220 KB of proven, NPU-reachable SRAM at `0x34388000` —
+  `MEMORY_MAP.md` §5 is the runbook for putting a model in it.
+- NPU weights live in external OSPI NOR and are flashed **separately, once**.
+  A normal build never touches them. Check the layout with
+  `arm-none-eabi-nm -n <elf> | grep '^71' | head` before blaming code for an
+  epoch-controller error.
+- **`session_12_notes.md` Addendum 9 is a standing constraint**: `WFI` stops
+  the clock of any memory bank whose `LPEN` bit is clear, so anything that
+  adds a DMA destination must add its bit to `ms_configure_sleep_clocks()` in
+  the same change and test it **from a cold boot**.
+
 ## Documentation
 
 Start with
