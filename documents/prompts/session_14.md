@@ -315,96 +315,6 @@ Two concrete reasons, both practical rather than theoretical:
 
 ---
 
-## Part E — Audio output (exploratory; strictly after Parts A–C work)
-
-**Status: a plan to evaluate, not a commitment to build.** The device currently
-communicates only visually. A patient who has walked away, or who cannot see
-the screen well, gets nothing. A short chime when a dose is ready, a
-confirmation tone when pills are dispensed, and an alert tone for a missed dose
-would each be genuinely useful — and audio is one of the few remaining things
-that would make the demo video noticeably better.
-
-**This part must not put Parts A–C at risk.** The stepper and the IR counter
-are what this session exists for. If audio is not working by the time those are
-solid and documented, stop, write down where you got to, and leave it. A
-half-wired speaker that hangs the I2C bus or steals a pin from the dispenser is
-a worse outcome than no audio at all.
-
-### E1. Find out what the board already has — before buying anything
-
-`ENGINEERING_LESSONS.md` hard rule 4 applies with full force here: **trace the
-schematic first.** Establish from the STM32N6570-DK schematic and user manual,
-and write down:
-
-- Does the board carry an audio codec, an amplifier, or a jack of any kind?
-- Which audio-capable peripherals does the STM32N657 expose on the headers —
-  SAI, I2S, SPDIFRX, a DAC (do not assume this part has one; check), and which
-  timers can produce PWM on a free pin?
-- Which pins are genuinely free after the dispenser has taken its five, and
-  which VddIO domain each sits in.
-
-The answer to the first question decides everything after it. Do not order
-parts before this is written down.
-
-### E2. Choose an approach, with the trade-off stated
-
-Three realistic options, cheapest first. Pick one, justify it in the notes, and
-say what you rejected:
-
-**(a) Passive buzzer or small speaker on a PWM timer pin.** One GPIO, one timer
-channel, optionally one transistor. Produces tones and simple melodies — enough
-for "dose ready", "dispensing", "well done", "missed dose". No DMA, no codec, no
-new bus. Lowest risk by a wide margin, and it fits this session's remaining time
-honestly.
-
-**(b) I2S class-D amplifier module (MAX98357A or equivalent) plus an 8 Ω
-speaker.** A digital-in amplifier: three signal lines from SAI/I2S, no analogue
-stage to get wrong, no codec to configure over I2C. Gives real WAV playback,
-which means spoken prompts — much stronger for an accessibility argument. Costs
-a SAI peripheral, a DMA stream, and audio assets on the SD card.
-
-**(c) Analogue amplifier module (PAM8302 or similar) driven from a DAC or
-filtered PWM.** Only if the part actually has a DAC and a free channel.
-Generally more analogue trouble than (b) for no gain.
-
-**Recommendation, to be argued with rather than obeyed:** start at (a). It is
-achievable in the time this session has left, it proves the audio path end to
-end, and it makes the demo better immediately. Treat (b) as a Session 15 item
-if there is appetite for spoken prompts.
-
-### E3. Constraints that apply whichever option is chosen
-
-- **If the audio path uses DMA, its `LPEN` bit MUST be added to
-  `ms_configure_sleep_clocks()` in `main.c`, in the same change.** Read
-  `session_12_notes.md` Addendum 9 before writing a line of audio code. `WFI`
-  stops the clock of every peripheral, bus and memory whose `LPEN` bit is
-  clear; the display fault that cost six rounds of debugging was exactly this,
-  and audio DMA that stutters or drops out during idle would be the same bug
-  wearing a different hat. SAI/I2S and its DMA controller both need covering.
-- **No `printf` anywhere on an audio callback or ISR.**
-  `session_11_notes.md` Addendum 8 is the evidence.
-- **Audio goes through the OSAL**, like everything else. If a sound needs to
-  outlive the call that triggered it, it belongs to a task, not to
-  `state_machine_update()`. Do not block the UI task on a tone finishing.
-- **Volume and mute.** A device that beeps in a bedroom at 08:00 needs a way to
-  be quieted. If Session 15's carer mode exists by the time you build this, the
-  setting belongs there; if not, note it as a dependency.
-- **Do not reintroduce the dropped buzzer claim by accident.** A previous pass
-  removed an unbuilt buzzer from the documentation deliberately. If audio is
-  built, the docs say what was actually built and demonstrated; if it is not,
-  they stay silent. Nothing goes into `MASTER_PROJECT_PLAN.md` or the
-  submission material that has not run on hardware.
-
-### E4. Deliverable
-
-Whether or not audio ships, this part produces a written answer in
-`session_14_notes.md`: what the board has, which option was chosen and why,
-which pins and peripheral it uses, and — if it was not built — exactly what
-someone would need to do to finish it. A clear "we evaluated this and here is
-the path" is a legitimate result and is worth more than a rushed implementation.
-
----
-
 ## Part D — Documentation
 
 Several documents currently assert, firmly, that this hardware will never
@@ -433,6 +343,115 @@ exist. Every one of them must be corrected — not quietly, but with the reason:
 
 ---
 
+## Part E — The buzzer (the Program Plan's Alert Task)
+
+**Scope: a buzzer and the existing LEDs. No speaker, no amplifier, no codec, no
+WAV playback.** That is not a simplification — it is what the contest Program
+Plan actually committed to, and matching it is the point.
+
+The Program Plan (`tools/Program Plan 54916.pdf`) specifies, in two places:
+
+- §5 Development Scope — *"Alert / Feedback Module: Buzzer, LED, optional small
+  display output"*.
+- §6 Feature Description — *"The Alert Task drives a buzzer and LED (green =
+  correct, red = incorrect/missed)"*, shown as the fourth box in the task
+  diagram: Camera → Inference → Validation → **Alert**.
+
+The device currently has no audible feedback at all, so this is an
+unimplemented commitment from our own submitted plan, not a new idea. Session
+15 Part A reconciles our documentation against that plan; building this closes
+the gap rather than explaining it away.
+
+**This part comes strictly after Parts A–C work.** The stepper and the IR
+counter are what this session exists for. If the buzzer is not done by the time
+those are solid and documented, stop, write down where you got to, and leave it
+— a buzzer that has stolen a pin from the dispenser is a worse outcome than no
+buzzer.
+
+### E1. Pick the part and the pin
+
+Two kinds of buzzer, and the choice changes the driver:
+
+- **Active buzzer** — contains its own oscillator. Drive the pin high, it
+  sounds; low, it stops. One GPIO, no timer. You get one fixed pitch, which is
+  enough for "ready / done / wrong".
+- **Passive buzzer** — a transducer with no oscillator. Needs a square wave,
+  so a timer PWM channel. Gives you *different* pitches, which is what lets a
+  confirmation chirp sound different from a missed-dose alert. Slightly more
+  work, meaningfully better result.
+
+**Recommendation: passive, on a timer PWM channel.** Distinguishable tones are
+most of the value here, and the cost is one timer.
+
+Either way: most buzzers draw more than a GPIO should source directly. Use a
+small NPN transistor or MOSFET with a base/gate resistor, and a flyback diode
+if the part is magnetic rather than piezo. Confirm with your hardware teammate.
+
+`ENGINEERING_LESSONS.md` hard rule 4 applies: **trace the schematic first.**
+Establish which pin is genuinely free after the dispenser has taken its five,
+which timer channel it maps to, and which **VddIO domain** it sits in — the
+Session 06 rule that a GPIO bank on this part is unpowered by default, and a
+peripheral on an unpowered pin fails silently, has cost this project an
+afternoon before.
+
+### E2. Build it as the Alert Task
+
+The Program Plan describes an Alert *Task*, and that is the right shape here
+too: a tone must be able to outlive the call that triggered it without blocking
+the UI.
+
+- A small task, or a reuse of an existing one, that owns the buzzer and takes
+  requests over an OSAL primitive. Session 12 added event flags to the OSAL for
+  exactly this kind of thing; add what you need there rather than reaching for
+  `tk_*`. **Zero `tk_*` outside `ms_osal.c`.**
+- Fit it into the priority scheme derived in `session_12_notes.md` Part A3 —
+  and justify where you put it. A buzzer has no hard deadline; it almost
+  certainly belongs low.
+- **Never block `state_machine_update()` on a tone finishing.** The UI task's
+  10 ms poll is what makes touch feel immediate.
+- **No `printf` in any timer callback or ISR.** `session_11_notes.md`
+  Addendum 8 is the evidence for what that costs on this board.
+- A buzzer needs no DMA, so `ms_configure_sleep_clocks()` should not need
+  touching. **If your design ends up using DMA anyway, its `LPEN` bit must go
+  in there in the same change** — read `session_12_notes.md` Addendum 9 first;
+  that bug cost six rounds of debugging and it would present here as a tone
+  that stutters or cuts out when the system is idle.
+
+### E3. What it should sound like
+
+Keep it to a handful of short, clearly different patterns, and pair each with
+the LED colour the Program Plan already specifies:
+
+| Event | Suggested | LED |
+|---|---|---|
+| Dose ready / attention | two short rising chirps | — |
+| Pills dispensed, correct | one short confirming chirp | green |
+| Wrong patient / no match | two low buzzes | red |
+| Jam or short dispense | a longer, lower tone | red |
+
+Nothing long, nothing repeating indefinitely. This device may sit in a bedroom.
+
+**Quiet hours and mute.** A device that chirps at 08:00 needs a way to be
+silenced. If Session 15's carer mode exists by the time you build this, the
+setting belongs there — say so and wire it. If not, note it as a dependency in
+the notes so Session 15 picks it up.
+
+### E4. Deliverable
+
+Whether or not the buzzer ships, write the answer down in
+`session_14_notes.md`: buzzer type and part number, the pin and timer channel
+with the VddIO domain confirmed, the drive circuit, where the Alert Task sits
+in the priority scheme, and the tone patterns. If it was not built, say exactly
+what remains.
+
+**Documentation rule, and it is not optional:** a previous pass deliberately
+removed an unbuilt buzzer claim from the project documents. If the buzzer runs
+on hardware, the docs describe what was built and demonstrated. If it does not,
+they stay silent. Nothing goes into `MASTER_PROJECT_PLAN.md` or the submission
+material that has not run on hardware.
+
+---
+
 ## Definition of Done
 
 - [ ] `sessions/session_14/` created per the folder rules; clean baseline build
@@ -448,11 +467,11 @@ exist. Every one of them must be corrected — not quietly, but with the reason:
       refill detection based on a real short dispense.
 - [ ] **Part C**: `MEDSIGHT_PHYSICAL_DISPENSER 0` still builds and runs the
       full simulated flow.
-- [ ] **Part E (audio)**: an answer written down either way — what the board
-      has, the option chosen and why, pins and peripheral, and if it was not
-      built, what remains. **If it WAS built: its `LPEN` bit is in
-      `ms_configure_sleep_clocks()` and it has been verified from a COLD boot
-      (power physically removed), not a warm re-run.**
+- [ ] **Part E (buzzer)**: an answer written down either way — buzzer type,
+      pin and timer channel with VddIO domain confirmed, drive circuit, where
+      the Alert Task sits in the priority scheme, and the tone patterns. If it
+      was not built, exactly what remains. **Docs mention it only if it ran on
+      hardware.**
 - [ ] **Part D**: all five documents corrected; pin map updated.
 - [ ] Build 100% clean, **both** configurations.
 - [ ] **On hardware**: 10 consecutive dispenses of 3 pills each. Record how
@@ -475,6 +494,11 @@ exist. Every one of them must be corrected — not quietly, but with the reason:
   signature clean enough that a `hopper_id` parameter would be an additive
   change rather than a rewrite.
 - **No new AI models.** Action recognition is a Session 15 question.
+- **No speaker, amplifier, codec or voice output.** Part E is a buzzer and the
+  existing LEDs, because that is what the Program Plan committed to ("Alert /
+  Feedback Module: Buzzer, LED"). Spoken prompts would be a genuine
+  accessibility gain, but they need an I2S amplifier, audio assets, a DMA path
+  and its `LPEN` bit — a session's work on their own, and not this session's.
 - **No UI redesign** — that is Session 13's. New screens here follow the design
   system Session 13 established.
 - **No `.ioc` files.**
