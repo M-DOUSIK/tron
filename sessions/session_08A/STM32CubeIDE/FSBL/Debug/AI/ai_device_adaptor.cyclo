@@ -1,6 +1,0 @@
-../../../Drivers/CMSIS/Include/m-profile/armv8m_pmu.h:196:22:ARM_PMU_Enable	1
-../../../Drivers/CMSIS/Include/m-profile/armv8m_pmu.h:242:22:ARM_PMU_CNTR_Enable	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ai/ai_device_adaptor.c:54:17:get_IC_freq	7
-C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ai/ai_device_adaptor.c:86:13:get_system_freqs	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ai/ai_device_adaptor.c:122:6:port_hal_set_extra_conf	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_08A/FSBL/Src/ai/ai_device_adaptor.c:194:6:port_dwt_init_imp	1

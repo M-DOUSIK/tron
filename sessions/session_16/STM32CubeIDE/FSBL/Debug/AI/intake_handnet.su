@@ -1,8 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:163:6:intake_handnet_ready	4	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:165:6:intake_handnet_reset	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:176:6:intake_handnet_bands	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:183:6:intake_handnet_tips	24	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:193:6:intake_handnet_stats	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:199:6:intake_handnet_init	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:239:10:intake_handnet_input	4	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_handnet.c:244:6:intake_handnet_run	120	static,ignoring_inline_asm

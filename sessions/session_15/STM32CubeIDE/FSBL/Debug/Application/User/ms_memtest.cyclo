@@ -1,8 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:13:11:ms_memtest_arena_start	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:14:11:ms_memtest_arena_end	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:15:11:ms_memtest_arena_size	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:25:13:sweep	6
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:59:17:pat_a5	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:63:17:pat_5a	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:71:17:pat_addr	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ms_memtest.c:76:6:ms_memtest_arena	9

@@ -1,7 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:106:13:soft_reset	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:120:6:intake_fsm_reset	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:128:13:intake_reason_text	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:137:6:intake_fsm_is_terminal	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:148:13:intake_verdict_text	5
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:176:13:enter	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_fsm.c:183:24:intake_fsm_update	14

@@ -1,6 +1,0 @@
-../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1407:22:LL_AHB4_GRP1_EnableClock	24	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/touch_driver.c:32:13:gt911_hardware_reset	32	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/touch_driver.c:55:6:touch_driver_init	32	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/touch_driver.c:87:6:touch_driver_get_touch	32	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/touch_driver.c:102:6:user_button_init	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_13/FSBL/Src/ui/touch_driver.c:107:6:user_button_is_pressed	8	static

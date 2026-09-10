@@ -1,5 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:32:13:gt911_hardware_reset	40	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:55:6:touch_driver_init	24	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:87:6:touch_driver_get_touch	32	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:102:6:user_button_init	0	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/Src/ui/touch_driver.c:107:6:user_button_is_pressed	8	static

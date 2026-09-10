@@ -1,3 +1,24 @@
 /tools/
 /.metadata/
 /.vscode/
+
+# ── STM32CubeIDE build output ───────────────────────────────────────────
+#
+# Everything under a session's Debug/ or Release/ is compiler output: .o,
+# .d, .su, .cyclo, the generated .mk files and makefile, the .elf/.map and
+# the .bin. Verified before untracking that these directories contain no
+# hand-written .c, .h, .ld, .ioc or .cproject — the linker script lives one
+# level up in STM32CubeIDE/FSBL/ and stays tracked.
+#
+# Untracking does not delete anything: the files stay on disk, the IDE keeps
+# writing there, and building and flashing are unchanged. A fresh clone needs
+# one build before it can flash, which the IDE handles by regenerating the
+# makefiles from .cproject.
+#
+# This stops FUTURE growth only. Sessions 06-16's build output is already in
+# history and stays there; shrinking that would mean rewriting history, which
+# is not worth doing to a submission repo.
+# Sessions 01-05 predate the STM32CubeIDE/ layout and put Debug/ elsewhere,
+# so the pattern is rooted at sessions/ rather than at a fixed depth.
+sessions/**/Debug/
+sessions/**/Release/

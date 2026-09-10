@@ -1,9 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:130:10:vRestoreContextOfFirstTask	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:187:12:xIsPrivileged	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:204:6:vRaisePrivilege	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:219:6:vResetPrivilege	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:234:6:vStartFirstTask	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:255:10:ulSetInterruptMask	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:272:6:vClearInterruptMask	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:418:10:PendSV_Handler	0	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_10/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM55_NTZ/non_secure/portasm.c:560:10:SVC_Handler	0	static,ignoring_inline_asm

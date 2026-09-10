@@ -1,4 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/lib/libtk/fastlock.c:54:13:Lock	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/lib/libtk/fastlock.c:64:13:Unlock	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/lib/libtk/fastlock.c:74:11:CreateLock	32	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_12/FSBL/mtk3_bsp2/mtkernel/lib/libtk/fastlock.c:99:13:DeleteLock	8	static

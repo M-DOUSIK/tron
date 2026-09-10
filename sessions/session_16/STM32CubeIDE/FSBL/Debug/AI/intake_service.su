@@ -1,6 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:121:22:intake_view	4	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:128:6:intake_begin	16	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:146:6:intake_end	8	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:158:24:intake_peek	4	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:163:6:intake_is_active	4	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_16/FSBL/Src/ai/intake_service.c:168:6:intake_service_run	352	static

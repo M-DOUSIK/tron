@@ -1,6 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:31:6:SD_Logger_Init	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:44:6:SD_Log_Event	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:67:6:SD_Log_Binary	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:95:6:SD_Logger_Queue_Init	1
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:101:6:SD_Log_Event_Async	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_07/FSBL/Src/sd_logger.c:131:6:task_logger_fn	3

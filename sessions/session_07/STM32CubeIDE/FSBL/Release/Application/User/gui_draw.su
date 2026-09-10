@@ -1,9 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:233:13:flush_rows.constprop	4	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:109:6:gui_draw_init	0	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:116:6:gui_draw_rect	20	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:132:6:gui_draw_text	72	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:162:13:draw_button.constprop	56	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:225:6:gui_draw_mascot_bg	0	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:241:6:gui_draw_home_screen	32	static,ignoring_inline_asm
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:276:6:gui_draw_ready_screen	24	static
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/ui/gui_draw.c:294:6:gui_draw_dialog_text	16	static

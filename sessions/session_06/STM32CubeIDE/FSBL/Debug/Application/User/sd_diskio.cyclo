@@ -1,5 +1,0 @@
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/sd_diskio.c:9:9:disk_initialize	3
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/sd_diskio.c:26:9:disk_status	2
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/sd_diskio.c:31:9:disk_read	6
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/sd_diskio.c:49:9:disk_write	6
-C:/Users/Dousik/Workspace/TRON/sessions/session_06/FSBL/Src/sd_diskio.c:67:9:disk_ioctl	6
