@@ -1,0 +1,6 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:64:5:LL_Streng_EncryptionInit	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:106:5:LL_Busif_SetKeys	12	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:151:5:LL_EpochCtrl_EncryptionInit	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:181:5:LL_DmaCypherInit	200	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:316:5:LL_ExtDmaCypherInit	240	static,ignoring_inline_asm
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ll_aton_cipher.c:517:6:LL_ATON_DecryptAndCopy	48	static

@@ -71,10 +71,10 @@ see §1):
 
 ## 4. Data Handling
 
-Face enrollment images/embeddings, and now also the patient's name and daily pill
-count collected during registration (Session 09, as actually implemented — see
-`SOFTWARE_ARCHITECTURE.md` §6; an earlier draft of the data model also planned a
-phone number field for a future notification feature, but that was never built),
+Face enrollment images/embeddings, and now also the patient's name, dose size and
+(from Session 15) their dose schedule — see `SOFTWARE_ARCHITECTURE.md` §6 for the
+record as actually implemented; an earlier draft of the data model also planned a
+phone number field for a future notification feature, but that was never built —
 are sensitive personal data — see `COMPLIANCE_PRIVACY_POSTURE.md`. All of it is
 written only to the local SD card, never transmitted, and never leaves the device.
 None of it is ever logged over the UART debug channel, in any session.

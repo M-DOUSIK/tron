@@ -1,5 +1,18 @@
 # Session 15 — Carer Mode, Scheduled Dosing, and the Submission
 
+> **HISTORICAL — this prompt was executed and Session 15 is complete**
+> (`milestones/session_15_notes.md`). It is left exactly as it was written,
+> including its references to "Session 14", which was the physical-dispensing
+> session at the time. **Session 14 has since been retired as a number and
+> that prompt is now `session_17.md`** — the owner moved hardware interfacing
+> to the end, and action recognition took the next slot as Session 16. See
+> `MASTER_PROJECT_PLAN.md`'s v13 changelog.
+>
+> Two of this prompt's own conclusions were also corrected by the session that
+> executed it: the Debug ROM figure in "What was ruled out" (it was 90.6% full,
+> not 85%), and the action-recognition memory analysis (the frame ring never
+> had to be in SRAM). Both are recorded in the notes rather than edited here.
+
 ## What this session is for
 
 Sessions 01–14 built the thing. This session asks two questions that nobody has

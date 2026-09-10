@@ -17,21 +17,21 @@ This board alone covers camera, display, **touch input**, storage, and debug —
 separate dev board or added touch hardware needed for the electronics core. The touch
 panel is a driver/software task (Session 05), not a wiring task.
 
-## 2. Dispensing Hardware: One Hopper Being Built (Session 14)
+## 2. Dispensing Hardware: One Hopper Being Built (Session 17)
 
 **Status changed in v11 of `MASTER_PROJECT_PLAN.md` — read the history, because
 this section said the opposite for three sessions.** The physical build was cut
 in v8 on the grounds that it was not achievable solo before the deadline;
 Sessions 10-13 were therefore built as a software-only simulation, and every
 document gained a firm "no motors, ever" banner. A teammate able to design and
-build the hardware has since joined, so **Session 14 builds a real
+build the hardware has since joined, so **Session 17 builds a real
 single-hopper turntable dispenser**: an actuator that singulates pills onto a
 chute, and an IR break-beam sensor that **counts each pill as it physically
 drops**, so the actuator stops on a real count rather than a timer.
 
 What is being built and what is not:
 
-- **Built (Session 14):** one hopper, one actuator, one IR counter.
+- **Built (Session 17):** one hopper, one actuator, one IR counter.
 - **Still design intent:** the 6-8 independently addressable hopper
   architecture in `MECHANICAL_DESIGN.md`, illustrated by
   `RAGNAR_CAD_PROMPT.md`'s renders. The firmware keeps the dispense API clean
@@ -56,7 +56,7 @@ is preferred over the **reflective type** (FC-51 and lookalikes): a pill is
 small, fast, and may be white, translucent or dark, and a reflective sensor
 asked to detect one in mid-fall is doing the hardest version of its job.
 
-`prompts/session_14.md` Part 0 covers what this means for firmware — chiefly
+`prompts/session_17.md` Part 0 covers what this means for firmware — chiefly
 that the output polarity must be checked rather than assumed (most modules are
 active LOW), that the module should be powered at 3.3 V so its output cannot
 over-drive a non-tolerant pin, that debouncing is still required, and that
@@ -82,7 +82,7 @@ The only peripheral actually added to the DK board for this project is:
 - USB Host/Device data functions beyond ST-LINK debug/flash
 - Any wireless module — none is added to this BOM
 - ~~Any dispensing actuator hardware~~ — **no longer true as of v11.** See §2:
-  Session 14 interfaces one actuator and one IR sensor. This bullet is left in
+  Session 17 interfaces one actuator and one IR sensor. This bullet is left in
   place, struck through, because three sessions' worth of documents and prompts
   cite it as a firm rule and a reader needs to see that it was deliberately
   superseded rather than forgotten.

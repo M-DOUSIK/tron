@@ -1,0 +1,16 @@
+../../../Drivers/STM32N6xx_HAL_Driver/Inc/stm32n6xx_ll_bus.h:1407:22:LL_AHB4_GRP1_EnableClock	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:127:9:BSP_TS_Init	10
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:190:9:BSP_TS_DeInit	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:224:9:BSP_TS_GetCapabilities	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:245:9:BSP_TS_EnableIT	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:297:9:BSP_TS_DisableIT	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:329:6:BSP_TS_IRQHandler	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:339:13:BSP_TS_Callback	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:354:9:BSP_TS_GetState	11
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:442:9:BSP_TS_Get_MultiTouchState	13
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:538:9:BSP_TS_GestureConfig	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:563:9:BSP_TS_GetGestureId	12
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:615:9:BSP_TS_Set_Orientation	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:627:9:BSP_TS_Get_Orientation	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:645:16:GT911_Probe	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_ts.c:690:13:TS_EXTI_Callback	1

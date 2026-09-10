@@ -79,11 +79,11 @@ Sessions 01-12: `main.c`, `ms_osal.c/.h`, `ai_vision.c/.h`, `sd_logger.c/.h`,
 
 | Field | Value |
 |---|---|
-| **Name** | STM32N6xx HAL Driver (85 source modules; DCMIPP, LTDC, DMA2D, SDMMC, I2C, UART, RCC, PWR, XSPI and the rest) |
+| **Name** | STM32N6xx HAL Driver (87 source modules; DCMIPP, LTDC, DMA2D, SDMMC, I2C, UART, RCC, PWR, XSPI, RAMCFG, RTC and the rest) |
 | **Rights holder** | STMicroelectronics |
 | **Licence** | BSD-3-Clause |
 | **Acquisition** | STM32Cube FW_N6 package, via the `DCMIPP_ContinuousMode` example (Session 03). |
-| **Function** | All peripheral access: the camera pipeline (DCMIPP + CSI), the display controller (LTDC), the 2D blitter (DMA2D) behind the mascot renderer, the SD card (SDMMC2), the touch controller bus (I2C2), the debug console (USART1), clocks and power domains. |
+| **Function** | All peripheral access: the camera pipeline (DCMIPP + CSI), the display controller (LTDC), the 2D blitter (DMA2D) behind the mascot renderer, the SD card (SDMMC2), the touch controller bus (I2C2), the debug console (USART1), the real-time clock behind the dose schedule (RTC, added Session 15 — `stm32n6xx_hal_rtc.c` and `stm32n6xx_hal_rtc_ex.c`, previously present in the tree but not compiled), clocks and power domains. |
 | **Modified?** | No. |
 
 ### 2.4 STM32N6570-DK BSP and BSP components

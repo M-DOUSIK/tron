@@ -1,0 +1,13 @@
+../../../FSBL/mtk3_bsp2/mtkernel/include/sys/queue.h:71:13:QueRemove	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.h:155:13:knl_wait_release	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:22:13:knl_wait_release_ok	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:28:13:knl_wait_release_ok_ercd	1
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:34:13:knl_wait_release_ng	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:43:13:knl_wait_release_tmout	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:65:13:knl_make_wait	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:79:13:knl_make_wait_reltim	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:97:13:knl_wait_delete	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:111:11:knl_wait_tskid	2
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:124:13:knl_gcb_make_wait	5
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:143:13:knl_gcb_change_priority	3
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/mtk3_bsp2/mtkernel/kernel/tkernel/wait.c:154:13:knl_gcb_top_of_wait_queue	3

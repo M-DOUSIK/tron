@@ -1,6 +1,6 @@
 # MECHANICAL_DESIGN.md — MedSight Dispensing Mechanism
 
-> **STATUS: ONE HOPPER IS BEING BUILT (Session 14). The rest stays design intent.**
+> **STATUS: ONE HOPPER IS BEING BUILT (Session 17). The rest stays design intent.**
 >
 > This document's history, because it has said three different things:
 > it originally specified a 2–3 hopper physical build; `MASTER_PROJECT_PLAN.md`
@@ -12,7 +12,7 @@
 > — a 28BYJ-48 stepper turning a turntable that singulates pills past an IR
 > break-beam counter. §3's reasoning about why a break-beam and not a gate is
 > the direct justification for the closed-loop design in
-> `prompts/session_14.md`. **The specification below is correct; build it.**
+> `prompts/session_17.md`. **The specification below is correct; build it.**
 >
 > **One implementation change, made after Session 13:** the break beam is a
 > packaged 3-pin IR sensor module rather than a discrete emitter/receiver pair.
@@ -26,7 +26,7 @@
 > referenced from Session 13's `DESIGN_PROTOTYPE.md`, not built.
 >
 > **One correction to the text below:** it says a `dispenser.c` exposing
-> `dispense_dose(hopper_id, count)` "was never built". Session 14 builds
+> `dispense_dose(hopper_id, count)` "was never built". Session 17 builds
 > `dispenser.c` for real, with a single-hopper signature deliberately kept
 > clean enough that adding `hopper_id` would be additive rather than a
 > rewrite.

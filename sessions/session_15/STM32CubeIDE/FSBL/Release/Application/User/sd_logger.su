@@ -1,0 +1,15 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:68:13:fres_is_media_fault	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:83:13:sd_note_media_fault	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:96:13:sd_ensure_mounted	16	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:127:6:SD_Logger_Is_Available	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:132:10:SD_Logger_Get_Fault_Count	0	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:141:6:SD_Logger_Init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:166:13:log_stamp	56	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:173:6:SD_Log_Event	736	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:215:6:SD_Log_Binary	584	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:247:6:SD_Write_File	592	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:288:6:SD_Read_File	592	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:336:6:SD_Read_File_Tail	616	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:381:6:SD_Logger_Queue_Init	8	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:388:6:SD_Log_Event_Async	144	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/sd_logger.c:418:6:task_logger_fn	136	static

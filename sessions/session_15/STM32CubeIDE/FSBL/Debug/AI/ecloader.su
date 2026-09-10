@@ -1,0 +1,16 @@
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:109:17:ec_get_blob_ptr	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:167:6:ec_copy_blob	40	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:256:6:ec_copy_reloc_table	56	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:349:20:ec_get_reloc_table_ptr	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:384:14:ec_get_num_relocs	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:406:13:ec_get_reloc_id	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:446:6:ec_reloc	48	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:511:6:ec_reloc_by_id	64	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:593:6:ec_copy_patch_table	56	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:684:20:ec_get_patch_table_ptr	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:721:14:ec_get_num_patches	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:743:13:ec_get_patch_id	32	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:778:9:ec_get_patch_shr	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:809:10:ec_get_patch_mask	24	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:844:6:ec_patch	88	static
+C:/Users/Dousik/Workspace/TRON/sessions/session_15/FSBL/Src/ai/ecloader.c:914:6:ec_patch_by_id	112	static

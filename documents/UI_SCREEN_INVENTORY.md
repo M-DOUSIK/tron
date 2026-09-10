@@ -1,6 +1,6 @@
 # UI_SCREEN_INVENTORY.md — MedSight
 
-Every screen the device can show, as of the end of Session 13. Written as a
+Every screen the device can show, as of the end of **Session 15**. Written as a
 description of what exists, not a design brief. Session 13 rebuilt this UI
 as one visual system — see `milestones/session_13_notes.md` for exactly
 what changed and why; this file just describes the result.
@@ -9,16 +9,21 @@ Screen state is driven by `AppState_t` in `FSBL/Inc/ui/state_machine.h`.
 Drawing lives in `FSBL/Src/ui/gui_draw.c` (shared screens and the design
 system — title bar, buttons, measured text centring) and
 `FSBL/Src/ui/registration_ui.c` (the three registration entry screens,
-which now use `gui_draw.c`'s shared primitives instead of their own).
+which now use `gui_draw.c`'s shared primitives instead of their own), and
+`FSBL/Src/ui/carer_ui.c` (Session 15: the passcode prompt and the seven
+carer-mode screens, all drawn from the same primitives).
 The mascot layer is `FSBL/Src/ui/anime_ui.c`.
 
 Everything is 800×480, RGB565, drawn CPU-side, into **one** framebuffer at
 `BUFFER_ADDRESS` (0x34200000). Session 13 tried to add a second one at
 `GUI_BUFFER_ADDRESS` so the UI could keep drawing during inference, and
 proved on hardware that it does not fit: a canary written into
-`GUI_BUFFER_ADDRESS` came back overwritten with float bit patterns, so the
-NPU's activation scratch spans at least 0x34200000-0x34376FFF (over 1.5 MB)
-and swallows the second buffer whole. That work was reverted.
+`GUI_BUFFER_ADDRESS` came back overwritten with float bit patterns. **Session
+15 established the exact extent** by extracting every address literal from the
+generated networks (`documents/MEMORY_MAP.md` §2): the activations occupy one
+contiguous block, **0x34200000-0x34387FFF**, and `GUI_BUFFER_ADDRESS`
+(0x342BB800-0x34376FFF) is entirely inside it. The revert was correct, and now
+there is arithmetic behind that rather than one canary.
 
 What replaced it: during the capture window the LTDC layer is **disabled**
 (`display_blank()` in `state_machine.c`), so the panel shows the LTDC
@@ -42,7 +47,80 @@ camera frame being visibly scribbled over. See §3.2.
 | 9 | `STATE_DISPENSING` | `gui_draw_dispensing_screen()` + `gui_draw_dispensing_progress()` | Green title bar "DISPENSING", the patient's name, their dose ("4 pills"), **one gem per pill** which fills in from grey to hopper colour as the dose is released, and a bordered progress bar that fills left-to-right over ~2 s. The loop counts pills, not fixed steps, so the bar, the percentage below it and the lit gems always agree — pill 3 of 6 is a half-full bar reading 50%. | Automatic → 10 |
 | 10 | `STATE_CONFIRM_TAKEN` | `gui_draw_confirm_taken_screen()`, then `gui_draw_taken_thankyou_screen()` | Amber title "TAKE YOUR PILL NOW", a large green **I TOOK IT!** button (darkened this session for real contrast — see below) filling most of the screen, a small grey **SKIP** in the top-right (also darkened). On confirm, a styled green-titled "THANK YOU!" screen for 1.5 s (was bare text on white with no styling at all). | I TOOK IT / SKIP / 30 s timeout → 1 |
 | 11 | `STATE_FACE_RETRY` | `gui_draw_two_choice_screen()` + `anime_ui_update()` | Amber title "FACE NOT RECOGNISED", the designer's **crying mascot animating on the left** (`MASCOT_ERROR`, three frames), advice text that differs by cause to its right, two centred buttons **TRY AGAIN** / **CANCEL**. | TRY AGAIN → 3 or 8; CANCEL / 30 s → 1 |
-| 12 | `STATE_ALERT` | `gui_draw_alert_screen()` | Coloured title bar (red or amber), a message, one wide **OK** button. Raised for: gallery full (on tapping REGISTER), and the AI pipeline failing to initialise. | OK / 30 s → wherever the alert was told to return |
+| 12 | `STATE_ALERT` | `gui_draw_alert_screen()` | Coloured title bar (red or amber), a message, one wide **OK** button. Raised for: gallery full (on tapping REGISTER), the AI pipeline failing to initialise, and — Session 15 — a carer edit that reached RAM but not the SD card. | OK / 30 s → wherever the alert was told to return |
+
+### Session 15 — the passcode gate and carer mode
+
+Screen 13 is reachable from **two** places and is the only way into 14–20.
+There is no third way in and no shortcut between them.
+
+| # | State | Drawn by | What the user sees | Exits via |
+|---|---|---|---|---|
+| 13 | `STATE_PASSWORD` | `carer_ui_draw_prompt()` | Rose title bar — **"CARER ACCESS"** when reached by the hidden gesture, **"A CARER SETS THIS UP"** when reached by REGISTER PATIENT, because the person most likely to see the second one is a patient who pressed the wrong button. A phone-layout numeric keypad (12 keys at 128×66 px, nearly twice the area of the QWERTY keys), the entered digits shown as **dots, never digits**, and a small CANCEL. Wrong entries redraw with the reason in red. | Correct → 14 or 2; CANCEL / 30 s → 1; 5 wrong → refuses for 30 s |
+| 14 | `STATE_CARER_MENU` | `carer_ui_draw_menu()` | Rose title "CARER MODE", the current date/time and time-source mode on a status strip (red if the clock has never been set), four buttons — SET CLOCK, PATIENTS, REVIEW LOG, CHANGE CODE (subtitled "still the default!" when it is) — and EXIT. | Any button → 15–18; EXIT → 1, re-arming the schedule |
+| 15 | `STATE_CARER_CLOCK` | `carer_ui_draw_clock()` | **The same numeric keypad as screen 13.** The carer types twelve digits and the screen shows them landing in `DD/MM/YYYY  HH:MM`, with `_` for what is still to come; the current clock sits underneath as a reference. DEL backspaces, OK validates and saves, CANCEL leaves. An invalid entry names the field that is wrong ("That day does not exist in that month") rather than saying "invalid". | OK → "Clock set." then 14, re-arming the schedule; CANCEL → 14 |
+| 16 | `STATE_CARER_PATIENTS` | `carer_ui_draw_patients()` | Green title "PATIENTS", up to three rows per page, each showing a name and their whole plan on one line ("3 pills   08:00, 20:00" or "no schedule"), a page indicator, BACK / PREV / NEXT. Says so plainly when nobody is registered. | Tap a row → 17; BACK → 14 |
+| 17 | `STATE_CARER_PATIENT` | `carer_ui_draw_patient_menu()` | The patient's name as the title, their plan beneath it, and three buttons: **DOSE TIMES**, **DOSE SIZE**, and **DELETE** (red). | → 18, 19, 20; BACK → 16 |
+| 18 | `STATE_CARER_SCHEDULE` | `carer_ui_draw_schedule()` | **Two modes on one screen.** *Grid:* four slots showing `HH:MM` or `--:--`, a CLEAR for the selected slot, and a **live** clock strip. *Entry:* tapping a slot opens the same numeric keypad as screens 13 and 15, four digits into `HH : MM`, OK to commit back to the grid. One tap to start typing. BACK / SAVE on the grid. | SAVE → "Dose times saved." then 17, or an alert if the card write failed; BACK → 17 |
+| 19 | `STATE_CARER_DOSE` | `carer_ui_draw_dose()` | A large digit, **the same pill lentils the dispense screen uses** so "3" here and three gems during a dispense are visibly the same fact, − / + over 1–10, BACK / SAVE. | SAVE → "Dose size saved." then 17; BACK → 17 |
+| 20 | `STATE_CARER_LOG` | `carer_ui_draw_log()` | Rose title "DOSE HISTORY" and up to eight lines read back from the **end** of `events.log`, filtered to the selected patient and to the lines that answer the question — CONFIRMED, MISSED, DISPENSE, SKIPPED. **Missed doses are the one line that is not grey.** Says plainly when there is no card or nothing recorded. | BACK → 17 or 14 |
+| 21 | `STATE_CARER_CHANGE_CODE` | `carer_ui_draw_change_code()` | The same keypad as screen 13, twice: enter a new code, then confirm it. Deliberately does **not** ask for the old code — the carer entered it thirty seconds ago to get here. | Both entries match → saved, then 14; CANCEL → 14 |
+| 22 | `STATE_CARER_DELETE_CONFIRM` | `gui_draw_two_choice_screen()` | Red title "DELETE PATIENT", the crying mascot, "Remove <name> completely? Their name and their face are both deleted.", and **DELETE** / **KEEP**. | DELETE → 16, schedule re-armed; KEEP / 30 s timeout → 17 |
+
+**The delete screen times out to KEEP, not to DELETE.** That is the only
+correct default for a destructive confirmation and it is worth saying out
+loud, because every other timeout in this UI goes forward rather than back.
+
+**Why the clock screen was redesigned after the first hardware round.** It
+originally used five stepped fields and a big − / +, chosen so an invalid
+date would be impossible to enter. It achieved that and it was miserable:
+setting a year, a day and a time from the device's power-on default is on the
+order of a hundred taps. "Impossible to enter an invalid value" was the wrong
+thing to optimise for — a carer sets the clock while looking at their phone
+and already knows the date; the job is to let them **type** it. Twelve digits
+and an OK is thirteen taps, and validation is one function call at the end.
+
+**The dose-times screen went the same way, for the same reason.** It kept a
+15-minute stepper at first, and the second hardware round's log shows what
+that cost: the schedule screen was opened and saved **six times in one
+session**, because moving from 04:00 to 06:15 is nine taps and moving to an
+arbitrary time is worse. Tapping a slot now opens the keypad directly.
+
+That makes **three screens driven by one keypad** — passcode, clock, dose
+time — which is the point: a carer learns it once.
+
+Stepping survives on exactly one screen, **dose size** (1–10), where every
+value is at most five taps away and the control shows the whole range
+implicitly. That is what stepping is good at. A four-digit year or an
+arbitrary time is what it is worst at.
+
+### The clock ticks now
+
+Every screen that shows the clock strip — the carer menu, the clock screen,
+the dose-times grid, **and the home screen** — updates it live.
+`carer_ui_clock_tick()` runs once per UI pass, redraws only when the
+displayed text actually changes, and flushes only that 24-pixel band. In demo
+mode that is about once a real second; in a real build, once a minute.
+
+It was drawn once on screen entry before, which in demo mode meant a clock
+that was visibly frozen while a simulated minute passed every second — worse
+than no clock on a screen whose whole job is scheduling. The demo strip shows
+seconds as well, because at that ratio a minutes-only clock sits still for a
+whole second and then jumps, which reads as a bug rather than as a fast
+clock.
+
+### The hidden entry gesture
+
+Carer mode is reached by tapping the **home screen's title bar five times
+within three seconds**. The title bar is the target because it is the one
+element on that screen that is unmistakably not a button, so tapping it
+repeatedly is not something anyone does by accident — and it is large enough
+(320×68 px) to hit reliably with an unsteady hand. Any tap elsewhere resets
+the count, so five accidental taps spread across a session never accumulate.
+
+Five and three seconds are decisions: one or two taps are plausible accidents
+and ten is a chore to explain over the phone; three seconds is comfortably
+long for a deliberate five taps by an older hand.
 
 Plus two overlays that are not states of their own:
 
@@ -51,7 +129,23 @@ Plus two overlays that are not states of their own:
   messages.
 - **The mascot** (`anime_ui_update()`) — drawn directly into the framebuffer,
   never during a capture. Idle loop on screens 1, 2 and 7; the crying
-  `MASCOT_ERROR` loop on screen 11.
+  `MASCOT_ERROR` loop on screens 11 and 22, **and on the home screen after a
+  missed dose**. That last case is why the error pose's position is now a
+  parameter (`anime_ui_set_error_box()`) rather than the `MASCOT_SAD_*`
+  constant it was hard-coded to: on the home screen that rectangle sits on
+  top of the REGISTER and DISPENSE buttons, and the crying mascot was being
+  drawn straight over them. The sprite is centred in whatever box the screen
+  nominates.
+- **The dose-due banner** (Session 15) — not a screen and not a state. When a
+  scheduled window opens, the home screen's dialog box carries
+  "<name> — your 08:00 pills are due now. Tap DISPENSE MEDICINE." It is drawn
+  last, so it wins the panel over the SD-card warning when both apply: a dose
+  being due is time-critical and the SD warning is not. When the clock has
+  never been set, that same panel says so instead — a device that cannot tell
+  the time cannot remind anyone, and the home screen is the only place a carer
+  will find that out before a dose is missed.
+- `MASCOT_ACTIVE` is selected when a window opens, but it has no artwork yet
+  and renders the idle loop, so **the banner is the reminder, not the mascot**.
 
 ---
 

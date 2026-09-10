@@ -66,7 +66,7 @@ Maps directly onto the `mascot_state_t` enum defined in `SOFTWARE_ARCHITECTURE.m
 | `MASCOT_IDLE` | No active event; also the reset target after any button tap or completed cycle | Gentle idle bounce/breathing loop |
 | `MASCOT_ACTIVE` | Face capture running; dispensing in progress | A simple "in progress" animation cycle |
 | `MASCOT_SUCCESS` | Patient matched; registration saved; dose confirmed | Happy animation, green accent |
-| `MASCOT_ERROR` | No face found; no gallery match; gallery full; SD card unavailable; dispenser jam or short dispense (Session 14); missed dose window (Session 15) | Concerned animation, amber/red accent |
+| `MASCOT_ERROR` | No face found; no gallery match; gallery full; SD card unavailable; dispenser jam or short dispense (Session 17); missed dose window (Session 15) | Concerned animation, amber/red accent |
 
 Session 04 implemented `MASCOT_IDLE`; Session 13 implemented `MASCOT_ERROR`
 from the designer's three error frames and wired it to `STATE_FACE_RETRY`.
@@ -78,7 +78,7 @@ see the status note above.
 Two main-screen buttons: **"Register"** and **"Dispense Medicine"** — these are the
 final labels from the start (Session 05 wired them to debug output only; Session 09
 gave Register its real enrollment flow, Session 10 gave Dispense Medicine its real
-dispense flow, and Session 14 makes that dispense physical). Buttons should be large and high-contrast, consistent with the
+dispense flow, and Session 17 makes that dispense physical). Buttons should be large and high-contrast, consistent with the
 elderly-user-friendly goal — this isn't a phone-sized touch target, use the full
 available button area on the 5" panel.
 

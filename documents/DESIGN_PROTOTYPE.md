@@ -18,14 +18,14 @@ on a physical board, confirmed from a genuine cold boot — see
 `milestones/session_12_notes.md` Addendum 10 for exactly what is and isn't
 hardware-evidenced.
 
-**Dispensing itself:** check whether `sessions/session_14/` exists in this
+**Dispensing itself:** check whether `sessions/session_17/` exists in this
 checkout.
 - **If it does not exist**, "dispensing" in this build is the software
   simulation described in `SOFTWARE_ARCHITECTURE.md` §7 — a progress bar and
   a confirmation screen, no pills actually move. This is exactly what
   Sessions 09–13 built and tested; it is a deliberate, documented
   simplification, not an oversight.
-- **If it does exist**, Session 14 has built one real hopper: a 28BYJ-48
+- **If it does exist**, Session 17 has built one real hopper: a 28BYJ-48
   unipolar stepper turning a turntable, singulating loose pills past an IR
   break-beam sensor that counts each one as it drops — the motor stops the
   instant the prescribed count is verified, not assumed. This is a direct,
@@ -45,7 +45,7 @@ independent modules, not one big carousel) is in that document's §2 table;
 the short version is that a jam or an empty hopper in one module doesn't
 take down dispensing for every other medication a patient is on.
 
-The single hopper Session 14 builds (if it has run) is deliberately the
+The single hopper Session 17 builds (if it has run) is deliberately the
 *same* mechanism at one-hopper scale, specifically so that scaling up later
 is "print and wire one more identical module," not a redesign.
 
@@ -70,6 +70,6 @@ prompt revision produced them; none exist as of this writing.
 | Component | Status |
 |---|---|
 | Face recognition, registration, dose-confirmation UI flow | **Built, hardware-verified** |
-| Physical dispensing (single hopper) | **Built in Session 14, if that session has run in this checkout — otherwise software-simulated** |
+| Physical dispensing (single hopper) | **Built in Session 17, if that session has run in this checkout — otherwise software-simulated** |
 | Multi-hopper (2–8 medications) architecture | **Design intent** — `MECHANICAL_DESIGN.md`, not built |
 | Enclosure | **Not built** — one unrun CAD-generation prompt (`RAGNAR_CAD_PROMPT.md`) |

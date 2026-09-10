@@ -6,18 +6,25 @@ Bare-metal (Sessions 01–06) → FreeRTOS behind an OS Abstraction Layer, OSAL
 (Sessions 07–10) → µT-Kernel 3.0 swapped in behind the same OSAL (Session 11,
 done and hardware-verified — see `milestones/session_11_notes.md`) →
 µT-Kernel-idiomatic integration, power saving and hardening (Session 12, done —
-see `milestones/session_12_notes.md`) → final polish/demo packaging
-(Session 13). Session 13 is the last planned session —
-see `MASTER_PROJECT_PLAN.md`'s Changelog for the renumbering history (this
-used to run through Session 16 with optional stretch sessions; those were
-dropped along with the physical-hardware cut below).
+see `milestones/session_12_notes.md`) → UI/UX overhaul (Session 13, done) →
+physical dispensing hardware (Session 17) and carer mode + scheduled dosing +
+the memory map + the submission materials (Session 15). **Sessions 15 and 17 are
+independent and may be run in either order**; each records at the top of its
+notes which folder it was based on, so the chain is reconstructable whichever
+way round they went. **15 is the last session in the plan** — see
+`MASTER_PROJECT_PLAN.md`'s Changelog for the renumbering history.
 
-**Physical dispensing hardware was cut from this project entirely** (decision
-recorded in `MASTER_PROJECT_PLAN.md`'s Changelog, first reflected in
-`prompts/session_10.md`). No `dispenser.c` module exists, no hopper concept exists
-in the patient data model, and no GPIO/motor/IR pins are assigned. Everywhere this
-document previously described hopper hardware, it now describes the software-only
-simulated dispense flow instead.
+**Physical dispensing was cut in v8 of the plan and un-cut in v11**, when a
+teammate able to build the hardware joined. Session 17 interfaces one hopper: a
+28BYJ-48 stepper turntable and an IR break-beam that counts pills as they drop.
+The 6–8 hopper architecture in `MECHANICAL_DESIGN.md` remains design intent, and
+the simulated dispense path is kept working behind a build switch so the hardware
+stays cuttable. **The no-networking rule is unaffected and permanent.**
+
+Where this document still describes the software-only simulated dispense flow, it
+is describing what a build without `MEDSIGHT_PHYSICAL_DISPENSER` does — which is
+the build Session 15 was developed against, since Session 17 had not run at the
+time it was written.
 
 The OSAL is the whole point of this staging: FreeRTOS lets you build and debug quickly
 with a mature, well-documented API, while guaranteeing the final TRON-mandated swap to
@@ -54,6 +61,13 @@ FSBL/
                                         longer exists as a file)
       registration_ui.c/.h          -- Session 09 (enrollment flow: face capture hand-off,
                                         on-screen keyboard, pill count, confirm)
+      carer_ui.c/.h                 -- Session 15. Two things, deliberately together:
+                                        the ONE passcode prompt and the ONE
+                                        validation routine shared by carer-mode
+                                        entry and by REGISTER PATIENT (§7), plus
+                                        carer mode's own screens - set clock,
+                                        per-patient schedule and dose, log review,
+                                        delete patient, change passcode.
     sd_logger.c/.h                  -- Session 06 (event log), extended Session 09
                                         (patient-profile read/write/list/delete)
     ai_vision.c/.h                  -- Sessions 08A-B (toolchain proof, one-shot face
@@ -64,12 +78,18 @@ FSBL/
                                         no second model runs on the NPU. Consumption
                                         is confirmed by a manual "I Took It" button
                                         instead (Session 10).
-    schedule_time_source.c/.h       -- DESIGNED, NOT YET WRITTEN. Planned for
-                                        Session 10, never built because nothing
-                                        needed a schedule; Session 15's carer mode
-                                        and scheduled dosing is what finally
-                                        requires it.
-    dispenser.c/.h                  -- Session 14 (stepper turntable + IR pill
+    schedule_time_source.c/.h       -- Session 15 (WRITTEN AT LAST). Listed here
+                                        as "designed, not yet written" from
+                                        Session 10 until Session 15, because
+                                        nothing needed the time of day. Backed by
+                                        the STM32N6's internal RTC, with a
+                                        compressed-day demo mode behind the same
+                                        interface (see §11).
+    ms_memtest.c/.h                 -- Session 15. Pattern-tests the AI_ARENA
+                                        linker region from a cold boot and
+                                        reports the byte count. See
+                                        MEMORY_MAP.md §3.
+    dispenser.c/.h                  -- Session 17 (stepper turntable + IR pill
                                         counter; closed-loop count)
     state_machine.c/.h              -- Session 10 (dispense-flow orchestration —
                                         simulated dispense only, see §7);
@@ -105,9 +125,20 @@ because the gallery and the record are owned by the same module. See §6.
 - No module outside `touch_driver.c` touches the touch controller's I2C2 bus directly —
   `state_machine.c` and `registration_ui.c` consume touch events through
   `touch_driver.h`'s API only.
-- No module outside `schedule_time_source.c` reads the fast-timer/RTC directly —
-  `state_machine.c` asks "what's due now" through this module's API only, which is
-  what makes the prototype-timer/real-RTC swap a single-file change later.
+- No module outside `schedule_time_source.c` reads the RTC directly —
+  `state_machine.c` and `carer_ui.c` ask "what minute of the day is it" and "how
+  long until HH:MM" through this module's API only. **This is now real rather than
+  planned**: Session 15 built both backends behind that interface, and a build
+  switch (`MEDSIGHT_FAST_CLOCK`) chooses between a wall clock and a day compressed
+  into four minutes without a single conditional anywhere above this module. The
+  substitution point was the deliverable, not the timer.
+- `carer_ui.c` is a second documented exception of the same shape as
+  `registration_ui.c`'s (above): it calls `ai_vision.h`'s
+  `gallery_set_schedule()` / `gallery_set_dose()` / `gallery_delete_patient()`
+  directly, and `sd_logger.h`'s file API for the passcode store and the log
+  review. Carer mode is a self-contained flow over the gallery, exactly as
+  registration is, and routing every edit through `state_machine.c` would have
+  made that file the owner of six screens' worth of form state for no benefit.
 
 ## 4. OSAL API Surface (defined Session 07, remapped Session 11)
 
@@ -117,9 +148,10 @@ Minimum surface needed, mapped to both backends:
 |---|---|---|
 | `osal_task_create` | `osThreadNew` | `tk_cre_tsk` / `tk_sta_tsk` |
 | `osal_queue_create` / `send` / `receive` | FreeRTOS queue API | `tk_cre_mbf` / `tk_snd_mbf` / `tk_rcv_mbf` |
-| `osal_mutex_create` / lock / unlock | FreeRTOS mutex API | `tk_cre_mtx` / `tk_loc_mtx` / `tk_unl_mtx` |
+| `osal_mutex_create` / lock / unlock | FreeRTOS mutex API | `tk_cre_mtx` / `tk_loc_mtx` / `tk_unl_mtx` — **first real consumer in Session 15**, see below |
 | `osal_delay_ms` | `osDelay` | `tk_dly_tsk` |
 | `osal_flag_create` / `set` / `clear` / `wait` **(Session 12)** | — (never existed) | `tk_cre_flg` / `tk_set_flg` / `tk_clr_flg` / `tk_wai_flg` with `TWF_ANDW`/`TWF_ORW`/`TWF_BITCLR` |
+| `osal_alarm_create` / `start` / `stop` **(Session 15)** | — (never existed) | `tk_cre_alm` / `tk_sta_alm` / `tk_stp_alm` |
 | `ms_osal_low_power_idle` **(Session 12)** | — (never existed) | called from the BSP's `low_pow()`, which µT-Kernel's dispatcher invokes on its idle path |
 | `ms_osal_clean_dcache` (Session 11) | — (never existed) | called from the BSP's `sys_start.c` / `interrupt.c` |
 
@@ -154,9 +186,44 @@ What Session 12 added, and what it deliberately did **not**:
   itself), so the flag would have been set and waited on by one task — a
   synchronisation object with nothing to synchronise.
 
+**The mutex primitive got its first consumer in Session 15, eight sessions
+after it was defined.** Session 07 declared four primitives and
+`session_12_notes.md` records that nothing in the codebase ever locked
+anything — there was only ever one writer for each piece of shared state.
+Session 15 broke that: reading the RTC calendar is a *pair* of HAL calls
+(`HAL_RTC_GetTime()` locks the shadow registers, `HAL_RTC_GetDate()` unlocks
+them), and the logger task (priority 2) now stamps every log line while the UI
+task (priority 4) reads the clock to draw it and to schedule. The UI preempts
+the logger by construction, so the interleaving is the normal case rather than
+an unlucky one. `schedule_time_source.c` serialises the pair.
+
+**Session 15 widened the API a second time, once, for the same kind of
+reason.**
+Alarm handlers (`osal_alarm_*` → `tk_cre_alm`/`tk_sta_alm`/`tk_stp_alm`) have a
+genuine consumer that nothing already in this API expresses: a dose window is a
+one-shot deadline at an absolute time of day, three or four times a day. A task
+polling the clock every ten seconds would wake 8,640 times a day to act four
+times, spending the ~89% idle figure Session 12 measured in order to do it;
+`osal_delay_ms()` until the next dose blocks a whole task on nothing; an event
+flag has no notion of time at all. An alarm costs nothing until it fires.
+
+It is also the mechanism the **original Program Plan named** — "The Camera Task
+wakes either on a scheduled µT-Kernel alarm (aligned to dose times) or on user
+button press" — unimplemented from March until Session 15. See
+`PROGRAM_PLAN_RECONCILIATION.md` §2.
+
+The constraint that shapes its use: an alarm handler runs in **handler context**,
+so it may not block, may not `printf`, and may not call anything unbounded. The
+only correct shape is "set an event flag and return", and
+`schedule_alarm_handler()` in `state_machine.c` is three lines long for exactly
+that reason. Every piece of real work — reading the gallery, drawing, logging —
+is done by the UI task. That is the same division of labour Session 12
+established between the UI and the AI task, applied to time instead of inference.
+
 `prompts/session_12.md` is explicit that a forced idiom reads worse to an expert
 judge than an absent one; `milestones/session_12_notes.md` records each of these
-decisions with its evidence.
+decisions with its evidence, and `session_15_notes.md` does the same for the
+alarm.
 
 No application code calls `osThreadNew`, `osDelay`, etc. directly — enforce this in code
 review during every session from 07 onward. See `ENGINEERING_LESSONS.md` for the
@@ -194,6 +261,15 @@ exists for them yet. Sessions 12 and 13 originally recorded "idle-only" as a
 closed design decision; the project owner reopened it in Session 13 and
 `MASCOT_ERROR` was built. The remaining two are unbuilt, not forbidden.
 
+**Session 15 selects `MASCOT_ACTIVE` when a dose window opens**, and
+`MASCOT_ERROR` when one closes unserved. The error state animates for real; the
+active state currently renders the idle loop, so **the visible reminder is the
+home screen's banner, not the mascot**. Recorded here rather than left to be
+discovered, because "the mascot goes to MASCOT_ACTIVE" is otherwise a sentence
+that sounds like something happens on screen. New artwork is the only thing
+missing, and Session 15 deliberately did not add it — out of scope, and it is
+the designer's work rather than the firmware's.
+
 The one hard constraint on any new state is memory, not policy: mascot frames
 are CPU-drawn into `BUFFER_ADDRESS`, which the NPU also uses as activation
 scratch, so nothing may animate while a capture is in flight. See
@@ -202,18 +278,33 @@ scratch, so nothing may animate while a capture is in flight. See
 ## 6. Patient Profile Data Model (Session 09, as actually implemented)
 
 ```c
-/* ai_vision.h — the real, shipped struct. */
+/* ai_vision.h — the real, shipped struct, as of Session 15 (file format v3). */
 #define EMBEDDING_SIZE    128
 #define MAX_PATIENTS      10
 #define PATIENT_NAME_MAX  32
+#define MAX_DOSE_TIMES     4
 
 typedef struct {
     uint8_t   valid;
     char      name[PATIENT_NAME_MAX];
     int8_t    embedding[EMBEDDING_SIZE];   // from ai_vision.c, Session 08B
     uint8_t   pill_count;                  // pills per DOSE - fixed, never decremented
+    uint8_t   dose_time_count;             // Session 15: 0..MAX_DOSE_TIMES
+    uint16_t  dose_time[MAX_DOSE_TIMES];   // Session 15: minute-of-day, ascending
 } PatientRecord;
 ```
+
+**The schedule (Session 15).** Times are minute-of-day (0..1439), the one axis
+the whole scheduling path uses — small enough to store four of per patient in a
+record written to an SD card in full on every edit, with no timezone and no DST,
+and exactly the granularity a prescription is written in. They are kept sorted
+ascending, and the invariant is established in `gallery_set_schedule()`, the only
+function that writes them, rather than assumed by every reader.
+
+`MAX_DOSE_TIMES` is 4 because that is what real prescriptions use — once, twice,
+three or four times a day. `dose_time_count == 0` is a legitimate state, not an
+error: that patient can still walk up and tap DISPENSE, the device simply never
+reminds them and never records a missed dose for them.
 
 **`pill_count` is the dose (corrected in Session 12).** It is how many pills
 this patient takes in one sitting: a fixed property of their prescription, set
@@ -230,7 +321,7 @@ symptom was the dispense screen announcing "3 pills" while the number fell
 There is **no stock counter in the data model at all**, deliberately. The
 firmware has no way to know when a carer tops the hopper up, so any software
 count would drift from reality immediately. Real hopper-level knowledge arrives
-in Session 14, where the IR break-beam counter measures pills physically
+in Session 17, where the IR break-beam counter measures pills physically
 dropping - a short dispense after a full actuator cycle *is* an empty hopper,
 measured rather than assumed.
 
@@ -244,6 +335,12 @@ header makes a mismatch say which one it is - which mattered immediately, since
 dropping `pills_remaining` changed the record size from 163 to 162 bytes and
 invalidated every existing card.
 
+**Session 15 bumped the format to v3.** Adding the schedule changed the record
+size again, so every v2 card is stale - and this time the header did its job
+without anyone having to think about it: a v2 card is reported by name and
+version and rejected, rather than silently loading as an empty gallery. Carers
+re-register once. The README says so, which is the other half of the feature.
+
 Defined once in `ai_vision.h` so `sd_logger.c` (storage, via `gallery_save()`/
 `gallery_init()`), `ai_vision.c` (embedding shape, gallery matching), and
 `registration_ui.c`/`state_machine.c` (population and consumption, Session 09/10)
@@ -256,6 +353,35 @@ sensors are interfaced, at any session. "Dispensing" is an on-screen animation, 
 consumption is confirmed by the patient tapping a button — not by any sensor or a
 second NPU model (action recognition was evaluated and dropped, see
 `MASTER_PROJECT_PLAN.md` §8).
+
+**Session 15 changed the way into registration, and added a way in that is not a
+button at all.** Both are recorded before the diagram so nobody reads the old
+happy path as current:
+
+```
+STATE_HOME
+  -> user taps "Register Patient"
+STATE_PASSWORD  (carer passcode; ui/carer_ui.c)     <- NEW, Session 15 B2a
+  -> correct   -> STATE_INSTRUCT_REGISTER (the Session 09 flow, unchanged)
+  -> cancelled -> STATE_HOME
+  -> wrong x5  -> refuses for 30 s, still STATE_HOME on cancel
+
+STATE_HOME
+  -> five taps on the TITLE BAR within 3 s          <- NEW, Session 15 B2
+STATE_PASSWORD
+  -> correct -> STATE_CARER_MENU -> { STATE_CARER_CLOCK,
+                                      STATE_CARER_PATIENTS -> STATE_CARER_PATIENT
+                                          -> { STATE_CARER_SCHEDULE,
+                                               STATE_CARER_DOSE,
+                                               STATE_CARER_DELETE_CONFIRM },
+                                      STATE_CARER_LOG,
+                                      STATE_CARER_CHANGE_CODE }
+```
+
+Every carer state is reachable **only** through `STATE_PASSWORD`, and
+`STATE_PASSWORD` is reachable from exactly those two places. There is no third
+way in and no shortcut between them. The gate is at the *start* of registration
+rather than the end, deliberately — see `COMPLIANCE_PRIVACY_POSTURE.md` §6.
 
 ```
 STATE_HOME (camera OFF, main screen shown)
@@ -289,10 +415,38 @@ STATE_ALERT        -- one-button screen for conditions the user must act on
                       and "the dose was dispensed but could not be saved".
 ```
 
+**Session 15 additions — the scheduled-dose path.** This is not a state; it is a
+condition the home screen and the log respond to, driven by a µT-Kernel alarm
+(§4). It is written out here because it is the first thing in this device that
+happens without anybody touching it:
+
+```
+alarm fires (window OPEN)  -> handler sets SCHED_FLAG_OPEN and returns
+  UI task, next tick       -> home screen redraws with a banner naming the
+                              patient and the time; mascot -> MASCOT_ACTIVE;
+                              "SCHEDULE: dose due HH:MM for <name>" to the log
+                           -> the SAME alarm is re-armed for the window's close
+  patient taps DISPENSE, matches, confirms, inside the window
+                           -> "CONFIRMED: <name> took the HH:MM dose (on time)"
+                              rather than the generic confirmation line
+alarm fires (window CLOSE) -> handler sets SCHED_FLAG_CLOSE and returns
+  UI task, next tick       -> if nobody dispensed: "MISSED: <name> did not take
+                              the HH:MM dose"; mascot -> MASCOT_ERROR
+                           -> the alarm is re-armed for the NEXT dose
+```
+
+One alarm object serves both edges, one pending expiry at a time, and nothing
+anywhere polls the clock. The window is `DOSE_WINDOW_MINUTES` (30) *schedule*
+minutes, so in demo mode it compresses along with everything else.
+
+The `MISSED:` line is the single most valuable entry in the audit trail and the
+device has never been able to write it before.
+
 Edge cases (handled explicitly, not as afterthoughts), each driving `mascot_state_t`
 above to `MASCOT_ERROR` unless noted:
-- Missed dose (fast-timer/RTC schedule window elapses with no Dispense Medicine tap) →
-  `MASCOT_ERROR` + SD log, remain `STATE_HOME`.
+- Missed dose (the RTC schedule window closes with no Dispense Medicine tap) →
+  `MASCOT_ERROR` + SD log, remain `STATE_HOME`. **Built in Session 15**; this line
+  described intent from Session 10 until then.
 - Unrecognized/no face at the face-check step → `MASCOT_ERROR`, local alert (LCD +
   on-screen only — there is no buzzer and no audio in this project, see
   `MASTER_PROJECT_PLAN.md` §7), SD log, no dispense,
@@ -331,6 +485,14 @@ them. The previously vacant level 3 is now occupied.
 | 3 | `ai` | `ai_vision.c` | on demand | **No deadline.** Hundreds of milliseconds of solid NPU/CPU work per request, a few times per session, in response to a button press the user already expects to take a moment. Deliberately below the UI so it is preemptible — that is what keeps touch and the physical USER1 button alive during inference. Above the logger because a person is waiting on its result and nobody waits on a log line. |
 | 2 | `logger` | `sd_logger.c` | event-driven | Tolerates seconds of latency by construction; the async queue exists so no caller ever waits on a 10-50 ms SD write. |
 | 1 | `heartbeat` | `main.c` | 500 ms | No deadline at all. Deliberately lowest, so "the LED stopped blinking" means "something above me is starving the system" — which is exactly the signal it should carry. Also carries the periodic idle/power report (§10). |
+
+**Session 15 added no task**, and that was a decision rather than an oversight.
+Scheduled dosing looks at first like it wants one, but its work is an alarm
+handler (which is not a task) plus a few lines of reaction in the UI task, which
+is already running every 10 ms and already owns every screen the reaction
+touches. A sixth task would have needed its own stack and its own claim on the
+framebuffer for no behaviour that is not already there. `OSAL_MAX_TASKS` is 8 and
+five are used, so the room exists — it just is not needed.
 
 `ms_osal.h`'s convention is 1 = lowest; `ms_osal.c` inverts it onto µT-Kernel's
 opposite scale (1 = highest) as `OSAL_PRI_CEILING - priority`, so 5/4/3/2/1
@@ -429,3 +591,31 @@ The display was simply the one failure visible to the naked eye.
 **Rule for future sessions:** anything that adds a new DMA-driven peripheral
 must add its `LPEN` bit here in the same change, and must be tested from a
 **cold boot** — the only condition under which the original fault appeared.
+
+**Session 15 checked this rather than assuming it, and needed no new bit.** The
+new `AI_ARENA` region is at `0x34388000`, inside AXISRAM6, which these bits
+already ungate. Two things found while checking, both now in
+`documents/MEMORY_MAP.md`:
+
+- **AXISRAM5 and AXISRAM6 are not powered at all until `npu_init.c`'s
+  `SystemInit_POST()` runs**, on the AI task, after the scheduler starts;
+  `stm32n6xx_hal_msp.c` brings up only AXISRAM3 and AXISRAM4. Anything placed in
+  the upper two banks must not be touched before `ai_vision_wait_init()` returns.
+- **AXISRAM1 and AXISRAM2 — where all the code, `.rodata` and `.bss` live — are
+  not in this function's set at all.** Harmless today because no DMA master reads
+  from them (the SD path is polling, so the CPU is awake throughout). It becomes
+  a live bug the moment anything DMAs to or from a `.bss` buffer.
+
+## 11. Memory Map (Session 15)
+
+The full region table, the NPU-reachability finding, the `AI_ARENA` region and a
+runbook for adding a third model now live in **`documents/MEMORY_MAP.md`**, which
+is the authority. The two facts most likely to be needed from elsewhere:
+
+- The linker's `ROM` region was re-derived in Session 15 from 511 KB (inherited
+  unexamined from the ST example this repo was founded on, and **90.6% full** in
+  Debug) to 1024 KB — all of AXISRAM2. Debug now sits at 47.3%.
+- The two NPU networks' activations occupy one contiguous block,
+  `0x34200000`–`0x34387FFF`. `BUFFER_ADDRESS` is inside it on purpose; Session
+  13's `GUI_BUFFER_ADDRESS` was also inside it, which is why the second
+  framebuffer was reverted.

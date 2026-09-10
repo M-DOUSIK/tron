@@ -34,7 +34,7 @@ conditions a demo audience would experience.
    - Tap **DISPENSE PILLS** — show the instruction screen's amber accent,
      distinct from Register's teal.
    - Face the camera again; show **"Checking…"** again, then the match.
-   - Show the dispensing screen (progress bar) and, **if Session 14 has
+   - Show the dispensing screen (progress bar) and, **if Session 17 has
      run**, the physical hopper actually turning and a pill dropping into
      the collection tray — otherwise narrate plainly that this segment is
      the software-simulated dispense (see `DESIGN_PROTOTYPE.md`; don't
@@ -47,7 +47,7 @@ conditions a demo audience would experience.
    text, with no face-embedding bytes anywhere in the file (Session 13,
    Part D verified this against a real capture, not just code review).
 
-5. **Physical dispense close-up** (only if Session 14 has run). A closer
+5. **Physical dispense close-up** (only if Session 17 has run). A closer
    shot of the turntable singulating a pill past the break-beam sensor,
    narrating that the motor stops on a *verified* count, not a timed guess.
 
