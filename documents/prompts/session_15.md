@@ -49,6 +49,35 @@ asking about the missing classifier. A vague one is not.
 
 ---
 
+## Session ordering — read this before anything else
+
+**Sessions 14 and 15 are independent and may be run in either order.** Do not
+assume this session follows 14, and do not assume 14 has not already happened.
+
+Before reading anything else:
+
+1. `ls sessions/` and `ls documents/milestones/`. The correct base for this
+   session is **the highest-numbered `sessions/session_NN` that has a
+   corresponding `session_NN_notes.md` recording a completed, hardware-verified
+   run** — not simply this session's number minus one.
+2. Copy that folder to `sessions/session_15/` and say in your first message
+   which base you chose and why.
+3. Read the milestone notes for **every** completed session, in order. If
+   `session_14_notes.md` exists, Session 14 has already run: there is now a
+   physical dispenser task, an EXTI ISR, new GPIO assignments, possibly an
+   audio peripheral, and a `MEDSIGHT_PHYSICAL_DISPENSER` build switch. All of
+   that is your baseline and none of it may be regressed — in particular, **B4
+   below must not reclaim memory that Session 14's DMA buffers are using**, and
+   any peripheral Session 14 added already has an `LPEN` bit that must survive.
+4. Record the base you built on at the top of `session_15_notes.md`.
+
+If the two sessions conflict — most likely in `state_machine.c`, the task table
+in `main.c`, GPIO assignments, or the linker script — the later session
+reconciles, and says so in its notes. Do not silently revert the other
+session's work.
+
+---
+
 ## How to Start This Session
 
 1. **READ `tools/Program Plan 54916.pdf` IN FULL.** It is four pages. It is
@@ -262,51 +291,113 @@ constraint that shapes the design: an alarm handler runs in handler context, so
 it may not `printf` and may not block — it should set an event flag and let a
 task do the work.
 
-### B4. Investigate the memory budget — is the FSBL 512 KB limit real?
+### B4. Reclaim the unused SRAM and make it genuinely usable
 
-**This is an investigation with a written answer, not necessarily a change.**
-It is worth doing because the conclusion that ruled out a second AI model rests
-on numbers that may be an inherited linker-script choice rather than a hardware
-limit.
+**This is a build task with a measured before/after, not an audit.** An earlier
+draft of this prompt asked only for an investigation with a written answer. The
+owner has since asked for more, and is right to: knowing that ~2.7 MB is idle
+is worth very little on its own. The deliverable is that the memory is
+**claimed, addressable, proven on hardware, and documented well enough that a
+future session can drop an action-recognition model into it without repeating
+this work.**
 
-The facts to start from:
+#### The facts to start from
 
-- The STM32N657 has roughly **4.2 MB of contiguous on-chip SRAM**, and this
-  project's linker script (`STM32N657X0HXQ_AXISRAM2_fsbl.ld`) claims only two
-  small windows of it: `ROM` at `0x34180400` for **511 KB** (`.text` +
-  `.rodata`) and `RAM` at `0x34000400` for **1023 KB** (`.data`/`.bss`/heap/
-  stack). That is ~1.5 MB of 4.2 MB.
+- The STM32N657 has roughly **4.2 MB of contiguous on-chip SRAM**. This
+  project's linker script (`STM32N657X0HXQ_AXISRAM2_fsbl.ld`) claims two small
+  windows: `ROM` at `0x34180400` for **511 KB** (`.text` + `.rodata`) and `RAM`
+  at `0x34000400` for **1023 KB** (`.data`/`.bss`/heap/stack). That is ~1.5 MB
+  of 4.2 MB.
 - Those numbers came from the ST `DCMIPP_ContinuousMode` example this
   repository was founded on in Session 03, not from any analysis of what
   MedSight needs. **511 KB is a choice, not a ceiling.**
 - **Why FSBL at all:** the STM32N6 has no internal user flash. Its ROM
-  bootloader loads a First Stage Boot Loader image into SRAM and runs it, and
-  a project may optionally chain to a second "Appli" stage. The ST example ran
-  entirely in FSBL and Session 03 kept that ("Maintain the FSBL-only
-  architecture"). Nothing about FSBL itself caps memory — it is simply the
-  stage this application runs in.
-- The rest of the SRAM is **not free space**, though: the camera framebuffer
-  (`0x34200000`), the NPU activation pools, and Session 13's second
-  framebuffer (`GUI_BUFFER_ADDRESS`) all live at absolute addresses above the
-  linker regions. `session_08B_notes.md` Addenda 2 and 4 document three more
-  fixed regions in external memory (`0x70380000`, `0x72000000`, `0x90000000`).
+  bootloader loads a First Stage Boot Loader image into SRAM and runs it, and a
+  project may optionally chain to a second "Appli" stage. The ST example ran
+  entirely in FSBL and Session 03 kept that. Nothing about FSBL itself caps
+  memory — it is simply the stage this application runs in.
+- The rest of the SRAM is **not free space**. The camera framebuffer
+  (`0x34200000`), Session 13's second framebuffer (`GUI_BUFFER_ADDRESS`), and
+  the NPU activation pools all live at absolute addresses above the linker
+  regions. `session_08B_notes.md` Addenda 2 and 4 document three more fixed
+  regions in external memory (`0x70380000`, `0x72000000`, `0x90000000`). If
+  Session 14 has already run, its DMA buffers are in here too.
 
-**What to produce:** a memory map of what is actually claimed versus what
-exists, from the reference manual and the map file — not from these notes.
-Then answer, in writing:
+#### Step 1 — Map what is actually claimed
 
-1. How much of the 4.2 MB is genuinely unclaimed?
-2. Can `ROM` and `RAM` be grown without colliding with the framebuffers or the
-   NPU pools? Note that the NPU's data masters cannot reach every bank —
-   `AI_LESSONS.md` records a hard fault caused by exactly that, which is why
-   the weights live in external OSPI flash.
-3. **If** the answer is that a third model would now fit, say so with numbers —
-   and then say what it would cost in *time*, which is the constraint that
-   actually matters this close to the deadline. Do not start building a model
-   on the strength of a memory answer alone.
+From the reference manual, the linker script, and the `.map` file of a real
+build — **not from these notes, which may be stale**. Produce a single table:
+every region, its start, its length, who owns it, and whether it is hard-wired
+(an absolute address in code or in generated NPU sources) or merely a linker
+choice. Include the AXISRAM bank boundaries, because they matter for step 3.
 
-Treat a negative result as a real result. "We measured the budget and a third
-model does not fit, here is the map" is a good thing to be able to say.
+Cross-check the absolute addresses against `Src/ai/faceid.c` and `Src/ai/fd.c`
+rather than trusting any document, including this one.
+
+#### Step 2 — Grow `ROM` and `RAM` to what the application actually needs
+
+The current 511 KB / 1023 KB split is inherited, and Session 13 added a second
+framebuffer without anyone re-deriving it. Resize both regions to something
+chosen deliberately, with headroom stated as a number.
+
+**Rule: the working build must keep working.** Change the linker script, build
+both configurations, and verify on hardware from a **cold boot** before going
+further. If anything regresses, stop and revert — a bigger `ROM` region is not
+worth a device that does not boot.
+
+#### Step 3 — Define a named arena for future models
+
+This is the part that makes the memory *usable* rather than merely *unclaimed*.
+Add an explicit, named region to the linker script — `MODELS`, `AI_ARENA`, or
+similar — covering the contiguous SRAM that step 1 proved is free, with a
+symbol a future session can reference (`_ai_arena_start` / `_ai_arena_end` or a
+section attribute). Then:
+
+- **Prove it.** Write a small, gated self-test that fills the arena with a
+  pattern, reads it back, and reports pass/fail with the byte count over UART.
+  Run it from a cold boot. An arena nobody has ever written to is a hypothesis,
+  not a resource.
+- **Check NPU reachability, because this is the trap.** The NPU's data masters
+  **cannot reach every bank** — `AI_LESSONS.md` records a hard fault caused by
+  exactly that, which is why the face weights live in external OSPI flash.
+  Memory the CPU can address is not automatically memory a model can run from.
+  Establish which banks the NPU can actually use and record it in the table.
+  This single fact determines whether a third model is possible at all.
+- **`LPEN` — read `session_12_notes.md` Addendum 9 before you finish this
+  step.** `RCC_MEMLPENR` has a bit per memory bank, and `WFI` stops the clock
+  of any bank whose bit is clear. `ms_configure_sleep_clocks()` currently
+  enables AXISRAM3–6 because that is where the framebuffer lives. **If the new
+  arena is in a bank that is not already covered, and anything but the CPU
+  touches it, its bit must be added there in the same change.** This is the bug
+  that cost six rounds of debugging on the display; it will present identically
+  on an NPU buffer, and it is invisible on a warm re-run.
+
+#### Step 4 — Write `MEMORY_MAP.md` in `documents/`
+
+A new document, because this belongs in the permanent record rather than buried
+in session notes. It contains: the region table from step 1, the reasoning
+behind the new sizes, the arena's address, size and symbol, the NPU-reachability
+finding, the `LPEN` requirement, and — the part that pays this session back — a
+short **"how to add a third model"** runbook: where the weights go, where the
+activations go, which constraints apply, and what to verify.
+
+#### Step 5 — Then, and only then, answer the action-recognition question
+
+With real numbers in hand:
+
+1. How much contiguous, NPU-reachable memory is genuinely available?
+2. Does a small action-recognition model fit — weights and activations both?
+   Weights can live in external OSPI as the face models do; activations cannot.
+3. **If it fits, say so with numbers, then say what it would cost in *time*.**
+   That is the constraint that actually matters this close to the deadline. Do
+   not start training or integrating a model on the strength of a memory answer
+   alone. The owner's standing instruction is that action recognition happens
+   only if it is a certainty, not a maybe.
+
+**A negative result is still a real result.** "We reclaimed 2.4 MB, proved it
+writable, established that only N of it is NPU-reachable, and a third model
+therefore does not fit — here is the map" is a strong, honest outcome and gives
+the next person a foundation instead of a question.
 
 ### B5. Measure the current draw, if the instrumentation cooperates
 
@@ -389,8 +480,14 @@ the sake of a plan that looks ambitious.
 
 - [ ] `PROGRAM_PLAN_RECONCILIATION.md` written, every row verified against real
       code, each gap either closed or explained.
-- [ ] **B4 answered in writing**: the real memory budget, with a map, and a
-      numbers-backed statement on whether a third NPU model could fit.
+- [ ] **B4 delivered, not just answered**: `documents/MEMORY_MAP.md` written
+      with the full region table; `ROM`/`RAM` resized deliberately with headroom
+      stated; a named arena added to the linker script with a referencable
+      symbol; the arena **pattern-tested on hardware from a cold boot** with the
+      byte count reported over UART; NPU bank reachability established; any new
+      bank's `LPEN` bit added to `ms_configure_sleep_clocks()`; and a "how to
+      add a third model" runbook. Then the numbers-backed statement on whether
+      action recognition fits — with its *time* cost, not just its memory cost.
 - [ ] **Part B built and hardware-tested**: `schedule_time_source.c` behind a
       swappable interface with the RTC live and the fast-timer demo mode
       working; carer mode reachable only via the hidden gesture + password;
@@ -407,6 +504,9 @@ the sake of a plan that looks ambitious.
 - [ ] `MASTER_PROJECT_PLAN.md` reflects the true final scope and history.
 - [ ] Deferred work recorded in the README and this session's notes — no
       separate future-work document.
+- [ ] `session_15_notes.md` states at the top **which session folder this was
+      based on**, so the chain is reconstructable whatever order 14 and 15 ran
+      in.
 - [ ] Build 100% clean, both configurations; full flow works end to end on
       hardware; `milestones/session_15_notes.md` written.
 

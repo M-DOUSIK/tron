@@ -31,6 +31,35 @@ is not, and never will be.**
 
 ---
 
+## Session ordering — read this before anything else
+
+**Sessions 14 and 15 are independent and may be run in either order.** Do not
+assume this session follows 13, and do not assume 15 has not already happened.
+
+Before reading anything else:
+
+1. `ls sessions/` and `ls documents/milestones/`. The correct base for this
+   session is **the highest-numbered `sessions/session_NN` that has a
+   corresponding `session_NN_notes.md` recording a completed, hardware-verified
+   run** — not simply this session's number minus one.
+2. Copy that folder to `sessions/session_14/` and say in your first message
+   which base you chose and why.
+3. Read the milestone notes for **every** completed session, in order. If
+   `session_15_notes.md` exists, Session 15 has already run: it will have
+   touched the linker script, the memory map, `patients.dat`'s format (v3), the
+   state machine (carer mode, gated registration) and possibly
+   `ms_configure_sleep_clocks()`. All of that is now your baseline and none of
+   it may be regressed.
+4. Record the base you built on at the top of `session_14_notes.md`. A future
+   session needs to be able to reconstruct the chain.
+
+If the two sessions turn out to conflict — most likely in `state_machine.c`,
+the task table in `main.c`, or GPIO pin assignments — the later session
+reconciles, and says so in its notes. Do not silently revert the other
+session's work.
+
+---
+
 ## How to Start This Session
 
 1. **READ ALL DOCUMENTATION** in `documents/` — especially
@@ -286,6 +315,96 @@ Two concrete reasons, both practical rather than theoretical:
 
 ---
 
+## Part E — Audio output (exploratory; strictly after Parts A–C work)
+
+**Status: a plan to evaluate, not a commitment to build.** The device currently
+communicates only visually. A patient who has walked away, or who cannot see
+the screen well, gets nothing. A short chime when a dose is ready, a
+confirmation tone when pills are dispensed, and an alert tone for a missed dose
+would each be genuinely useful — and audio is one of the few remaining things
+that would make the demo video noticeably better.
+
+**This part must not put Parts A–C at risk.** The stepper and the IR counter
+are what this session exists for. If audio is not working by the time those are
+solid and documented, stop, write down where you got to, and leave it. A
+half-wired speaker that hangs the I2C bus or steals a pin from the dispenser is
+a worse outcome than no audio at all.
+
+### E1. Find out what the board already has — before buying anything
+
+`ENGINEERING_LESSONS.md` hard rule 4 applies with full force here: **trace the
+schematic first.** Establish from the STM32N6570-DK schematic and user manual,
+and write down:
+
+- Does the board carry an audio codec, an amplifier, or a jack of any kind?
+- Which audio-capable peripherals does the STM32N657 expose on the headers —
+  SAI, I2S, SPDIFRX, a DAC (do not assume this part has one; check), and which
+  timers can produce PWM on a free pin?
+- Which pins are genuinely free after the dispenser has taken its five, and
+  which VddIO domain each sits in.
+
+The answer to the first question decides everything after it. Do not order
+parts before this is written down.
+
+### E2. Choose an approach, with the trade-off stated
+
+Three realistic options, cheapest first. Pick one, justify it in the notes, and
+say what you rejected:
+
+**(a) Passive buzzer or small speaker on a PWM timer pin.** One GPIO, one timer
+channel, optionally one transistor. Produces tones and simple melodies — enough
+for "dose ready", "dispensing", "well done", "missed dose". No DMA, no codec, no
+new bus. Lowest risk by a wide margin, and it fits this session's remaining time
+honestly.
+
+**(b) I2S class-D amplifier module (MAX98357A or equivalent) plus an 8 Ω
+speaker.** A digital-in amplifier: three signal lines from SAI/I2S, no analogue
+stage to get wrong, no codec to configure over I2C. Gives real WAV playback,
+which means spoken prompts — much stronger for an accessibility argument. Costs
+a SAI peripheral, a DMA stream, and audio assets on the SD card.
+
+**(c) Analogue amplifier module (PAM8302 or similar) driven from a DAC or
+filtered PWM.** Only if the part actually has a DAC and a free channel.
+Generally more analogue trouble than (b) for no gain.
+
+**Recommendation, to be argued with rather than obeyed:** start at (a). It is
+achievable in the time this session has left, it proves the audio path end to
+end, and it makes the demo better immediately. Treat (b) as a Session 15 item
+if there is appetite for spoken prompts.
+
+### E3. Constraints that apply whichever option is chosen
+
+- **If the audio path uses DMA, its `LPEN` bit MUST be added to
+  `ms_configure_sleep_clocks()` in `main.c`, in the same change.** Read
+  `session_12_notes.md` Addendum 9 before writing a line of audio code. `WFI`
+  stops the clock of every peripheral, bus and memory whose `LPEN` bit is
+  clear; the display fault that cost six rounds of debugging was exactly this,
+  and audio DMA that stutters or drops out during idle would be the same bug
+  wearing a different hat. SAI/I2S and its DMA controller both need covering.
+- **No `printf` anywhere on an audio callback or ISR.**
+  `session_11_notes.md` Addendum 8 is the evidence.
+- **Audio goes through the OSAL**, like everything else. If a sound needs to
+  outlive the call that triggered it, it belongs to a task, not to
+  `state_machine_update()`. Do not block the UI task on a tone finishing.
+- **Volume and mute.** A device that beeps in a bedroom at 08:00 needs a way to
+  be quieted. If Session 15's carer mode exists by the time you build this, the
+  setting belongs there; if not, note it as a dependency.
+- **Do not reintroduce the dropped buzzer claim by accident.** A previous pass
+  removed an unbuilt buzzer from the documentation deliberately. If audio is
+  built, the docs say what was actually built and demonstrated; if it is not,
+  they stay silent. Nothing goes into `MASTER_PROJECT_PLAN.md` or the
+  submission material that has not run on hardware.
+
+### E4. Deliverable
+
+Whether or not audio ships, this part produces a written answer in
+`session_14_notes.md`: what the board has, which option was chosen and why,
+which pins and peripheral it uses, and — if it was not built — exactly what
+someone would need to do to finish it. A clear "we evaluated this and here is
+the path" is a legitimate result and is worth more than a rushed implementation.
+
+---
+
 ## Part D — Documentation
 
 Several documents currently assert, firmly, that this hardware will never
@@ -329,6 +448,11 @@ exist. Every one of them must be corrected — not quietly, but with the reason:
       refill detection based on a real short dispense.
 - [ ] **Part C**: `MEDSIGHT_PHYSICAL_DISPENSER 0` still builds and runs the
       full simulated flow.
+- [ ] **Part E (audio)**: an answer written down either way — what the board
+      has, the option chosen and why, pins and peripheral, and if it was not
+      built, what remains. **If it WAS built: its `LPEN` bit is in
+      `ms_configure_sleep_clocks()` and it has been verified from a COLD boot
+      (power physically removed), not a warm re-run.**
 - [ ] **Part D**: all five documents corrected; pin map updated.
 - [ ] Build 100% clean, **both** configurations.
 - [ ] **On hardware**: 10 consecutive dispenses of 3 pills each. Record how
@@ -337,6 +461,9 @@ exist. Every one of them must be corrected — not quietly, but with the reason:
       Session 12's.
 - [ ] Face-match → dispense → IR-counted → confirm works end to end.
 - [ ] Zero `tk_*` outside `ms_osal.c`; no embeddings in a real UART capture.
+- [ ] `session_14_notes.md` states at the top **which session folder this was
+      based on**, so the chain is reconstructable whatever order 14 and 15 ran
+      in.
 
 ---
 
