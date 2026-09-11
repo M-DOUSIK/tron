@@ -31,6 +31,7 @@ static char    s_name[PATIENT_NAME_MAX];
 static uint8_t s_name_len;
 static uint8_t s_pill_count;
 static int8_t  s_embedding[EMBEDDING_SIZE];
+static bool    s_symbols;
 
 #define PILLCOUNT_MIN 1
 #define PILLCOUNT_MAX 10
@@ -40,6 +41,7 @@ void registration_ui_reset(void)
     memset(s_name, 0, sizeof(s_name));
     s_name_len   = 0;
     s_pill_count = PILLCOUNT_MIN;
+    s_symbols    = false;
 }
 
 void registration_ui_set_embedding(const int8_t *embedding)
@@ -62,10 +64,10 @@ static bool hit(uint32_t tx, uint32_t ty, uint16_t x, uint16_t y, uint16_t w, ui
  * rest of the UI follows. All ten Row-1 keys still fit inside the card
  * frame: 10*70 + 9*5 = 745px of the 800px panel. */
 #define KEY_W   70u
-#define KEY_H   60u
-#define KEY_GAP  5u
+#define KEY_H   54u
+#define KEY_GAP  4u
 
-#define KB_ROW1_Y 172u
+#define KB_ROW1_Y 164u
 #define KB_ROW2_Y (KB_ROW1_Y + KEY_H + KEY_GAP)
 #define KB_ROW3_Y (KB_ROW2_Y + KEY_H + KEY_GAP)
 #define KB_ROW4_Y (KB_ROW3_Y + KEY_H + KEY_GAP)
@@ -75,18 +77,27 @@ static bool hit(uint32_t tx, uint32_t ty, uint16_t x, uint16_t y, uint16_t w, ui
 #define NAME_BOX_W 580u
 #define NAME_BOX_H  56u
 
-/* Row 4: SPACE / DEL / DONE, sharing row 3's centred span. */
+/* Row 4 mirrors the supplied keyboard drawings: ABC/?123 switch, comma,
+ * space, period, delete and done. */
+#define R4_MODE_W  100u
+#define R4_PUNCT_W  65u
 #define R4_SPACE_W 250u
-#define R4_DEL_W   125u
+#define R4_DEL_W    95u
 #define R4_DONE_W  140u
-#define R4_TOTAL   (R4_SPACE_W + R4_DEL_W + R4_DONE_W + 2u * KEY_GAP)
+#define R4_TOTAL   (R4_MODE_W + 2u * R4_PUNCT_W + R4_SPACE_W + R4_DEL_W + R4_DONE_W + 5u * KEY_GAP)
 #define R4_X       ((800u - R4_TOTAL) / 2u)
-#define R4_DEL_X   (R4_X + R4_SPACE_W + KEY_GAP)
+#define R4_COMMA_X (R4_X + R4_MODE_W + KEY_GAP)
+#define R4_SPACE_X (R4_COMMA_X + R4_PUNCT_W + KEY_GAP)
+#define R4_DOT_X   (R4_SPACE_X + R4_SPACE_W + KEY_GAP)
+#define R4_DEL_X   (R4_DOT_X + R4_PUNCT_W + KEY_GAP)
 #define R4_DONE_X  (R4_DEL_X + R4_DEL_W + KEY_GAP)
 
 static const char *KB_ROW1 = "QWERTYUIOP"; /* 10 keys */
 static const char *KB_ROW2 = "ASDFGHJKL";  /* 9 keys  */
 static const char *KB_ROW3 = "ZXCVBNM";    /* 7 keys  */
+static const char *KB_SYM_ROW1 = "1234567890";
+static const char *KB_SYM_ROW2 = "@#$%&-+()";
+static const char *KB_SYM_ROW3 = "*\"':;!?";
 
 static uint16_t kb_row_start_x(int n_keys)
 {
@@ -119,7 +130,9 @@ void registration_ui_draw_keyboard(void)
 
     char label[2] = {0, 0};
     struct { const char *row; int n; uint16_t y; } rows[3] = {
-        { KB_ROW1, 10, KB_ROW1_Y }, { KB_ROW2, 9, KB_ROW2_Y }, { KB_ROW3, 7, KB_ROW3_Y }
+        { s_symbols ? KB_SYM_ROW1 : KB_ROW1, 10, KB_ROW1_Y },
+        { s_symbols ? KB_SYM_ROW2 : KB_ROW2, 9, KB_ROW2_Y },
+        { s_symbols ? KB_SYM_ROW3 : KB_ROW3, 7, KB_ROW3_Y }
     };
     for (int r = 0; r < 3; r++)
     {
@@ -132,7 +145,11 @@ void registration_ui_draw_keyboard(void)
         }
     }
 
-    gui_draw_button(R4_X,      KB_ROW4_Y, R4_SPACE_W, KEY_H, THEME_ROSE_EDGE,  "SPACE", "");
+    gui_draw_button(R4_X,      KB_ROW4_Y, R4_MODE_W,  KEY_H, THEME_ROSE_EDGE,
+                    s_symbols ? "ABC" : "?123", "");
+    gui_draw_button(R4_COMMA_X, KB_ROW4_Y, R4_PUNCT_W, KEY_H, THEME_ROSE_EDGE, ",", "");
+    gui_draw_button(R4_SPACE_X, KB_ROW4_Y, R4_SPACE_W, KEY_H, THEME_ROSE_EDGE, "SPACE", "");
+    gui_draw_button(R4_DOT_X,   KB_ROW4_Y, R4_PUNCT_W, KEY_H, THEME_ROSE_EDGE, ".", "");
     gui_draw_button(R4_DEL_X,  KB_ROW4_Y, R4_DEL_W,   KEY_H, THEME_AMBER_EDGE, "DEL",   "");
     gui_draw_button(R4_DONE_X, KB_ROW4_Y, R4_DONE_W,  KEY_H, THEME_GREEN_EDGE, "DONE",  "");
 
@@ -142,7 +159,9 @@ void registration_ui_draw_keyboard(void)
 bool registration_ui_handle_keyboard_touch(uint32_t tx, uint32_t ty)
 {
     struct { const char *row; int n; uint16_t y; } rows[3] = {
-        { KB_ROW1, 10, KB_ROW1_Y }, { KB_ROW2, 9, KB_ROW2_Y }, { KB_ROW3, 7, KB_ROW3_Y }
+        { s_symbols ? KB_SYM_ROW1 : KB_ROW1, 10, KB_ROW1_Y },
+        { s_symbols ? KB_SYM_ROW2 : KB_ROW2, 9, KB_ROW2_Y },
+        { s_symbols ? KB_SYM_ROW3 : KB_ROW3, 7, KB_ROW3_Y }
     };
     for (int r = 0; r < 3; r++)
     {
@@ -162,7 +181,26 @@ bool registration_ui_handle_keyboard_touch(uint32_t tx, uint32_t ty)
         }
     }
 
-    if (hit(tx, ty, R4_X, KB_ROW4_Y, R4_SPACE_W, KEY_H))
+    if (hit(tx, ty, R4_X, KB_ROW4_Y, R4_MODE_W, KEY_H))
+    {
+        s_symbols = !s_symbols;
+        registration_ui_draw_keyboard();
+        return false;
+    }
+    char punctuation = 0;
+    if (hit(tx, ty, R4_COMMA_X, KB_ROW4_Y, R4_PUNCT_W, KEY_H)) punctuation = ',';
+    if (hit(tx, ty, R4_DOT_X, KB_ROW4_Y, R4_PUNCT_W, KEY_H)) punctuation = '.';
+    if (punctuation)
+    {
+        if (s_name_len < PATIENT_NAME_MAX - 1)
+        {
+            s_name[s_name_len++] = punctuation;
+            s_name[s_name_len] = '\0';
+            draw_name_box();
+        }
+        return false;
+    }
+    if (hit(tx, ty, R4_SPACE_X, KB_ROW4_Y, R4_SPACE_W, KEY_H))
     {
         if (s_name_len < PATIENT_NAME_MAX - 1)
         {
@@ -212,6 +250,9 @@ bool registration_ui_handle_keyboard_touch(uint32_t tx, uint32_t ty)
  * hoppers do arrive, the screen needs colours turned on, not a redesign.
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/* Retain the overwritten hopper experiment for history, but compile the
+ * author's original plus/minus composition below. */
+#if 0
 /* Hopper slots. Only HOPPER_LIVE of them accept touch. */
 #define HOPPER_COUNT    4u
 #define HOPPER_LIVE     1u
@@ -338,6 +379,63 @@ bool registration_ui_handle_pillcount_touch(uint32_t tx, uint32_t ty)
 
     return false;
 }
+#endif
+
+#define PC_MINUS_X  365u
+#define PC_PLUS_X   525u
+#define PC_CTRL_Y   292u
+#define PC_CTRL_W    95u
+#define PC_CTRL_H    66u
+#define PC_NEXT_X   430u
+#define PC_NEXT_Y   380u
+#define PC_NEXT_W   250u
+#define PC_NEXT_H    56u
+
+static void draw_authored_count(void)
+{
+    gui_draw_rect(350u, 226u, 360u, 54u, THEME_BG);
+    char line[24];
+    snprintf(line, sizeof(line), "COUNT: %u", (unsigned)s_pill_count);
+    gui_font_text_centered(530u, 230u, line, THEME_INK, &ui_font_lg);
+    gui_draw_flush_rows(226u, 280u);
+}
+
+void registration_ui_draw_pillcount(void)
+{
+    gui_draw_frame();
+    gui_blit_rle_sprite(76u, 105u, &ui_sprite_buddu_register);
+
+    gui_fill_round_rect(326u, 82u, 408u, 128u, 16u, THEME_BG);
+    gui_stroke_round_rect(326u, 82u, 408u, 128u, 16u, 4u, THEME_FRAME);
+    gui_font_text(350u, 108u, "HOW MANY PILLS", THEME_INK, &ui_font_lg);
+    gui_font_text(350u, 154u, "PER DAY?", THEME_INK, &ui_font_lg);
+
+    draw_authored_count();
+    gui_draw_button(PC_MINUS_X, PC_CTRL_Y, PC_CTRL_W, PC_CTRL_H,
+                    THEME_ROSE_EDGE, "-", "");
+    gui_draw_button(PC_PLUS_X, PC_CTRL_Y, PC_CTRL_W, PC_CTRL_H,
+                    THEME_ROSE_EDGE, "+", "");
+    gui_draw_button(PC_NEXT_X, PC_NEXT_Y, PC_NEXT_W, PC_NEXT_H,
+                    THEME_GREEN_EDGE, "NEXT", "");
+    gui_draw_flush();
+}
+
+bool registration_ui_handle_pillcount_touch(uint32_t tx, uint32_t ty)
+{
+    if (hit(tx, ty, PC_MINUS_X, PC_CTRL_Y, PC_CTRL_W, PC_CTRL_H))
+    {
+        if (s_pill_count > PILLCOUNT_MIN) s_pill_count--;
+        draw_authored_count();
+        return false;
+    }
+    if (hit(tx, ty, PC_PLUS_X, PC_CTRL_Y, PC_CTRL_W, PC_CTRL_H))
+    {
+        if (s_pill_count < PILLCOUNT_MAX) s_pill_count++;
+        draw_authored_count();
+        return false;
+    }
+    return hit(tx, ty, PC_NEXT_X, PC_NEXT_Y, PC_NEXT_W, PC_NEXT_H);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
  * CONFIRM screen
@@ -353,14 +451,16 @@ void registration_ui_draw_confirm(void)
     gui_draw_frame();
     gui_draw_title_bar("CONFIRM REGISTRATION", ACCENT_NEUTRAL);
 
-    char line[80];
-    gui_font_text_centered(400u, 140u, "NAME", THEME_INK_SOFT, &ui_font_sm);
-    snprintf(line, sizeof(line), "%s", s_name);
-    gui_font_text_centered(400u, 166u, line, THEME_INK, &ui_font_lg);
+    gui_blit_rle_sprite(58u, 105u, &ui_sprite_buddu_register);
 
-    gui_font_text_centered(400u, 216u, "PILLS PER DOSE", THEME_INK_SOFT, &ui_font_sm);
+    char line[80];
+    gui_font_text_centered(520u, 130u, "NAME", THEME_INK_SOFT, &ui_font_sm);
+    snprintf(line, sizeof(line), "%s", s_name);
+    gui_font_text_centered(520u, 158u, line, THEME_INK, &ui_font_lg);
+
+    gui_font_text_centered(520u, 210u, "NUMBER OF PILLS", THEME_INK_SOFT, &ui_font_sm);
     snprintf(line, sizeof(line), "%u", (unsigned)s_pill_count);
-    gui_font_text_centered(400u, 242u, line, THEME_INK, &ui_font_lg);
+    gui_font_text_centered(520u, 238u, line, THEME_INK, &ui_font_lg);
 
     gui_draw_button(CHOICE_LEFT_X,  CHOICE_BTN_Y, CHOICE_BTN_W, CHOICE_BTN_H,
                     THEME_GREEN_EDGE, "CONFIRM", "");

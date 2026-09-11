@@ -6,6 +6,8 @@ extern "C" {
 #endif
 
 typedef enum {
+    STATE_IDLE,
+    STATE_INTRO,
     STATE_HOME,
     STATE_INSTRUCT_REGISTER,
     STATE_CAMERA_REGISTER,

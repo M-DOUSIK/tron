@@ -51,16 +51,9 @@ typedef enum
  * MASCOT_ERROR is a 3-frame crying loop drawn at MASCOT_SAD_* (gui_draw.h),
  * selected by state_machine.c on the face-not-recognised screen.
  * --------------------------------------------------------------------------- */
-#define LUMIO_DRAW_W     214u          /**< matches ui_sprite_mascot_a.w         */
-#define LUMIO_DRAW_H     213u          /**< matches ui_sprite_mascot_a.h         */
-#define LUMIO_BOB_PX       5u          /**< breathing travel, in pixels          */
-#define LUMIO_IDLE_FRAMES  8u          /**< Number of frames in the idle loop    */
-#define LUMIO_FPS          4u          /**< Target animation frame rate (4 FPS)  */
-#define LUMIO_FRAME_MS   (1000u / LUMIO_FPS)  /**< ms per frame = 250 ms        */
+#define BUDDU_FRAME_MS    250u
 
 /** Right side of screen, beside the buttons (matches MASCOT_BG_X/Y). */
-#define LUMIO_X_POS      536u   /* pixels from left edge */
-#define LUMIO_Y_BASE     136u   /* pixels from top       */
 
 /* ---------------------------------------------------------------------------
  * Public API

@@ -14,6 +14,11 @@
  * already in the build removes that failure mode entirely.
  */
 
+/* The overwritten Session 13 mascot bitmaps are deliberately excluded.
+ * Abirami's original Buddu sprites in buddu_assets_data.inc replace them and
+ * need the reclaimed flash.  Keep this block as history until the missing
+ * ui-assets generator is rebuilt. */
+#if 0
 static const uint16_t pal_mascot_a[16] __attribute__((section(".text.msassets"))) = {
     0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFF1C, 0xF71C, 0xDEBA, 0xB596, 0x8C51, 0x5ACB, 0x2965, 0x10A2, 0x10A2
 };
@@ -6484,6 +6489,7 @@ static const uint8_t px_mascot_sad2[] __attribute__((section(".text.msassets")))
     0x00, 0x00, 0x00,
 };
 const ui_sprite_t ui_sprite_mascot_sad2 = { 150, 153, 75, pal_mascot_sad2, px_mascot_sad2 };
+#endif
 
 static const uint16_t pal_sparkle_lg[16] __attribute__((section(".text.msassets"))) = {
     0x0000, 0xFFFF, 0xFFF9, 0xFFFF, 0xFFFF, 0xFFDB, 0xFF97, 0xFF75, 0xDED9, 0xB574, 0x7BCE, 0x5289, 0x10A2, 0x10A2, 0x10A2, 0x10A2

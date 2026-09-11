@@ -106,16 +106,21 @@ extern "C" {
 #define TITLE_Y        38u
 #define TITLE_H        44u
 
-/* ── Home screen ────────────────────────────────────────────────────────── */
-#define REG_BTN_X      44u
-#define REG_BTN_Y     148u
-#define REG_BTN_W     452u
-#define REG_BTN_H     104u
+#define INTRO_NEXT_X  280u
+#define INTRO_NEXT_Y  335u
+#define INTRO_NEXT_W  240u
+#define INTRO_NEXT_H   60u
 
-#define DISP_BTN_X     44u
-#define DISP_BTN_Y    266u
-#define DISP_BTN_W    452u
-#define DISP_BTN_H    104u
+/* ── Home screen ────────────────────────────────────────────────────────── */
+#define REG_BTN_X     150u
+#define REG_BTN_Y     142u
+#define REG_BTN_W     500u
+#define REG_BTN_H      92u
+
+#define DISP_BTN_X    150u
+#define DISP_BTN_Y    270u
+#define DISP_BTN_W    500u
+#define DISP_BTN_H     92u
 
 /* Mascot artwork sits to the right of the home/instruction buttons. */
 #define MASCOT_BG_X   536u
@@ -150,10 +155,10 @@ extern "C" {
 #define DISPENSE_BAR_H   54u
 #define PCT_TEXT_Y      364u
 
-#define TAKEN_BTN_X      96u
-#define TAKEN_BTN_Y     168u
-#define TAKEN_BTN_W     608u
-#define TAKEN_BTN_H     196u
+#define TAKEN_BTN_X     235u
+#define TAKEN_BTN_Y     363u
+#define TAKEN_BTN_W     330u
+#define TAKEN_BTN_H      65u
 
 #define SKIP_BTN_X      596u
 #define SKIP_BTN_Y       92u
@@ -164,14 +169,14 @@ extern "C" {
 /* The sad mascot's box on the two-choice screen. anime_ui animates the three
  * MASCOT_ERROR frames inside exactly this rectangle, so the layout and the
  * animation agree on one definition. */
-#define MASCOT_SAD_X    56u
-#define MASCOT_SAD_Y   112u
-#define MASCOT_SAD_W   150u
-#define MASCOT_SAD_H   158u
+#define MASCOT_SAD_X    40u
+#define MASCOT_SAD_Y   104u
+#define MASCOT_SAD_W   230u
+#define MASCOT_SAD_H   210u
 /* Messages on the two-choice screen centre to the right of the mascot. */
-#define CHOICE_MSG_CX  500u
+#define CHOICE_MSG_CX  530u
 
-#define CHOICE_BTN_Y    296u
+#define CHOICE_BTN_Y    320u
 #define CHOICE_BTN_W    300u
 #define CHOICE_BTN_H    124u
 #define CHOICE_BTN_GAP   40u
@@ -197,6 +202,7 @@ void gui_stroke_round_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
 /* 4bpp palettised sprite blit; palette index 0 is transparent. */
 void gui_blit_sprite(uint16_t x, uint16_t y, const ui_sprite_t *s);
+void gui_blit_rle_sprite(uint16_t x, uint16_t y, const ui_rle_sprite_t *s);
 
 /* One pill lentil, centred on (cx, cy): anti-aliased disc in `fill`, a
  * darker rim derived from it, and a soft highlight up and to the left so it
@@ -236,6 +242,8 @@ void gui_draw_button(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
  * Screens
  * ═══════════════════════════════════════════════════════════════════════════ */
 void gui_draw_home_screen(void);
+void gui_draw_idle_screen(uint8_t frame);
+void gui_draw_intro_screen(void);
 void gui_draw_dialog_text(const char *text);
 void gui_draw_ready_screen(const char *title, uint16_t accent, const char *dialog_msg);
 void gui_draw_mascot_bg(void);   /* no-op; kept for API compatibility */
@@ -245,9 +253,11 @@ void gui_draw_dispensing_screen(const char *patient_name, uint8_t pill_count);
  * released, and lights exactly that many gems. Both come from the caller's
  * per-pill loop so the bar, the number and the gems can never disagree. */
 void gui_draw_dispensing_progress(uint16_t percent, uint8_t pills_done);
+void gui_draw_registered_screen(uint8_t frame);
 
 void gui_draw_confirm_taken_screen(void);
 void gui_draw_taken_thankyou_screen(void);
+void gui_draw_taken_frame(uint8_t frame);
 
 void gui_draw_two_choice_screen(const char *title, const char *message,
                                 uint16_t accent,

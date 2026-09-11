@@ -87,6 +87,8 @@ extern DCMIPP_HandleTypeDef hdcmipp;
  * reading a large on-screen button, without leaving the device stuck
  * mid-flow indefinitely. */
 #define CONFIRM_TAKEN_TIMEOUT_MS  30000u
+#define HOME_IDLE_TIMEOUT_MS      30000u
+#define BUDDU_SCREEN_FRAME_MS       350u
 
 /* Session 09B: set around ai_vision_run_pipeline() calls. Named per
  * documents/prompts/session_08B.md step 6; the actual hardware freeze is
@@ -109,6 +111,8 @@ static uint8_t  s_dispense_pill_count = 0;
 /* Session 10: true while STATE_CONFIRM_TAKEN is holding its post-tap
  * acknowledgement ("Thank You!") on screen before returning home. */
 static bool     s_taken_ack_shown      = false;
+static uint8_t  s_ui_frame             = 0u;
+static uint32_t s_last_ui_frame        = 0u;
 
 /* Session 12: Sessions 09/10 each kept a "hold the error dialog on screen for
  * 2.5 s, then go home regardless" flag here (s_register_face_failed /
@@ -119,6 +123,7 @@ static bool     s_taken_ack_shown      = false;
  * been shown on STATE_CONFIRM_REGISTER, so that screen can hold for a
  * couple of seconds before returning home. */
 static bool     s_confirm_done = false;
+static bool     s_confirm_anim = false;
 
 /* ── Session 12: non-blocking face capture ──────────────────────────────── */
 
@@ -195,7 +200,7 @@ static bool check_hit(uint32_t tx, uint32_t ty,
 }
 
 /* ── State ───────────────────────────────────────────────────────────────── */
-static AppState_t current_state   = STATE_HOME;
+static AppState_t current_state   = STATE_IDLE;
 static bool       state_init_done  = false;
 static uint32_t   state_entry_time = 0;
 
@@ -358,10 +363,12 @@ void state_machine_init(void)
     anime_ui_set_dest_buffer(BUFFER_ADDRESS);
     anime_ui_set_bg_color(COLOR_BG);
 
-    gui_draw_home_screen();
+    gui_draw_idle_screen(0u);
 
-    current_state  = STATE_HOME;
+    current_state  = STATE_IDLE;
     state_init_done = true;
+    state_entry_time = HAL_GetTick();
+    s_last_ui_frame = state_entry_time;
 }
 
 void state_machine_update(void)
@@ -406,6 +413,54 @@ void state_machine_update(void)
 
     switch (current_state)
     {
+        /* Idle is the board's attract screen. Both supplied sleeping frames
+         * are used exactly as drawn; a touch opens the authored explanation
+         * page before Home. */
+        case STATE_IDLE:
+            if (!state_init_done)
+            {
+                camera_stop();
+                switch_ltdc_buffer(BUFFER_ADDRESS);
+                gui_draw_init(BUFFER_ADDRESS, FRAME_WIDTH, FRAME_HEIGHT);
+                s_ui_frame = 0u;
+                gui_draw_idle_screen(s_ui_frame);
+                state_entry_time = HAL_GetTick();
+                s_last_ui_frame = state_entry_time;
+                state_init_done = true;
+                was_touching = true;
+                SD_Log_Event_Async("STATE: IDLE");
+            }
+            if ((HAL_GetTick() - s_last_ui_frame) >= BUDDU_SCREEN_FRAME_MS)
+            {
+                s_ui_frame ^= 1u;
+                gui_draw_idle_screen(s_ui_frame);
+                s_last_ui_frame = HAL_GetTick();
+            }
+            if (new_touch)
+            {
+                current_state = STATE_INTRO;
+                state_init_done = false;
+            }
+            break;
+
+        case STATE_INTRO:
+            if (!state_init_done)
+            {
+                gui_draw_intro_screen();
+                state_init_done = true;
+                state_entry_time = HAL_GetTick();
+                was_touching = true;
+                SD_Log_Event_Async("STATE: INTRO");
+            }
+            if (new_touch &&
+                check_hit(tx, ty, INTRO_NEXT_X, INTRO_NEXT_Y,
+                          INTRO_NEXT_W, INTRO_NEXT_H))
+            {
+                current_state = STATE_HOME;
+                state_init_done = false;
+            }
+            break;
+
         /* ── HOME ─────────────────────────────────────────────────────── */
         case STATE_HOME:
             if (!state_init_done)
@@ -432,12 +487,11 @@ void state_machine_update(void)
                 }
 
                 state_init_done = true;
+                state_entry_time = HAL_GetTick();
                 MS_DBG_PRINTF("STATE_HOME\n");
                 /* Session 07: async log via queue — does not block the UI task */
                 SD_Log_Event_Async("STATE: HOME");
             }
-
-            anime_ui_update(HAL_GetTick());
 
             if (new_touch)
             {
@@ -466,6 +520,11 @@ void state_machine_update(void)
                     current_state   = STATE_INSTRUCT_DISPENSE;
                     state_init_done = false;
                 }
+            }
+            else if ((HAL_GetTick() - state_entry_time) > HOME_IDLE_TIMEOUT_MS)
+            {
+                current_state = STATE_IDLE;
+                state_init_done = false;
             }
             break;
 
@@ -648,10 +707,13 @@ void state_machine_update(void)
                 switch (result)
                 {
                     case REG_CONFIRM_SAVED:
-                        gui_draw_dialog_text("Registered!\nWelcome aboard.");
+                        s_ui_frame = 0u;
+                        gui_draw_registered_screen(s_ui_frame);
                         SD_Log_Event_Async("EVENT: Registration - patient saved");
                         s_confirm_done    = true;
+                        s_confirm_anim    = true;
                         state_entry_time  = HAL_GetTick();
+                        s_last_ui_frame   = state_entry_time;
                         break;
                     case REG_CONFIRM_SAVED_NO_SD:
                         /* Session 13, found on hardware: the patient IS in the
@@ -663,6 +725,7 @@ void state_machine_update(void)
                                              "Re-register after restarting.");
                         SD_Log_Event_Async("EVENT: Registration - saved to RAM only (no SD)");
                         s_confirm_done    = true;
+                        s_confirm_anim    = false;
                         state_entry_time  = HAL_GetTick();
                         break;
                     case REG_CONFIRM_FULL:
@@ -690,9 +753,18 @@ void state_machine_update(void)
                 }
             }
 
+            if (s_confirm_done && s_confirm_anim &&
+                (HAL_GetTick() - s_last_ui_frame >= BUDDU_SCREEN_FRAME_MS))
+            {
+                s_ui_frame ^= 1u;
+                gui_draw_registered_screen(s_ui_frame);
+                s_last_ui_frame = HAL_GetTick();
+            }
+
             if (s_confirm_done && (HAL_GetTick() - state_entry_time > 2000u))
             {
                 s_confirm_done   = false;
+                s_confirm_anim   = false;
                 current_state    = STATE_HOME;
                 state_init_done  = false;
             }
@@ -1045,6 +1117,8 @@ void state_machine_update(void)
                     gui_draw_taken_thankyou_screen();
                     s_taken_ack_shown = true;
                     state_entry_time  = HAL_GetTick();
+                    s_ui_frame        = 0u;
+                    s_last_ui_frame   = state_entry_time;
                 }
                 else if (check_hit(tx, ty, SKIP_BTN_X, SKIP_BTN_Y, SKIP_BTN_W, SKIP_BTN_H))
                 {
@@ -1062,6 +1136,14 @@ void state_machine_update(void)
                     current_state   = STATE_HOME;
                     state_init_done = false;
                 }
+            }
+
+            if (s_taken_ack_shown &&
+                (HAL_GetTick() - s_last_ui_frame >= BUDDU_SCREEN_FRAME_MS))
+            {
+                s_ui_frame ^= 1u;
+                gui_draw_taken_frame(s_ui_frame);
+                s_last_ui_frame = HAL_GetTick();
             }
 
             if (s_taken_ack_shown && (HAL_GetTick() - state_entry_time > 1500u))

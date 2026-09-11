@@ -1,3 +1,9 @@
-/tools/
+/tools/*
+!/tools/mascot_and_frames_design/
+!/tools/mascot_and_frames_design/**
+!/tools/gen_buddu_assets.py
+!/tools/buddu_simulator.m
+!/tools/run_buddu_simulator.sh
+.DS_Store
 /.metadata/
 /.vscode/

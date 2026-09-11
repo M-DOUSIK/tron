@@ -16,6 +16,17 @@ typedef struct {
     const uint8_t  *pixels;
 } ui_sprite_t;
 
+/* Compact run-length sprite generated from Abirami's original Buddu PNGs.
+ * Each pair in rle is [run length, palette index]; palette index zero is
+ * transparent.  This format keeps every authored pose inside the board's
+ * limited internal flash without changing the character artwork. */
+typedef struct {
+    uint16_t        w, h;
+    const uint16_t *palette;
+    const uint8_t  *rle;
+    uint32_t        rle_size;
+} ui_rle_sprite_t;
+
 /* One glyph of a 4bpp anti-aliased proportional font. */
 typedef struct {
     uint8_t  w, h;
@@ -41,6 +52,19 @@ extern const ui_sprite_t ui_sprite_sparkle_lg;
 extern const ui_sprite_t ui_sprite_sparkle_sm;
 extern const ui_sprite_t ui_sprite_heart;
 extern const ui_sprite_t ui_sprite_capsule;
+
+extern const ui_rle_sprite_t ui_sprite_buddu_sleep0;
+extern const ui_rle_sprite_t ui_sprite_buddu_sleep1;
+extern const ui_rle_sprite_t ui_sprite_buddu_register;
+extern const ui_rle_sprite_t ui_sprite_buddu_registered0;
+extern const ui_rle_sprite_t ui_sprite_buddu_registered1;
+extern const ui_rle_sprite_t ui_sprite_buddu_dispense;
+extern const ui_rle_sprite_t ui_sprite_buddu_collect;
+extern const ui_rle_sprite_t ui_sprite_buddu_taken0;
+extern const ui_rle_sprite_t ui_sprite_buddu_taken1;
+extern const ui_rle_sprite_t ui_sprite_buddu_error0;
+extern const ui_rle_sprite_t ui_sprite_buddu_error1;
+extern const ui_rle_sprite_t ui_sprite_buddu_error2;
 
 extern const ui_font_t ui_font_lg;
 extern const ui_font_t ui_font_md;

@@ -31,6 +31,13 @@
  * removes that failure mode. See tools/gen_ui_assets.py. */
 #include "ui/ui_assets_data.inc"
 
+/* Buddu's source of truth is tools/mascot_and_frames_design.  The generated
+ * RLE data is included in an existing compilation unit so STM32CubeIDE does
+ * not need project metadata changes. */
+#define BUDDU_ASSET __attribute__((section(".text.msassets")))
+#include "ui/buddu_assets_data.inc"
+#undef BUDDU_ASSET
+
 static uint32_t s_gui_buffer = 0;
 static uint16_t s_gui_width  = 0;
 static uint16_t s_gui_height = 0;
@@ -350,6 +357,27 @@ void gui_blit_sprite(uint16_t x, uint16_t y, const ui_sprite_t *s)
     }
 }
 
+void gui_blit_rle_sprite(uint16_t x, uint16_t y, const ui_rle_sprite_t *s)
+{
+    if (!s_gui_buffer || !s || !s->palette || !s->rle) return;
+    volatile uint16_t *fb = (volatile uint16_t *)s_gui_buffer;
+    uint32_t pixel = 0u;
+    for (uint32_t i = 0u; i + 1u < s->rle_size; i += 2u)
+    {
+        uint8_t run = s->rle[i];
+        uint8_t idx = s->rle[i + 1u];
+        for (uint16_t n = 0u; n < run; n++, pixel++)
+        {
+            uint16_t sx = (uint16_t)(pixel % s->w);
+            uint16_t sy = (uint16_t)(pixel / s->w);
+            uint32_t px = (uint32_t)x + sx;
+            uint32_t py = (uint32_t)y + sy;
+            if (idx != 0u && px < s_gui_width && py < s_gui_height)
+                fb[py * s_gui_width + px] = s->palette[idx];
+        }
+    }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * Anti-aliased proportional text
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -632,19 +660,44 @@ static void draw_dialog_panel(const char *text)
 /* ═══════════════════════════════════════════════════════════════════════════
  * Screens
  * ═══════════════════════════════════════════════════════════════════════════ */
+void gui_draw_idle_screen(uint8_t frame)
+{
+    gui_draw_frame();
+    gui_draw_title_bar("BUDDU IS RESTING", ACCENT_NEUTRAL);
+    gui_blit_rle_sprite(278u, 112u,
+                        (frame & 1u) ? &ui_sprite_buddu_sleep1
+                                     : &ui_sprite_buddu_sleep0);
+    gui_font_text_centered(400u, 404u, "TAP THE SCREEN TO BEGIN",
+                           THEME_INK_SOFT, &ui_font_md);
+    flush_all();
+}
+
+void gui_draw_intro_screen(void)
+{
+    gui_draw_frame();
+    gui_draw_title_bar("WELCOME TO MEDSIGHT", ACCENT_NEUTRAL);
+    gui_font_text(92u, 126u,
+                   "REGISTER: IF YOU ARE NEW,\n"
+                   "ADD YOUR NAME, FACE AND DOSE.",
+                   THEME_INK, &ui_font_md);
+    gui_font_text(92u, 226u,
+                   "DISPENSE: IF YOU ARE REGISTERED,\n"
+                   "USE THIS TO RECEIVE YOUR MEDICINE.",
+                   THEME_INK, &ui_font_md);
+    gui_draw_button(INTRO_NEXT_X, INTRO_NEXT_Y, INTRO_NEXT_W, INTRO_NEXT_H,
+                    THEME_ROSE_EDGE, "NEXT", "");
+    flush_all();
+}
+
 void gui_draw_home_screen(void)
 {
     gui_draw_frame();
-    gui_draw_title_bar("SMART PILL DISPENSER", ACCENT_NEUTRAL);
+    gui_draw_title_bar("WHAT WOULD YOU LIKE TO DO?", ACCENT_NEUTRAL);
 
     gui_draw_button(REG_BTN_X, REG_BTN_Y, REG_BTN_W, REG_BTN_H,
                     THEME_ROSE_EDGE, "REGISTER PATIENT", "");
     gui_draw_button(DISP_BTN_X, DISP_BTN_Y, DISP_BTN_W, DISP_BTN_H,
                     THEME_GREEN_EDGE, "DISPENSE PILLS", "");
-
-    gui_blit_sprite(MASCOT_BG_X, MASCOT_BG_Y, &ui_sprite_mascot_a);
-
-    draw_dialog_panel("Hello! I am Lumio - tap a button to begin.");
 
     flush_all();
 }
@@ -663,7 +716,7 @@ void gui_draw_ready_screen(const char *title, uint16_t accent, const char *dialo
     gui_draw_button(READY_BTN_X, READY_BTN_Y, READY_BTN_W, READY_BTN_H,
                     accent, "I AM READY", "");
 
-    gui_blit_sprite(MASCOT_BG_X, MASCOT_BG_Y, &ui_sprite_mascot_a);
+    gui_blit_rle_sprite(548u, 142u, &ui_sprite_buddu_register);
     draw_dialog_panel(dialog_msg);
 
     flush_all();
@@ -674,27 +727,6 @@ void gui_draw_ready_screen(const char *title, uint16_t accent, const char *dialo
  * gems in as the bar advances without the caller passing it every step. */
 static uint8_t s_dispense_gems = 0u;
 
-/* One row of the dose, centred: `lit` of them in hopper colour, the rest as
- * empty outlines, so the row doubles as a count and as a progress readout. */
-static void draw_dose_gems(uint8_t total, uint8_t lit)
-{
-    if (total == 0u) return;
-    const uint16_t r    = 17u;
-    const uint16_t step = 46u;
-    const uint16_t row_w = (uint16_t)(step * (total - 1u) + 2u * r);
-    uint16_t cx = (uint16_t)(s_gui_width / 2u - row_w / 2u + r);
-
-    gui_draw_rect((uint16_t)(DOSE_GEM_CX - DOSE_GEM_MAX_W / 2u), DOSE_GEM_Y,
-                  DOSE_GEM_MAX_W, DOSE_GEM_H, THEME_BG);
-
-    for (uint8_t i = 0; i < total; i++)
-    {
-        gui_draw_gem(cx, (uint16_t)(DOSE_GEM_Y + DOSE_GEM_H / 2u), r,
-                     (i < lit) ? GEM_RED : GEM_OFF);
-        cx = (uint16_t)(cx + step);
-    }
-}
-
 void gui_draw_dispensing_screen(const char *patient_name, uint8_t pill_count)
 {
     gui_draw_frame();
@@ -702,21 +734,16 @@ void gui_draw_dispensing_screen(const char *patient_name, uint8_t pill_count)
 
     char line[80];
     snprintf(line, sizeof(line), "For %s", patient_name ? patient_name : "");
-    gui_font_text_centered((uint16_t)(s_gui_width / 2u), 138u, line,
-                           THEME_INK, &ui_font_lg);
+    gui_font_text_centered(170u, 168u, line, THEME_INK, &ui_font_md);
     snprintf(line, sizeof(line), "%u pill%s", (unsigned)pill_count,
              pill_count == 1u ? "" : "s");
-    gui_font_text_centered((uint16_t)(s_gui_width / 2u), 190u, line,
+    gui_font_text_centered(170u, 210u, line,
                            THEME_INK_SOFT, &ui_font_md);
 
+    gui_blit_rle_sprite(292u, 112u, &ui_sprite_buddu_dispense);
     s_dispense_gems = pill_count;
-    draw_dose_gems(pill_count, 0u);
-
-    /* Track; gui_draw_dispensing_progress() fills it. */
-    gui_fill_round_rect(DISPENSE_BAR_X, DISPENSE_BAR_Y,
-                        DISPENSE_BAR_W, DISPENSE_BAR_H, 16u, THEME_GREEN_FILL);
-    gui_stroke_round_rect(DISPENSE_BAR_X, DISPENSE_BAR_Y,
-                          DISPENSE_BAR_W, DISPENSE_BAR_H, 16u, 4u, THEME_GREEN_EDGE);
+    gui_font_text_centered(400u, 352u, "DISPENSING YOUR PILLS",
+                           THEME_INK, &ui_font_lg);
 
     flush_all();
 }
@@ -726,40 +753,40 @@ void gui_draw_dispensing_progress(uint16_t percent, uint8_t pills_done)
     if (percent > 100u) percent = 100u;
     if (pills_done > s_dispense_gems) pills_done = s_dispense_gems;
 
-    uint16_t pad     = 7u;
-    uint16_t inner_x = (uint16_t)(DISPENSE_BAR_X + pad);
-    uint16_t inner_y = (uint16_t)(DISPENSE_BAR_Y + pad);
-    uint16_t inner_w = (uint16_t)(DISPENSE_BAR_W - 2u * pad);
-    uint16_t inner_h = (uint16_t)(DISPENSE_BAR_H - 2u * pad);
-    uint16_t fill_w  = (uint16_t)((uint32_t)inner_w * percent / 100u);
+    /* The supplied dispensing frames differ by a 0/1/2/3-dot progression.
+     * Draw those dots around the shared authored pose while retaining the
+     * real motor loop's progress and pill count. */
+    gui_draw_rect(552u, 186u, 140u, 55u, THEME_BG);
+    uint8_t dots = (percent >= 100u) ? 3u : (uint8_t)((percent * 4u) / 101u);
+    for (uint8_t i = 0u; i < dots; i++)
+        gui_draw_gem((uint16_t)(575u + i * 36u), 212u, 8u, THEME_ROSE_EDGE);
 
-    gui_fill_round_rect(inner_x, inner_y, inner_w, inner_h, 12u, THEME_GREEN_FILL);
-    if (fill_w > 12u)
-        gui_fill_round_rect(inner_x, inner_y, fill_w, inner_h, 12u, THEME_GREEN_EDGE);
+    gui_draw_rect(270u, 398u, 260u, ui_font_md.line_height, THEME_BG);
+    char pct[20];
+    snprintf(pct, sizeof(pct), "%u%%  %u/%u", (unsigned)percent,
+             (unsigned)pills_done, (unsigned)s_dispense_gems);
+    gui_font_text_centered(400u, 398u, pct, THEME_INK_SOFT, &ui_font_md);
+    flush_rows(186u, 430u);
+}
 
-    /* Fill the dose row in step with the bar. pills_done is passed in rather
-     * than derived from the percentage: the caller steps the bar per pill, so
-     * it already knows the exact count, and rounding a percentage back into a
-     * pill index made the gems light on the wrong steps. */
-    draw_dose_gems(s_dispense_gems, pills_done);
-    flush_rows(DOSE_GEM_Y, (uint16_t)(DOSE_GEM_Y + DOSE_GEM_H));
-
-    /* The readout, one size up from the old md caption and tracked apart so
-     * the digits stay distinct at arm's length. */
-    char pct[8];
-    snprintf(pct, sizeof(pct), "%u%%", (unsigned)percent);
-    gui_draw_rect(0u, PCT_TEXT_Y, s_gui_width, ui_font_lg.line_height, THEME_BG);
-    gui_font_text_centered_tracked((uint16_t)(s_gui_width / 2u), PCT_TEXT_Y,
-                                   pct, THEME_INK_SOFT, &ui_font_lg, 4u);
-
-    flush_rows(DISPENSE_BAR_Y,
-               (uint16_t)(PCT_TEXT_Y + ui_font_lg.line_height));
+void gui_draw_registered_screen(uint8_t frame)
+{
+    gui_draw_frame();
+    gui_draw_title_bar("REGISTERED!", ACCENT_SUCCESS);
+    gui_blit_rle_sprite(278u, 112u,
+                        (frame & 1u) ? &ui_sprite_buddu_registered1
+                                     : &ui_sprite_buddu_registered0);
+    gui_font_text_centered(400u, 404u, "BUDDU WILL REMEMBER YOU",
+                           THEME_INK, &ui_font_md);
+    flush_all();
 }
 
 void gui_draw_confirm_taken_screen(void)
 {
     gui_draw_frame();
-    gui_draw_title_bar("TAKE YOUR PILLS NOW", ACCENT_DISPENSE);
+    gui_draw_title_bar("COLLECT YOUR PILLS!", ACCENT_DISPENSE);
+
+    gui_blit_rle_sprite(288u, 104u, &ui_sprite_buddu_collect);
 
     gui_draw_button(TAKEN_BTN_X, TAKEN_BTN_Y, TAKEN_BTN_W, TAKEN_BTN_H,
                     THEME_GREEN_EDGE, "I TOOK IT!", "");
@@ -771,11 +798,18 @@ void gui_draw_confirm_taken_screen(void)
 
 void gui_draw_taken_thankyou_screen(void)
 {
+    gui_draw_taken_frame(0u);
+}
+
+void gui_draw_taken_frame(uint8_t frame)
+{
     gui_draw_frame();
-    gui_draw_title_bar("THANK YOU!", ACCENT_SUCCESS);
-    gui_blit_sprite(MASCOT_BG_X, MASCOT_BG_Y, &ui_sprite_mascot_a);
-    gui_font_text_centered(300u, 200u, "Your dose has\nbeen recorded.",
-                           THEME_INK, &ui_font_lg);
+    gui_draw_title_bar("WELL DONE!", ACCENT_SUCCESS);
+    gui_blit_rle_sprite(278u, 112u,
+                        (frame & 1u) ? &ui_sprite_buddu_taken1
+                                     : &ui_sprite_buddu_taken0);
+    gui_font_text_centered(400u, 404u, "YOUR DOSE HAS BEEN RECORDED",
+                           THEME_INK, &ui_font_md);
     flush_all();
 }
 
@@ -799,7 +833,7 @@ void gui_draw_two_choice_screen(const char *title, const char *message,
 
     /* First frame of the sad pose. anime_ui animates the remaining two over
      * this same box while the screen is up (MASCOT_ERROR). */
-    gui_blit_sprite(MASCOT_SAD_X, MASCOT_SAD_Y, &ui_sprite_mascot_sad0);
+    gui_blit_rle_sprite(MASCOT_SAD_X, MASCOT_SAD_Y, &ui_sprite_buddu_error0);
 
     gui_draw_button(CHOICE_LEFT_X,  CHOICE_BTN_Y, CHOICE_BTN_W, CHOICE_BTN_H,
                     THEME_GREEN_EDGE, left_label, "");
