@@ -312,6 +312,52 @@ stronger position.
 
 ## Known future work
 
+> **Two of these came from a review by the project's academic supervisor** and
+> are recorded here as future potential rather than commitments: a **vibration
+> sensor** for tamper and mishandling detection, and a **wearable alert band**
+> so a patient learns a dose is due without being in the room. The band is
+> covered in `MASTER_PROJECT_PLAN.md` §7, because it turns on the same
+> zero-network question that section already frames. A third suggestion — keep
+> the interface minimal and legible for elderly users — is **already met**:
+> see `UI_SCREEN_INVENTORY.md` §2 for the design system, body text at
+> 17:1 contrast on white with the palette checked against WCAG AA, and a
+> 330x200 px confirm button.
+
+### Vibration sensing — tamper, agitation and mishandling
+
+A small accelerometer or piezo vibration sensor, logging when the device is
+shaken, struck or tipped.
+
+The case for it is specific rather than general. This is a **locked box that
+withholds medication on purpose**, and the people it is for include some who
+are confused or agitated. A patient who cannot get pills out and shakes the
+unit is a plausible event, and at present the device has no idea it happened.
+So is the duller case: a unit knocked off a table. If the mechanism jams
+afterwards, the log should be able to say why.
+
+**Nothing architectural is needed.** The destination already exists — the
+append-only event log, `SD_Log_Event_Async()`, and carer mode's DOSE HISTORY
+screen that reads it back on the device. A tamper line is one more entry in a
+record a carer is already reading.
+
+**Two things to get right, and the first is the hard one.**
+
+*Telling agitation from ordinary handling is the same problem this project
+just spent a session on.* A carer carrying the unit to another room, a door
+slamming, hoppers being refilled — all produce vibration. A bare magnitude
+threshold will fire on all of them, and **a tamper log nobody trusts is worse
+than no tamper log**, for exactly the reason Session 16 kept relearning: a
+signal that cannot separate its target from its confusor is not a detector.
+Expect to need magnitude *and* duration, a learned quiet baseline, and a
+per-dose diagnostic before any threshold is chosen. Session 16's addenda are a
+long worked example of doing this badly and then well.
+
+*It must never lock the device or refuse to dispense.* Logging is the correct
+and complete response. A dispenser that stops working because it was jostled
+is a safety hazard, and it would break the rule every safety decision in this
+project has followed: the failure path always ends in the dose still being
+available and the uncertainty recorded, never in medication being withheld.
+
 Deliberately kept here, in one place, rather than in a separate document — the
 Program Plan's own "Extensibility" section was one of its strengths, and being
 able to say precisely what comes next is a sign of a project that is

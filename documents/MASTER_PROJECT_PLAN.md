@@ -226,6 +226,45 @@ valuable line in the audit trail. Carer mode can read those lines back on the
 device itself, so reviewing adherence no longer means taking the card to a
 laptop.
 
+**Future work, suggested in review: a wearable alert band.** A wristband that
+vibrates when a dose window opens, so the patient learns a dose is due without
+having to be in the room with the device.
+
+This closes a gap the current design genuinely has. Every reminder the device
+can produce — the on-screen banner, and Session 17's buzzer — requires the
+patient to be within sight or earshot of it. Someone in another room simply
+does not find out, and the first thing that tells anybody is the `MISSED:`
+line written half an hour later.
+
+It also fits the reasoning Session 15 already settled rather than contradicting
+it. That decision was that the buzzer fetches a CARER and never sounds at the
+patient, because beeping at someone who has already failed to respond is
+nagging. A wristband is the other half of that argument, not a reversal of it:
+it fires when the window OPENS, at someone who may simply not know yet.
+Informing a person who is absent is a different act from pestering one who is
+present and has declined.
+
+**The tension to resolve before building it, stated plainly.** This project's
+defining property is that it is offline — *"No network connection, no cloud,
+no companion app"*, the first line of the README. A band needs a radio, and
+that is the decision this section already flags as scope-and-privacy rather
+than firmware.
+
+The honest distinction, for whoever takes it up: a **one-way, short-range
+beacon carrying only "a dose is due"** is a materially different thing from a
+phone app that syncs records. It moves no patient identity, no face embedding,
+no adherence history — nothing that
+`COMPLIANCE_PRIVACY_POSTURE.md` protects. Whether that still counts as
+breaking the zero-network promise is a product decision and is **not settled
+here**; it is recorded so that it is made deliberately rather than discovered
+halfway through an implementation.
+
+What already exists in its favour: the firing point is the same single hook
+the buzzer uses — `schedule_service()`'s `SCHED_FLAG_OPEN` branch in
+`state_machine.c`, which runs exactly once per dose window. The firmware side
+is one call. The radio, the pairing, and the band's own battery life are the
+whole of the work.
+
 **There is no buzzer and no audio in the Session 15 build, and Session 17 adds
 one — for the carer.** Earlier revisions of this plan said "LCD + buzzer"; no
 audio code was ever written and the claim was dropped in Session 12 rather
