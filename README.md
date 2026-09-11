@@ -316,8 +316,10 @@ stronger position.
 > are recorded here as future potential rather than commitments: a **vibration
 > sensor** for tamper and mishandling detection, and a **wearable alert band**
 > so a patient learns a dose is due without being in the room. The band is
-> covered in `MASTER_PROJECT_PLAN.md` §7, because it turns on the same
-> zero-network question that section already frames. A third suggestion — keep
+> covered in `MASTER_PROJECT_PLAN.md` §7 and would be a **one-way beacon
+> meaning only "a dose is due"** — it signals TIME, never IDENTITY, so
+> nothing personal goes on the air. `COMPLIANCE_PRIVACY_POSTURE.md` §5b
+> records exactly what such a radio may and may not carry. A third suggestion — keep
 > the interface minimal and legible for elderly users — is **already met**:
 > see `UI_SCREEN_INVENTORY.md` §2 for the design system, body text at
 > 17:1 contrast on white with the palette checked against WCAG AA, and a

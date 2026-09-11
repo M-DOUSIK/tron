@@ -244,20 +244,30 @@ it fires when the window OPENS, at someone who may simply not know yet.
 Informing a person who is absent is a different act from pestering one who is
 present and has declined.
 
-**The tension to resolve before building it, stated plainly.** This project's
-defining property is that it is offline — *"No network connection, no cloud,
-no companion app"*, the first line of the README. A band needs a radio, and
-that is the decision this section already flags as scope-and-privacy rather
-than firmware.
+**The shape it should take, decided.** A **one-way, short-range beacon that
+carries a single bit of meaning: a dose is due.** No pairing to a phone, no
+companion app, no return channel, and nothing on the air that identifies
+anyone.
 
-The honest distinction, for whoever takes it up: a **one-way, short-range
-beacon carrying only "a dose is due"** is a materially different thing from a
-phone app that syncs records. It moves no patient identity, no face embedding,
-no adherence history — nothing that
-`COMPLIANCE_PRIVACY_POSTURE.md` protects. Whether that still counts as
-breaking the zero-network promise is a product decision and is **not settled
-here**; it is recorded so that it is made deliberately rather than discovered
-halfway through an implementation.
+That is deliberately not the obvious design, and the reason is the privacy
+posture rather than engineering convenience. The natural version of this
+feature is a phone app that syncs schedules and adherence history; that
+version would move patient identity, dose records and potentially face data
+off the device, and `COMPLIANCE_PRIVACY_POSTURE.md` exists to say this device
+does not do that. A beacon that transmits "now" and nothing else cannot leak
+a patient's identity, their medication, or whether they took it — **there is
+no payload to intercept**, because a listener learns only that some device
+somewhere thinks it is time for something.
+
+**Be accurate about what this costs, though.** It is still a radio. The
+README's *"no network connection, no cloud, no companion app"* remains true
+of the delivered build and would remain true of this one — a beacon addresses
+no remote service and forms no connection — but the honest framing is that the
+property being preserved is the PRIVACY promise, not a literal no-radio
+purity. Anyone extending this should hold the line at the payload: the moment
+a band sends anything back, or the device starts naming a patient on the air,
+this stops being the same feature and needs its own review against §4 of the
+compliance document.
 
 What already exists in its favour: the firing point is the same single hook
 the buzzer uses — `schedule_service()`'s `SCHED_FLAG_OPEN` branch in

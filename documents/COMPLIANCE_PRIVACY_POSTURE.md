@@ -181,6 +181,36 @@ KEEP rather than to DELETE, and the action is recorded in the event log by name.
 Deletion by physical control of the card (§2) remains available and is still the
 more complete option, because it removes the audit log as well.
 
+## 5b. The one radio this posture would permit (future work)
+
+Nothing in the delivered build transmits anything. A future direction recorded
+in `MASTER_PROJECT_PLAN.md` §7 — a **wearable alert band** so a patient learns
+a dose is due without being in the room — would add a radio, so the rule it
+must obey is written here rather than left to whoever implements it.
+
+**Permitted: a one-way, short-range beacon whose entire payload means "a dose
+is due".**
+
+It carries no name, no patient identifier, no slot number, no medication, no
+schedule, no adherence outcome, and no face embedding. A listener within range
+learns that *a* device believes it is time for *something* — which is not
+personal data about anybody, because it cannot be attributed to a person.
+There is no payload to intercept.
+
+**Not permitted without a fresh review against §4 of this document:**
+
+- any return channel from the band to the device
+- naming, numbering or otherwise identifying a patient on the air
+- transmitting the medication, the dose, or the schedule
+- transmitting whether a dose was taken, missed or skipped
+- pairing to a phone, or any companion application
+- anything derived from the camera, at any resolution, ever
+
+The distinction the whole rule rests on: **the beacon signals TIME, never
+IDENTITY.** The moment it carries who, what or whether, it becomes a different
+feature carrying personal data off the device, and §4's protections apply to
+it in full.
+
 ## 6. Known Limitations, Stated Plainly
 
 - **Enrolment was unauthenticated until Session 15. It is the most significant
