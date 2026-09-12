@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 900" width="1180" height="900" font-family="DejaVu Sans, Verdana, sans-serif">
+  <style>
+    .bg    { fill:#ffffff; }
+    .box   { fill:#f4f6f8; stroke:#33404d; stroke-width:2; }
+    .boxh  { fill:#e3e9ef; stroke:#33404d; stroke-width:2; }
+    .pad   { fill:#ffffff; stroke:#33404d; stroke-width:1.2; }
+    .t     { fill:#1a2430; font-size:13px; }
+    .tb    { fill:#1a2430; font-size:15px; font-weight:bold; }
+    .ts    { fill:#5a6672; font-size:11px; }
+    .title { fill:#1a2430; font-size:20px; font-weight:bold; }
+    .w5    { fill:none; stroke:#d0342c; stroke-width:2.6; }
+    .wg    { fill:none; stroke:#22272c; stroke-width:2.6; }
+    .wsig  { fill:none; stroke:#1666c8; stroke-width:2.4; }
+    .wmot  { fill:none; stroke:#8a5cc4; stroke-width:3.2; }
+    .lbl5  { fill:#d0342c; font-size:11px; font-weight:bold; }
+    .lblg  { fill:#22272c; font-size:11px; font-weight:bold; }
+    .lbls  { fill:#1666c8; font-size:11px; font-weight:bold; }
+    .note  { fill:#5a6672; font-size:12px; }
+  </style>
+  <rect class="bg" x="0" y="0" width="1180" height="900"/>
+
+  <text class="title" x="30" y="38">MedSight Session 17 - dispenser, pill counter and buzzer wiring</text>
+  <text class="note"  x="30" y="60">Silkscreen labels (D3, A0, 5V, GND) are authoritative. Every connection below was verified on hardware.</text>
+
+  <!-- board -->
+  <rect class="box" x="40" y="90" width="250" height="620" rx="6"/>
+  <text class="tb" x="60" y="120">STM32N6570-DK</text>
+  <text class="ts" x="60" y="138">Arduino Uno R3 headers</text>
+
+  <rect class="boxh" x="52" y="155" width="226" height="128" rx="4"/>
+  <text class="ts" x="62" y="172">CN11 - digital D0-D7</text>
+  <rect class="pad" x="240" y="182" width="50" height="20" rx="3"/><text class="t" x="248" y="197">D2</text>
+  <text class="ts" x="150" y="197" text-anchor="end">PD0  (EXTI0)</text>
+  <rect class="pad" x="240" y="208" width="50" height="20" rx="3"/><text class="t" x="248" y="223">D3</text>
+  <text class="ts" x="150" y="223" text-anchor="end">PE9</text>
+  <rect class="pad" x="240" y="234" width="50" height="20" rx="3"/><text class="t" x="248" y="249">D5</text>
+  <text class="ts" x="150" y="249" text-anchor="end">PE10</text>
+  <rect class="pad" x="240" y="260" width="50" height="20" rx="3"/><text class="t" x="248" y="275">D6</text>
+  <text class="ts" x="150" y="275" text-anchor="end">PE13</text>
+
+  <rect class="boxh" x="52" y="300" width="226" height="76" rx="4"/>
+  <text class="ts" x="62" y="317">CN12 - digital D8-D15</text>
+  <rect class="pad" x="240" y="327" width="50" height="20" rx="3"/><text class="t" x="248" y="342">D9</text>
+  <text class="ts" x="150" y="342" text-anchor="end">PE14</text>
+  <rect class="pad" x="240" y="353" width="50" height="20" rx="3"/><text class="t" x="244" y="368">D10</text>
+  <text class="ts" x="150" y="368" text-anchor="end">PA3</text>
+
+  <rect class="boxh" x="52" y="393" width="226" height="76" rx="4"/>
+  <text class="ts" x="62" y="410">CN8 - power</text>
+  <rect class="pad" x="240" y="420" width="50" height="20" rx="3"/><text class="t" x="248" y="435">5V</text>
+  <rect class="pad" x="240" y="446" width="50" height="20" rx="3"/><text class="t" x="244" y="461">GND</text>
+
+  <rect class="boxh" x="52" y="486" width="226" height="58" rx="4" opacity="0.55"/>
+  <text class="ts" x="62" y="503">CN7 - analog A0-A5</text>
+  <text class="ts" x="62" y="521">A0-A3 tried first and DID NOT</text>
+  <text class="ts" x="62" y="536">drive the ULN2003. Left unused.</text>
+
+  <text class="ts" x="62" y="575">D14 / D15 = camera I2C1.</text>
+  <text class="ts" x="62" y="591">Off limits, never wire here.</text>
+
+  <rect class="boxh" x="52" y="615" width="226" height="76" rx="4"/>
+  <text class="ts" x="62" y="632">USB-C (CN6, power in)</text>
+  <text class="ts" x="62" y="652">BOOT1 = SW1 -&gt; LOW for</text>
+  <text class="ts" x="62" y="668">standalone boot from flash</text>
+
+  <!-- ULN2003 -->
+  <rect class="box" x="600" y="150" width="230" height="200" rx="6"/>
+  <text class="tb" x="616" y="178">ULN2003A board</text>
+  <text class="ts" x="616" y="195">Darlington array, 4 channels</text>
+  <rect class="pad" x="592" y="210" width="46" height="20" rx="3"/><text class="t" x="598" y="225">IN1</text>
+  <rect class="pad" x="592" y="236" width="46" height="20" rx="3"/><text class="t" x="598" y="251">IN2</text>
+  <rect class="pad" x="592" y="262" width="46" height="20" rx="3"/><text class="t" x="598" y="277">IN3</text>
+  <rect class="pad" x="592" y="288" width="46" height="20" rx="3"/><text class="t" x="598" y="303">IN4</text>
+  <rect class="pad" x="592" y="318" width="46" height="20" rx="3"/><text class="t" x="596" y="333">+/-</text>
+  <text class="ts" x="646" y="333">screw terminal</text>
+  <rect class="pad" x="824" y="236" width="56" height="20" rx="3"/><text class="t" x="830" y="251">motor</text>
+
+  <!-- motor -->
+  <circle cx="985" cy="246" r="58" class="box"/>
+  <text class="tb" x="985" y="240" text-anchor="middle">28BYJ-48</text>
+  <text class="ts" x="985" y="258" text-anchor="middle">stepper</text>
+  <text class="ts" x="985" y="332" text-anchor="middle">turntable</text>
+
+  <!-- IR module -->
+  <rect class="box" x="600" y="420" width="230" height="130" rx="6"/>
+  <text class="tb" x="616" y="447">IR break-beam</text>
+  <text class="ts" x="616" y="464">3-pin module, counts pills</text>
+  <rect class="pad" x="592" y="478" width="46" height="20" rx="3"/><text class="t" x="597" y="493">VCC</text>
+  <rect class="pad" x="592" y="504" width="46" height="20" rx="3"/><text class="t" x="597" y="519">GND</text>
+  <rect class="pad" x="592" y="530" width="46" height="20" rx="3"/><text class="t" x="597" y="545">OUT</text>
+  <text class="ts" x="646" y="493">3.3 V or 5 V, both work</text>
+  <text class="ts" x="646" y="545">idle HIGH, LOW while broken</text>
+
+  <!-- piezo -->
+  <rect class="box" x="600" y="620" width="230" height="100" rx="6"/>
+  <text class="tb" x="616" y="647">Active piezo buzzer</text>
+  <text class="ts" x="616" y="664">self-oscillating, DC drive</text>
+  <rect class="pad" x="592" y="678" width="46" height="20" rx="3"/><text class="t" x="608" y="693">+</text>
+  <rect class="pad" x="592" y="700" width="46" height="20" rx="3"/><text class="t" x="610" y="715">-</text>
+
+  <!-- signal wires -->
+  <path class="wsig" d="M290 218 H 440 V 220 H 592"/>
+  <path class="wsig" d="M290 244 H 460 V 246 H 592"/>
+  <path class="wsig" d="M290 270 H 480 V 272 H 592"/>
+  <path class="wsig" d="M290 337 H 500 V 298 H 592"/>
+  <path class="wsig" d="M290 192 H 330 V 588 H 560 V 540 H 592"/>
+  <path class="wsig" d="M290 363 H 520 V 688 H 592"/>
+
+  <text class="lbls" x="360" y="214">D3 -&gt; IN1</text>
+  <text class="lbls" x="360" y="240">D5 -&gt; IN2</text>
+  <text class="lbls" x="360" y="266">D6 -&gt; IN3</text>
+  <text class="lbls" x="508" y="292">D9 -&gt; IN4</text>
+  <text class="lbls" x="340" y="580">IR OUT -&gt; D2</text>
+  <text class="lbls" x="396" y="684">D10 -&gt; piezo +</text>
+
+  <!-- 5V -->
+  <path class="w5" d="M290 430 H 352 V 328 H 592"/>
+  <path class="w5" d="M352 430 V 488 H 592"/>
+  <circle cx="352" cy="430" r="3.5" fill="#d0342c"/>
+  <text class="lbl5" x="398" y="322">5V -&gt; ULN terminal +</text>
+  <text class="lbl5" x="398" y="483">5V -&gt; IR VCC</text>
+
+  <!-- GND -->
+  <path class="wg" d="M290 456 H 374 V 344 H 592"/>
+  <path class="wg" d="M374 456 V 514 H 592"/>
+  <path class="wg" d="M374 456 V 710 H 592"/>
+  <circle cx="374" cy="456" r="3.5" fill="#22272c"/>
+  <text class="lblg" x="398" y="359">GND -&gt; ULN terminal -</text>
+  <text class="lblg" x="398" y="509">GND -&gt; IR GND</text>
+  <text class="lblg" x="398" y="706">GND -&gt; piezo -</text>
+
+  <!-- ULN to motor -->
+  <path class="wmot" d="M880 246 H 927"/>
+  <text class="ts" x="882" y="236">5-pin JST</text>
+
+  <!-- power note -->
+  <rect class="boxh" x="40" y="740" width="790" height="130" rx="6"/>
+  <text class="tb" x="58" y="765">Power - one 5 V source, one ground</text>
+  <text class="note" x="58" y="789">10 000 mAh power bank -&gt; USB-A -&gt; board USB-C (CN6). The ULN2003 and the IR module take</text>
+  <text class="note" x="58" y="809">their 5 V and GND from CN8, so the board and the driver share a single ground by construction.</text>
+  <text class="note" x="58" y="829">Verified: a full 5-pill dispense ran on the power bank alone, no laptop, no second supply. A split</text>
+  <text class="note" x="58" y="849">USB cable feeding the ULN separately also works, but its GND MUST still return to CN8 GND.</text>
+
+  <!-- legend -->
+  <rect class="boxh" x="860" y="740" width="280" height="130" rx="6"/>
+  <text class="tb" x="878" y="765">Wire colours</text>
+  <path class="w5"   d="M878 782 H 918"/><text class="note" x="926" y="787">5 V</text>
+  <path class="wg"   d="M878 806 H 918"/><text class="note" x="926" y="811">GND</text>
+  <path class="wsig" d="M878 830 H 918"/><text class="note" x="926" y="835">GPIO signal</text>
+  <path class="wmot" d="M878 854 H 918"/><text class="note" x="926" y="859">motor coils</text>
+</svg>
