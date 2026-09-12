@@ -64,8 +64,8 @@ contest-submitted form it:
   Sessions 10-13 were built as a software-only simulation because the physical
   build was not achievable solo before the deadline. That constraint changed
   when a teammate able to design and build the hardware joined, so **Session 17
-  builds a real single-hopper stepper turntable with an IR pill counter** (see
-  the v11 Changelog entry). What remains out of scope is the *6-8 hopper*
+  built a real single-hopper stepper turntable with an IR pill counter, and it
+  works on hardware** (see the v11 and v14 Changelog entries). What remains out of scope is the *6-8 hopper*
   architecture in `MECHANICAL_DESIGN.md`, which stays documented design intent.
   Note also that physical dispensing was never in the originally submitted
   Program Plan at all — that described a camera-only verification device — so
@@ -175,14 +175,27 @@ Three things are deliberately simplified (or, for dispensing, fully cut) for the
 prototype/contest build and must be called out explicitly wherever they matter, so
 nobody mistakes the shortcut for the real design:
 
-- **Physical dispensing:** the prototype dispenses via an on-screen animation and a
-  manual "✓ I Took It" confirmation button — no physical motors, servos, or IR
-  sensors are built or interfaced, at any session, in the contest-submitted build.
-  This is a **full cut**, not a scaled-down version: `MECHANICAL_DESIGN.md` documents
-  the real, future product's mechanism as design intent (illustrated via
-  `RAGNAR_CAD_PROMPT.md`'s 3D renders for the submission), but none of it is part of
-  this prototype's firmware or physical build. See §8 and the Changelog for the
-  decision history.
+- **Physical dispensing — BUILT IN SESSION 17. This entry described a full cut
+  from v8 until then, and the cut is now partial.** The prototype dispenses
+  through a **real** 28BYJ-48 stepper turntable, and an IR break-beam counts each
+  pill as it passes, so the mechanism stops on a measured count rather than a
+  timer. Four dispenses have been run on hardware — 13 of 13 pills counted
+  correctly — including one from a power bank with no laptop attached. The
+  "✓ I Took It" confirmation button remains, because counting a pill out of the
+  machine is not evidence that a person swallowed it.
+
+  **What is still cut:** the *6-8 hopper* architecture in `MECHANICAL_DESIGN.md`,
+  which stays design intent illustrated by `RAGNAR_CAD_PROMPT.md`'s renders. One
+  hopper is built; the rest is not.
+
+  **The simulation did not go away.** `MEDSIGHT_PHYSICAL_DISPENSER 0` still
+  builds clean and runs the full Session 10 flow with nothing attached, so a
+  reviewer without a stepper motor can exercise every software feature. Both
+  configurations are verified, not one real path and one stub.
+
+  Note that physical dispensing was never in the originally submitted Program
+  Plan — that described a camera-only verification device — so this is scope
+  *added* beyond what was promised. See §8 and the Changelog for the history.
 - **Time source — BUILT IN SESSION 15, both halves.** This entry described intent
   from v1 until Session 15, because nothing in the device needed the time of day.
   `FSBL/Src/schedule_time_source.c` now exists and is exactly what this paragraph
@@ -216,7 +229,7 @@ dose is due. That needs a radio (GSM/SMS, BLE-to-companion-app, or Wi-Fi) which
 does not exist in this project's zero-network design, and adding one is a real
 scope and privacy decision rather than a firmware detail.
 
-**Prototype behaviour: on-screen alert only — built, Session 15.** When a
+**Prototype behaviour: on-screen alert, plus a buzzer as of Session 17.** When a
 scheduled dose window opens, the home screen shows a banner naming the patient
 and the time, and the event is logged. The patient taps Dispense within their
 window and the confirmation is recorded *against that window*. If the window
@@ -348,12 +361,19 @@ classifier that names one, and `PROGRAM_PLAN_RECONCILIATION.md` §1 says so.
 ## 10. Document Index
 
 - `HARDWARE_ARCHITECTURE.md` — board, sensors, power, wiring for what's actually
-  built (camera, LCD/touch, SD card); documents the hopper/motor/IR peripherals as
-  **not built** for this prototype (design intent only — see §6)
-- `MECHANICAL_DESIGN.md` — the physical dispensing mechanism a real product would use
-  (Mr Innovative turntable design, duplicated per hopper), BOM, 3D printing, scaling
-  rationale — **documented design intent for the submission's 3D renders, not built
-  or wired to firmware in this prototype** (see §6)
+  built: camera, LCD/touch, SD card, and **as of Session 17 the stepper, the IR
+  pill counter and the buzzer**, with their real pin assignments
+- `HARDWARE_WIRING.md` — **Session 17.** The fourteen wires, as a table keyed on
+  the board's silkscreen labels, with a diagram, the power path and a bring-up
+  order. The document to hand someone holding jumper wires.
+- `RUNNING_ON_HARDWARE.md` — **Session 17.** A complete path from a fresh clone
+  to a dispensing device, for someone who has never seen this repository: both
+  boot modes with verified commands, the weights step, and how to run the whole
+  application with no dispensing hardware attached.
+- `MECHANICAL_DESIGN.md` — the physical dispensing mechanism (Mr Innovative
+  turntable design, duplicated per hopper), BOM, 3D printing, scaling rationale.
+  **One hopper is built as of Session 17**; the 6-8 hopper duplication stays
+  design intent for the submission's 3D renders (see §6)
 - `RAGNAR_CAD_PROMPT.md` — text-to-3D prompt generating the enclosure/hopper renders
   that illustrate `MECHANICAL_DESIGN.md`'s design intent for the submission
 - `SOFTWARE_ARCHITECTURE.md` — module boundaries, OSAL, folder structure, patient
@@ -396,7 +416,47 @@ classifier that names one, and `PROGRAM_PLAN_RECONCILIATION.md` §1 says so.
 
 ## 11. Changelog
 
-- **v14 (this update) — Session 16 is built: action recognition, with a
+- **v15 (this update) — Session 17 is built: MedSight physically dispenses,
+  and it boots on its own.**
+
+  Two things landed, and only one was planned.
+
+  **Planned.** A 28BYJ-48 stepper turns a turntable through a ULN2003A, an IR
+  break-beam counts each pill as it passes, and a piezo buzzer gives the device
+  the Alert Task the Program Plan promised from v1. `STATE_DISPENSING` drives
+  real hardware and the progress bar steps once per **counted** pill — a readout
+  of the interrupt, not a timer. Jam and short-count outcomes come back to §6 and
+  to `SOFTWARE_ARCHITECTURE.md` §7, where the physical-hopper cut had deleted
+  them. Neither calls `Error_Handler()`: a mechanical device failing to release a
+  pill is a normal outcome.
+
+  **Not planned, and the harder half.** The board now boots MedSight from
+  external flash with no debugger, and has run a complete dispense from a power
+  bank. That took ST's two-stage loader (the boot ROM caps an FSBL at 512 KB and
+  the application is ~880 KB), a linker ROM/RAM swap, a matching move of
+  `CNF_SYSTEMAREA_END`, and one real BSP fix: ST's external loader leaves the
+  flash chip in Octal-DTR mode, which is a property of the **chip** and survives
+  any reset on our side, so `XSPI_NOR_ResetMemory()` was resetting before it
+  established what mode the chip was in. Ten hypotheses were eliminated first and
+  all ten are recorded in `session_17_notes.md`.
+
+  **The measurement this session owes.** The prompt asked for 10 consecutive
+  dispenses of 3 pills, as a number. Four were run: 5/5, 3/3, 3/3, 2/2 — 13 of 13
+  pills counted correctly. Four trials cannot distinguish a 100% device from a
+  95% one, and the notes say so rather than rounding it into a reliability claim.
+  No jam was ever deliberately induced, and `DISPENSE_SHORT` has never fired
+  against a genuinely empty hopper.
+
+  **Scope unchanged elsewhere.** One hopper; the 6-8 hopper architecture stays
+  design intent. `MEDSIGHT_PHYSICAL_DISPENSER 0` still builds and runs the full
+  simulated flow, so the hardware stays cuttable. **No networking — permanent.**
+  Two documents were added that nobody asked for and both earned their place:
+  `HARDWARE_WIRING.md` (the project owner asked for the pin-to-pin connections
+  four separate times, which means the information had no home) and
+  `RUNNING_ON_HARDWARE.md` (standalone boot is only worth anything to a judge
+  who can reproduce it).
+
+- **v14 — Session 16 is built: action recognition, with a
   detector we had to train ourselves.**
   - **The collaborator's model does not generalise, and that was measured
     before anything was built on it.** It scores 0.83 on a synthetic pill

@@ -362,3 +362,68 @@ tree:
 diff -rq tools/mtk3bsp2_samples/Examples/prj_stm32n6_cam/extracted/prj_stm32n6_cam/FSBL/mtk3_bsp2 \
          sessions/session_NN/FSBL/mtk3_bsp2
 ```
+
+---
+
+## 8. Session 17 addendum — no new library, two things to record anyway
+
+**Session 17 added no third-party software.** `dispenser.c` and `buzzer.c` are
+original work written directly against ST's HAL GPIO API, which §2 already
+inventories. There is no stepper library, no debounce library and no tone
+library in this build — the half-step table is eight constants, the debounce is
+one measured comparison, and the buzzer element oscillates on its own.
+
+This is stated explicitly rather than left as silence, because an empty
+addition to a rule 1.3 inventory is indistinguishable from a forgotten one.
+
+Two things did change and both belong on the record.
+
+### 8.1 One ST BSP file was modified
+
+`Drivers/BSP/STM32N6570-DK/stm32n6570_discovery_xspi.c` — ST, BSD-3-Clause,
+already in the §2 inventory. Two changes, both inside `XSPI_NOR_ResetMemory()`
+and `BSP_XSPI_NOR_Init()`:
+
+1. Before issuing its reset sequence, the function now asks the MX66UW1G45G for
+   its status register **in Octal-DTR mode**. If the chip answers, its current
+   mode is adopted rather than reset. ST's own external loader leaves the chip
+   in Octal-DTR, and that is a property of the flash chip, not of the
+   controller — it survives any reset on the MCU side. Without this, booting
+   from external flash fails with `-5`, because the BSP speaks single-SPI to a
+   chip that is listening in Octal-DTR.
+2. The "reset all modes" branch had **no** post-reset delay at all. It now
+   waits `MX66UW1G45G_RESET_MAX_TIME`, which the component driver already
+   defines.
+
+Both are bug fixes to vendor code, kept minimal and commented in place with the
+reasoning. No API was changed; every caller is unaffected.
+
+### 8.2 ST's prebuilt FSBL is used for standalone boot, and is not redistributed
+
+Standalone boot uses ST's `ai_fsbl.hex` as the first-stage bootloader at
+`0x70000000`, with MedSight signed as a second-stage image at `0x70100000`.
+
+**It is not in this repository**, deliberately — it is ST's binary, not ours,
+and this project does not redistribute it. Anyone reproducing standalone boot
+downloads it from ST directly:
+
+| Item | Detail |
+|---|---|
+| Source | STMicroelectronics, **X-CUBE-N6-AI-POWER-MEASUREMENT** v1.4.0, file `FSBL/ai_fsbl.hex` |
+| Built on | STM32Cube N6 Firmware Package 1.3.0 |
+| Licence | ST's own terms for that package (its `LICENSE.md` lists BSD-3-Clause for the CMSIS/HAL/BSP components and SLA0044 for ST's application sources) |
+| Verified against | `sha256 8fa77dcdcb9aeed6e167c1ce5ffe9e16071fdeced8d13e22edd31a37abed1993`, 176,541 bytes |
+
+It is a separate binary flashed to a separate address. **It is not linked into
+MedSight and no part of it is compiled into this firmware**, which is why it
+does not appear in §2's link inventory. `RUNNING_ON_HARDWARE.md` §5.2 has the
+acquisition instructions.
+
+### 8.3 A rule followed the hard way
+
+An FSBL from another TRON contest entrant's repository was briefly flashed
+during debugging and was **removed**. Using another contest project's binaries
+is not acceptable, and it was replaced with ST's own package loader above. The
+incident is recorded here rather than quietly dropped, because a rule-1.3
+inventory that only lists what survived is a weaker document than one that says
+what was tried.

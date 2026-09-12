@@ -1,6 +1,7 @@
 # MECHANICAL_DESIGN.md — MedSight Dispensing Mechanism
 
-> **STATUS: ONE HOPPER IS BEING BUILT (Session 17). The rest stays design intent.**
+> **STATUS: ONE HOPPER IS BUILT AND WORKING (Session 17). The rest stays design
+> intent.**
 >
 > This document's history, because it has said three different things:
 > it originally specified a 2–3 hopper physical build; `MASTER_PROJECT_PLAN.md`
@@ -8,11 +9,19 @@
 > Sessions 10–13 ran on a software simulation; v11 restored a **single hopper**
 > once a hardware teammate joined.
 >
-> **What is being built:** exactly the mechanism described below, at one hopper
-> — a 28BYJ-48 stepper turning a turntable that singulates pills past an IR
+> **What was built:** exactly the mechanism described below, at one hopper — a
+> 28BYJ-48 stepper turning a turntable that singulates pills past an IR
 > break-beam counter. §3's reasoning about why a break-beam and not a gate is
-> the direct justification for the closed-loop design in
-> `prompts/session_17.md`. **The specification below is correct; build it.**
+> the direct justification for the closed-loop design, and **the hardware
+> vindicated it**: measured break durations were 17-46 ms, not the few
+> milliseconds a free-fall would have given, confirming that pills *slide down
+> the ramp*. A design that counted on free-fall timing would have thrown away
+> every real pill. **The specification below is correct, and it is built.**
+>
+> Four dispenses have been run: 13 of 13 pills counted correctly, including one
+> on battery power with no laptop attached. See
+> `milestones/session_17_notes.md` for the measurements and for what is still
+> untested — chiefly that no jam was ever deliberately induced.
 >
 > **One implementation change, made after Session 13:** the break beam is a
 > packaged 3-pin IR sensor module rather than a discrete emitter/receiver pair.
@@ -26,7 +35,7 @@
 > referenced from Session 13's `DESIGN_PROTOTYPE.md`, not built.
 >
 > **One correction to the text below:** it says a `dispenser.c` exposing
-> `dispense_dose(hopper_id, count)` "was never built". Session 17 builds
+> `dispense_dose(hopper_id, count)` "was never built". Session 17 built
 > `dispenser.c` for real, with a single-hopper signature deliberately kept
 > clean enough that adding `hopper_id` would be additive rather than a
 > rewrite.

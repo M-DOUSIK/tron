@@ -503,17 +503,26 @@ corrected, with the reason rather than quietly:
    list, §8's pin map, and §9's task table including the new `alert` task.
 4. **`MASTER_PROJECT_PLAN.md`** — §2's scope guardrails, §6's
    prototype-vs-final table, plus a changelog entry.
-5. **`THIRD_PARTY_SOFTWARE.md`** — **no new third-party library was added.**
-   `dispenser.c` and `buzzer.c` are original work over ST HAL GPIO, which is
-   already inventoried. Recorded explicitly so the absence is deliberate
-   rather than an omission (contest rule 1.3).
+5. **`THIRD_PARTY_SOFTWARE.md`** — new §8. **No third-party library was
+   added**; `dispenser.c` and `buzzer.c` are original work over ST HAL GPIO,
+   which is already inventoried. Stated explicitly because an empty addition to
+   a rule-1.3 inventory is indistinguishable from a forgotten one. §8 also
+   records the two ST BSP functions this session modified, the fact that ST's
+   `ai_fsbl.hex` is used for standalone boot but **not redistributed** here, and
+   the other-contest-entrant FSBL that was briefly flashed during debugging and
+   removed.
 
-A sixth document was added that the prompt did not ask for:
-**`documents/HARDWARE_WIRING.md`** — the wiring table, an SVG schematic, the
-power path, the bring-up order and the three firmware knobs. It exists because
-the project owner asked for the pin-to-pin connections four separate times
-across the session, which is a reliable signal that the information had no
-home.
+Two documents were added that the prompt did not ask for, and both earned it:
+
+- **`documents/HARDWARE_WIRING.md`** — the wiring table, an SVG schematic, the
+  power path, the bring-up order and the firmware knobs. It exists because the
+  project owner asked for the pin-to-pin connections four separate times across
+  the session, which is a reliable signal that the information had no home.
+- **`documents/RUNNING_ON_HARDWARE.md`** — a complete path from a fresh clone to
+  a dispensing device, for someone who has never seen this repository. Standalone
+  boot took the longest stretch of this session and it is worth nothing to a
+  judge who cannot reproduce it; every command in it is one that was actually
+  run.
 
 ---
 

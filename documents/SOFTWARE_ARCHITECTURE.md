@@ -15,8 +15,10 @@ way round they went. **15 is the last session in the plan** — see
 `MASTER_PROJECT_PLAN.md`'s Changelog for the renumbering history.
 
 **Physical dispensing was cut in v8 of the plan and un-cut in v11**, when a
-teammate able to build the hardware joined. Session 17 interfaces one hopper: a
-28BYJ-48 stepper turntable and an IR break-beam that counts pills as they drop.
+teammate able to build the hardware joined. Session 17 built one hopper and it
+works: a 28BYJ-48 stepper turntable and an IR break-beam that counts pills as
+they pass, verified on hardware including a dispense running from a power bank
+with no laptop attached.
 The 6–8 hopper architecture in `MECHANICAL_DESIGN.md` remains design intent, and
 the simulated dispense path is kept working behind a build switch so the hardware
 stays cuttable. **The no-networking rule is unaffected and permanent.**
@@ -90,7 +92,13 @@ FSBL/
                                         reports the byte count. See
                                         MEMORY_MAP.md §3.
     dispenser.c/.h                  -- Session 17 (stepper turntable + IR pill
-                                        counter; closed-loop count)
+                                        counter; closed-loop count). Built and
+                                        verified on hardware.
+    buzzer.c/.h                     -- Session 17. The Program Plan's Alert
+                                        Task: active piezo on PA3, five tone
+                                        patterns, rank-based pre-emption so a
+                                        UI tick cannot cut off a missed-dose
+                                        alert.
     state_machine.c/.h              -- Session 10 (dispense-flow orchestration —
                                         simulated dispense only, see §7);
                                         Session 12 added the error/alert states and
@@ -353,13 +361,25 @@ Defined once in `ai_vision.h` so `sd_logger.c` (storage, via `gallery_save()`/
 `registration_ui.c`/`state_machine.c` (population and consumption, Session 09/10)
 all agree on its shape without duplicating the definition.
 
-## 7. State Machine (Session 10 — simulated dispense, no physical actuators)
+## 7. State Machine (Session 10, with a real dispense since Session 17)
 
-Per `prompts/session_10.md`'s "Hardware decision (FINAL)": no motors, servos, or IR
-sensors are interfaced, at any session. "Dispensing" is an on-screen animation, and
-consumption is confirmed by the patient tapping a button — not by any sensor or a
-second NPU model (action recognition was evaluated and dropped, see
-`MASTER_PROJECT_PLAN.md` §8).
+**This section's premise changed twice and both changes are recorded rather than
+edited over.** Session 10 followed `prompts/session_10.md`'s "Hardware decision
+(FINAL)": no motors, servos or IR sensors at any session, "dispensing" as an
+on-screen animation, consumption confirmed by a button tap. Session 16 added
+action recognition as **corroboration only** — the button still confirms every
+dose. **Session 17 made the dispense physical.**
+
+`STATE_DISPENSING` now drives a real stepper and a real IR counter, and the
+on-screen progress bar steps **once per counted pill** — it is a readout of the
+interrupt, not a timer that happens to look plausible. That distinction is the
+whole point: an animation that keeps running while the mechanism is jammed is a
+device that lies to a patient.
+
+The Session 10 simulated path is preserved byte-for-byte behind
+`MEDSIGHT_PHYSICAL_DISPENSER 0` and both configurations build clean, so the
+hardware stays cuttable and a reviewer without a stepper motor can still run
+the full flow.
 
 **Session 15 changed the way into registration, and added a way in that is not a
 button at all.** Both are recorded before the diagram so nobody reads the old
@@ -457,13 +477,33 @@ above to `MASCOT_ERROR` unless noted:
 - Missed dose (the RTC schedule window closes with no Dispense Medicine tap) →
   `MASCOT_ERROR` + SD log, remain `STATE_HOME`. **Built in Session 15**; this line
   described intent from Session 10 until then.
-- Unrecognized/no face at the face-check step → `MASCOT_ERROR`, local alert (LCD +
-  on-screen only — there is no buzzer and no audio in this project, see
-  `MASTER_PROJECT_PLAN.md` §7), SD log, no dispense,
-  camera OFF, return to `STATE_HOME`.
+- Unrecognized/no face at the face-check step → `MASCOT_ERROR`, local alert, SD
+  log, no dispense, camera OFF, return to `STATE_HOME`. **There is a buzzer as of
+  Session 17** — this line previously said there was not. It is an active piezo
+  driven by plain GPIO, it plays five short patterns, and it is local-only: it
+  makes a sound in the room and sends nothing anywhere.
 - Missed consumption confirmation (neither "I Took It" nor "Skip" tapped within a
-  timeout) → `MASCOT_ERROR` + SD log, camera OFF, `STATE_HOME`. There is no jam/sensor
-  edge case — that only existed under the physical-hopper design and no longer applies.
+  timeout) → `MASCOT_ERROR` + SD log, camera OFF, `STATE_HOME`.
+- **Jam / short count — back as of Session 17**, having been deleted here when the
+  physical hopper was cut. The driver reports one of three outcomes and
+  **never** calls `Error_Handler()`, because a mechanical device failing to
+  release a pill is a normal outcome, not a system fault:
+  - `DISPENSE_OK` — the requested count was reached.
+  - `DISPENSE_JAM` — 25 s elapsed with **nothing** counted. Nothing was released.
+  - `DISPENSE_SHORT` — some pills, then 25 s of silence. **The hopper needs
+    refilling**, and this is the refill signal the data model deliberately has no
+    stock counter for (§6): it is measured, not inferred.
+
+  One bound, not two, and it measures time **since the last counted pill** rather
+  than how long the beam has been broken. An earlier design bounded the beam
+  break at 1500 ms and the first hardware run produced legitimate single-pill
+  breaks of 852 ms and 1210 ms — 290 ms of margin on a device where tripping the
+  bound means refusing a dose that was being delivered correctly.
+
+  The audit line is written **after** the outcome is known, once:
+  `DISPENSE: <patient> <n> requested, <m> counted (<result>)`. Logging the intent
+  before the fact and the count afterwards leaves a record that reads as two
+  claims about one event.
 - Successful cycle → `MASCOT_SUCCESS`, SD log, camera OFF, then back to `MASCOT_IDLE`.
 
 ## 8. Pin Map
@@ -473,11 +513,20 @@ above to `MASCOT_ERROR` unless noted:
 | Debug UART | USART1, via ST-LINK VCP | Session 02 | |
 | Camera / LCD | DCMIPP + LTDC (RGB888 parallel bus across PA, PB, PD, PE, PG, PH), PSRAM framebuffers | Session 03 | Based on jpcano/STM32N6-digits reference. Hardware ISP configured in camera_lcd.c. |
 | Touch controller (GT911) | I2C2 — PD14 (SCL), PD4 (SDA), FSBL context in `.ioc` | Session 05 | Confirmed via real prior bring-up on this board, not guessed — see `ENGINEERING_LESSONS.md` |
+| Stepper coils → ULN2003A `IN1`–`IN4` | PE9 / PE10 / PE13 / PE14 (`D3` `D5` `D6` `D9`, CN11/CN12) | **Session 17** | VDDIO5. Half-step sequence, one atomic `BSRR` write per step. Coils forced off on every exit path. |
+| IR break-beam `OUT` | PD0 (`D2`, CN11) — **EXTI0**, both edges | **Session 17** | Main VDD. Idles HIGH, LOW while broken — **measured**, not assumed. Breaks under 8 ms discarded as chatter. |
+| Piezo buzzer | PA3 (`D10`, CN12) | **Session 17** | Main VDD. Plain push-pull GPIO; the element is *active* so no timer channel is used. Pin is `TIM16_CH1` AF1 capable if a passive element is ever substituted. |
+| ULN2003A + IR module power | `5V` / `GND` on CN8 | **Session 17** | Verified under motor load. A separately-fed driver still needs its ground returned to CN8 `GND`. |
 
 This table stays a living document — record actual pin assignments here as each
 session finalizes them, don't write speculative pin numbers ahead of the hardware work.
-No dispenser-actuator pins are listed here because none are built — see §1's note on
-the physical-hardware cut.
+
+**`A0`–`A3` on CN7 (PA5/PA9/PA10/PA12) do not drive the ULN2003 on this board.**
+They were the first assignment and all four read back HIGH through `GPIOx->IDR`
+while nothing moved. Recorded so nobody re-derives them as "free analog pins".
+**`D14`/`D15` are the camera's I2C1 and are off limits.**
+
+Full pin-to-pin wiring, with a diagram: `HARDWARE_WIRING.md`.
 
 ## 9. Task Set and Priority Scheme (Session 12)
 
@@ -495,6 +544,21 @@ them. The previously vacant level 3 is now occupied.
 | 3 | `ai` | `ai_vision.c` | on demand | **No deadline.** Hundreds of milliseconds of solid NPU/CPU work per request, a few times per session, in response to a button press the user already expects to take a moment. Deliberately below the UI so it is preemptible — that is what keeps touch and the physical USER1 button alive during inference. Above the logger because a person is waiting on its result and nobody waits on a log line. |
 | 2 | `logger` | `sd_logger.c` | event-driven | Tolerates seconds of latency by construction; the async queue exists so no caller ever waits on a 10-50 ms SD write. |
 | 1 | `heartbeat` | `main.c` | 500 ms | No deadline at all. Deliberately lowest, so "the LED stopped blinking" means "something above me is starving the system" — which is exactly the signal it should carry. Also carries the periodic idle/power report (§10). |
+| 1 | `alert` | `buzzer.c` | event-driven | **Session 17.** Sleeps until a pattern is requested, then toggles a GPIO through a few hundred milliseconds of on/off. Shares level 1 with `heartbeat` deliberately: a buzzer that delays the camera ISP task to finish a beep is a defect, and a beep arriving 5 ms late is not perceptible. Pattern collisions are resolved by rank inside the task, not by priority — a UI tick is **dropped**, never queued, if a missed-dose alert is playing. |
+
+**Session 17 added one task**, the first since Session 12, and it is the Program
+Plan's long-promised Alert Task. It earns a task rather than living in the UI
+loop because its work is a sequence of timed waits: driving it from the 10 ms UI
+task would either block every screen for the length of a beep or smear the
+pattern across UI iterations, and neither is acceptable for a tone whose *shape*
+is what distinguishes a polite patient reminder from an insistent carer alert.
+
+The dispenser deliberately did **not** get a task. `dispenser_dispense()` runs
+synchronously on the UI task inside `STATE_DISPENSING`, because the UI has
+nothing else to do while a dose is being delivered and the progress bar it draws
+is driven by the same callback. A separate task would have added a handoff with
+no scheduling benefit. The IR counting that must be asynchronous already is — it
+is an EXTI ISR.
 
 **Session 16 added no task either**, and for a stronger reason than Session
 15's. Action recognition runs on the **existing** `ai` task at priority 3,
