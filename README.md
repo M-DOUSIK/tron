@@ -216,6 +216,15 @@ and says which.
 
 ## Build
 
+> **Want to run this on your own board?**
+> [`documents/RUNNING_ON_HARDWARE.md`](documents/RUNNING_ON_HARDWARE.md)
+> is a complete, tested path from a fresh clone to a dispensing device —
+> both development boot and **standalone boot from external flash**, with
+> the exact commands. It also covers running the whole application with
+> **no dispensing hardware attached**, which is a supported configuration.
+> For the peripherals themselves, see
+> [`documents/HARDWARE_WIRING.md`](documents/HARDWARE_WIRING.md).
+
 - **STM32CubeIDE required, and there is no `.ioc` file.** The base project
   came from an ST example rather than STM32CubeMX, so every peripheral —
   LTDC, DCMIPP, SDMMC2, I2C2, DMA2D, RTC — is configured by hand in
@@ -224,7 +233,7 @@ and says which.
 - Each session lives in its own folder under `sessions/`. **Build the
   highest-numbered one**; earlier folders are working snapshots and a
   rollback trail, not parallel branches.
-- In the IDE, open `sessions/session_15/STM32CubeIDE/FSBL`. Headlessly:
+- In the IDE, open `sessions/session_17/STM32CubeIDE/FSBL`. Headlessly:
 
   ```bash
   IDE="C:/ST/STM32CubeIDE_2.1.1/STM32CubeIDE/stm32cubeidec.exe"
@@ -233,8 +242,8 @@ and says which.
   "$IDE" --launcher.suppressErrors -nosplash \
     -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
     -data "$WS" \
-    -import "<repo>/sessions/session_15/STM32CubeIDE/FSBL" \
-    -cleanBuild "MedSight_Session15_FSBL"     # both Debug and Release
+    -import "<repo>/sessions/session_17/STM32CubeIDE/FSBL" \
+    -cleanBuild "MedSight_Session17_FSBL"     # both Debug and Release
   ```
 
   Note that on Windows the `-import` path must use backslashes; a

@@ -35,15 +35,29 @@ e1359bb6add1268f  pill_atonbuf.xSPI2.bin
 $cli    = "C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.500.202603051304\tools\bin\STM32_Programmer_CLI.exe"
 $loader = "C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.500.202603051304\tools\bin\ExternalLoader\MX66UW1G45G_STM32N6570-DK.stldr"
 
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w "weights\fd_data.xSPI2.bin"        0x70380000
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w "weights\ec_blobs.xSPI2.bin"       0x71000000
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w "weights\faceid_data.xSPI2.bin"    0x72000000
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w "weights\hand_atonbuf.xSPI2.bin"   0x73000000
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w "weights\pill_atonbuf.xSPI2.bin"   0x73400000
+& $cli -c port=SWD mode=UR -el $loader -w "weights\fd_data.xSPI2.bin"        0x70380000
+& $cli -c port=SWD mode=UR -el $loader -w "weights\ec_blobs.xSPI2.bin"       0x71000000
+& $cli -c port=SWD mode=UR -el $loader -w "weights\faceid_data.xSPI2.bin"    0x72000000
+& $cli -c port=SWD mode=UR -el $loader -w "weights\hand_atonbuf.xSPI2.bin"   0x73000000
+& $cli -c port=SWD mode=UR -el $loader -w "weights\pill_atonbuf.xSPI2.bin"   0x73400000
 ```
 
-`mode=HOTPLUG` matters — it avoids holding the MCU in reset while the external
-loader talks to the flash chip.
+### `mode=UR`, not `mode=HOTPLUG` — corrected in Session 17
+
+This page said `mode=HOTPLUG` for two years, and it was right for two years:
+the only writes happened before any application existed on the board, and
+HOTPLUG avoids holding the MCU in reset while the external loader talks to the
+flash chip.
+
+Session 17 put a bootable MedSight image in external flash, and that changed
+the situation. HOTPLUG needs a live, responsive core to attach to — and with
+MedSight **running**, the erase fails outright, because the application has
+XSPI2 memory-mapped for these very weights while the loader wants the same bus
+in indirect mode.
+
+**Use `mode=UR` for writes to external flash.** It holds the target in reset,
+so it does not care what the application was doing. The commands above have
+been updated.
 
 ### Then POWER-CYCLE. Unplug the USB cable.
 
@@ -63,7 +77,7 @@ board running.
 ### Verifying
 
 ```powershell
-& $cli -c port=SWD mode=HOTPLUG -el $loader -r32 0x73000000 2
+& $cli -c port=SWD mode=UR -el $loader -r32 0x73000000 2
 ```
 
 Compare against the file's own first words, then power-cycle again:
