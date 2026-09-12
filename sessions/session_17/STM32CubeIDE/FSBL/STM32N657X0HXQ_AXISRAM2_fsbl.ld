@@ -76,10 +76,44 @@ _Min_Stack_Size = 0x800; /* required amount of stack */
  *      because a future model wants it whole and because AXISRAM5/6 are not
  *      powered until aiPreInitialize() runs. See MEMORY_MAP.md.
  * ============================================================================ */
+/* ============================================================================
+ * SESSION 17: ROM AND RAM SWAPPED, so the device can boot without a computer.
+ *
+ * Sizes and section assignments are unchanged; only the two ORIGINs trade
+ * places. ROM (code + .rodata, the part that is actually loaded from flash)
+ * moves DOWN to 0x34000400; RAM (.data + .bss, which no loader ever copies)
+ * moves UP to 0x34100000.
+ *
+ * WHY. The STM32N6 boot ROM copies at most 512 KB from external flash, so a
+ * 715 KB application cannot be a single FSBL. The supported route is ST's
+ * two-stage loader (tools/x-cube-n6-ai-power-measurement/FSBL/ai_fsbl.hex):
+ * the ROM loads that 62 KB first stage, and it copies the real application
+ * out of flash and jumps to it.
+ *
+ * That loader reserves 0x34000400 .. 0x340FFFFF — SRAM1, 1 MB — for the
+ * application, and itself lives up around 0x34180000. With ROM at
+ * 0x34100000 our loadable image spanned 0x34100000 .. 0x341DB400 and so
+ * covered the loader's own code: it overwrote the loader partway through the
+ * copy and died before UART came up, which is exactly the silent failure
+ * observed on 2026-09-12. Swapping the origins puts the image where the
+ * loader expects it and leaves the loader untouched while it works.
+ *
+ * .bss now sits at 0x34100000 and does overlap where the loader was, which is
+ * harmless: startup zeroes .bss AFTER the jump, by which point the loader has
+ * done its job and is not coming back.
+ *
+ * Capacity, measured rather than assumed:
+ *   loadable image   873 KB Debug / 688 KB Release   vs 1023 KB   OK
+ *   .data + .bss     ~672 KB                         vs 1024 KB   OK
+ *
+ * Nothing else moves. The NPU activation block at 0x34200000, AI_ARENA at
+ * 0x34388000 and the framebuffer are absolute addresses and are unaffected.
+ * _estack now tops out at 0x34200000, immediately below the activation block.
+ * ============================================================================ */
 MEMORY
 {
-  ROM      (xrw)   : ORIGIN = 0x34100000,   LENGTH = 1024K
-  RAM      (xrw)   : ORIGIN = 0x34000400,   LENGTH = 1023K
+  ROM      (xrw)   : ORIGIN = 0x34000400,   LENGTH = 1023K
+  RAM      (xrw)   : ORIGIN = 0x34100000,   LENGTH = 1024K
   AI_ARENA (xrw)   : ORIGIN = 0x34388000,   LENGTH = 220K
   OSPI_NOR (rx)    : ORIGIN = 0x71000000,   LENGTH = 64M
 }

@@ -39,8 +39,26 @@
  * the silent hang into Default_Handler this fix addresses. Pinning
  * CNF_SYSTEMAREA_END to this project's actual RAM-region end keeps the
  * kernel's heap inside memory this project's linker script actually reserves
- * for dynamic use. */
-#define CNF_SYSTEMAREA_END	0x34100000
+ * for dynamic use.
+ *
+ * SESSION 17 UPDATE — this constant and the linker script's MEMORY block are
+ * ONE decision and must always move together.
+ *
+ * Session 17 swapped ROM and RAM so the loadable image sits where ST's
+ * two-stage boot loader expects it (see the linker script's own note on why).
+ * RAM is now 0x34100000-0x341FFFFF, so the kernel's heap ceiling follows it
+ * to 0x34200000 — still exactly where the camera framebuffer begins, which is
+ * the real physical boundary this value has always been tracking.
+ *
+ * Changing the linker script and leaving this at 0x34100000 produced a silent
+ * hang on hardware, and it is worth recording precisely because it looks like
+ * nothing: .bss moved up with the RAM region, so _end landed at 0x341A3890,
+ * ABOVE the old ceiling. knl_lowmem_top then exceeded knl_lowmem_limit, the
+ * kernel heap had negative size, every tk_cre_* in usermain() failed, and the
+ * scheduler started with no tasks. The board printed its whole pre-kernel
+ * boot log and then stopped between "sleep clocks:" and "task_camera_isp:
+ * started." with no fault, no Error_Handler and nothing on UART. */
+#define CNF_SYSTEMAREA_END	0x34200000
 
 #define	CNF_MAX_TSKPRI		32	/* Task Max priority */
 
