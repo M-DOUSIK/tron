@@ -165,18 +165,32 @@
  * only 4 ms of headroom over the noise. */
 #define MS_IR_MIN_BREAK_MS      8u
 
-/* A pill can STALL in the beam — friction on a ramp stops it dead and the
- * beam stays broken indefinitely. Free-fall designs never meet this case.
- * Past this bound it is a jam: reported, never a count, and never a hang.
- * This is the ramp's one genuine advantage — a stall is *detectable*, where
- * a pill that never left the hopper is invisible. */
-#define MS_IR_JAM_MS            1500u
+/* THE STALL BOUND IS GONE, and its removal is a finding rather than a
+ * simplification.
+ *
+ * The original reasoning was sound: a pill can stall in the beam, friction on
+ * a ramp stops it dead, and a stall is detectable where a pill that never
+ * left the hopper is invisible. What was wrong was the number. At 1500 ms it
+ * sat only 290 ms above the longest legitimate single-pill break the hardware
+ * actually produced - 1210 ms, with an 852 ms alongside it, both counted
+ * correctly on 2026-09-12. On a medication device that margin means a
+ * slightly slower pill gets a dose refused for a jam that did not happen.
+ *
+ * A stalled pill is not a separate condition needing its own detector: it
+ * stops producing counts, and MS_NO_PILL_TIMEOUT_MS catches it with
+ * everything else that stops producing counts. One bound, no false alarms. */
 
-/* Every wait bounded (session_17.md Part A item 2, ENGINEERING_LESSONS.md's
- * Session 06 polling rule). Generous, because a sliding pill is slow and
- * because until the mechanism exists a human is the ramp. */
-#define MS_DISPENSE_BASE_MS     5000u
-#define MS_DISPENSE_PER_PILL_MS 15000u
+/* THE ONLY BOUND on a dispense: how long since the last pill arrived.
+ *
+ * Every wait still bounded (session_17.md Part A item 2, ENGINEERING_LESSONS.md's
+ * Session 06 polling rule) - but bounded on the right quantity. A working
+ * mechanism restarts this clock with every pill and may take as long as it
+ * takes; a stopped one is caught within one window. See the long note at the
+ * check itself for why the previous stall bound was dangerous.
+ *
+ * 25 s is comfortably beyond any hand-fed or ramp-fed pill and still quick
+ * enough that a patient is not left watching a dead machine. */
+#define MS_NO_PILL_TIMEOUT_MS   25000u
 
 /* ── IR POLARITY, and the bug that made this a setting ────────────────────
  *
@@ -754,20 +768,22 @@ dispense_result_t dispenser_dispense(uint8_t count, uint8_t *out_dispensed)
            (HAL_GPIO_ReadPin(IR_PORT, IR_PIN) == GPIO_PIN_SET) ? "HIGH" : "LOW");
 
     const uint32_t started  = HAL_GetTick();
-    const uint32_t timeout  = MS_DISPENSE_BASE_MS
-                            + (MS_DISPENSE_PER_PILL_MS * (uint32_t)requested);
     uint32_t last_reported  = 0;
+    uint32_t last_pill_tick = HAL_GetTick();
     dispense_result_t result;
 
-    printf("dispenser: %u requested, timeout %lu ms\r\n",
-           (unsigned)requested, (unsigned long)timeout);
+    printf("dispenser: %u requested, gives up %lu ms after the last pill\r\n",
+           (unsigned)requested, (unsigned long)MS_NO_PILL_TIMEOUT_MS);
 
     for (;;) {
         uint32_t counted = s_pill_count;
 
-        /* Report and draw only on a real change — one pill, one bar step. */
+        /* Report and draw only on a real change - one pill, one bar step -
+         * and restart the patience clock, because a pill arriving is proof
+         * the mechanism is still working. */
         if (counted != last_reported) {
-            last_reported = counted;
+            last_reported  = counted;
+            last_pill_tick = HAL_GetTick();
             if (s_progress_cb != NULL) {
                 uint8_t shown = (counted > requested) ? requested
                                                       : (uint8_t)counted;
@@ -780,19 +796,32 @@ dispense_result_t dispenser_dispense(uint8_t count, uint8_t *out_dispensed)
             break;
         }
 
-        /* A pill stalled in the beam. A branch, not a hang. */
-        if (s_beam_broken &&
-            (HAL_GetTick() - s_break_start) > MS_IR_JAM_MS) {
-            result = DISPENSE_JAM;
-            break;
-        }
-
-        if ((HAL_GetTick() - started) > timeout) {
-            /* Nothing seen at all after a full actuator run is a jam; some
-             * pills but not enough is a short count, which — per session_17.md
-             * Part B item 4 — is also the first honest hopper-empty signal
-             * this firmware has ever had, because it is measured rather than
-             * assumed. */
+        /* ── ONE bound, and it measures the right thing ───────────────────
+         *
+         * This used to be two: a stall bound on how long the beam could stay
+         * broken, and an absolute cap on the whole dispense. Both are gone.
+         *
+         * The stall bound was actively dangerous. It was set at 1500 ms, and
+         * the very first standalone run produced legitimate single-pill
+         * breaks of 852 ms and 1210 ms - 290 ms of margin on a medication
+         * device, where tripping it means refusing a dose that was being
+         * delivered correctly. A slower pill would have been called a jam.
+         *
+         * The absolute cap was the wrong quantity too: it punished a slow
+         * dose rather than a stopped one, so a large dose needed a large
+         * timeout and a stuck mechanism still waited it out.
+         *
+         * What actually matters is how long it has been since the last pill
+         * arrived. Every counted pill restarts the clock, so a working
+         * mechanism runs as long as it needs to and a stopped one is caught
+         * within one window - including the stalled-in-the-beam case, which
+         * simply stops producing counts and is caught here like anything
+         * else. One bound, measuring the thing that distinguishes working
+         * from stopped. */
+        if ((HAL_GetTick() - last_pill_tick) > MS_NO_PILL_TIMEOUT_MS) {
+            /* Nothing at all means nothing was released; some but not enough
+             * means the hopper ran dry mid-dose. session_17.md Part B item 4:
+             * this is the refill signal, measured rather than assumed. */
             result = (counted == 0u) ? DISPENSE_JAM : DISPENSE_SHORT;
             break;
         }

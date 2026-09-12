@@ -81,6 +81,23 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32n6570_discovery_xspi.h"
 
+/* Session 17 diagnostic, kept and gated OFF rather than deleted - the same
+ * treatment MS_BOOT_LED_CHECKPOINTS and MS_DISPLAY_WATCH get in main.c.
+ *
+ * BSP_XSPI_NOR_Init() can return -5 from three different places, and knowing
+ * WHICH is what finally located the real fault after ten wrong theories (see
+ * the long note at the top of XSPI_NOR_ResetMemory). Set MS_XSPI_TRACE_ON to
+ * 1 if external flash bring-up ever misbehaves again; it costs nothing off. */
+#include <stdio.h>
+#ifndef MS_XSPI_TRACE_ON
+#define MS_XSPI_TRACE_ON 0
+#endif
+#if MS_XSPI_TRACE_ON
+#define MS_XSPI_TRACE(...) ((void)printf("xspi: " __VA_ARGS__), (void)printf("\r\n"))
+#else
+#define MS_XSPI_TRACE(...) ((void)0)
+#endif
+
 /** @addtogroup BSP
   * @{
   */
@@ -242,24 +259,61 @@ int32_t BSP_XSPI_NOR_Init(uint32_t Instance, BSP_XSPI_NOR_Init_t *Init)
         ret = BSP_ERROR_PERIPH_FAILURE;
       }
       /* XSPI memory reset */
-      else if (XSPI_NOR_ResetMemory(Instance) != BSP_ERROR_NONE)
+      else if (MS_XSPI_TRACE("ResetMemory..."), XSPI_NOR_ResetMemory(Instance) != BSP_ERROR_NONE)
       {
-        ret = BSP_ERROR_COMPONENT_FAILURE;
-      }
-      /* Check if memory is ready */
-      else if (MX66UW1G45G_AutoPollingMemReady(&hxspi_nor[Instance], XSPI_Nor_Ctx[Instance].InterfaceMode,
-                                                XSPI_Nor_Ctx[Instance].TransferRate) != MX66UW1G45G_OK)
-      {
-        ret = BSP_ERROR_COMPONENT_FAILURE;
-      }
-      /* Configure the memory */
-      else if (BSP_XSPI_NOR_ConfigFlash(Instance, Init->InterfaceMode, Init->TransferRate) != BSP_ERROR_NONE)
-      {
+        MS_XSPI_TRACE("ResetMemory FAILED");
         ret = BSP_ERROR_COMPONENT_FAILURE;
       }
       else
       {
-        ret = BSP_ERROR_NONE;
+        /* ── Session 17: accept a chip that is already in Octal-DTR ───────
+         *
+         * Booting from external flash, the first-stage loader leaves the
+         * MX66UW1G45G in Octal-DTR. That is a property of the CHIP and no
+         * controller reset clears it. XSPI_NOR_ResetMemory() above REPORTS
+         * success and sets this context back to SPI/STR, but its reset
+         * commands never reach a device that is no longer listening in SPI,
+         * so the poll below then asks in the one mode the chip cannot hear
+         * and fails - which is how a healthy flash produced -5 on every
+         * attempt and left the NPU bus-faulting on unmapped weights.
+         *
+         * So: ask in SPI first (development boot, where the chip really is in
+         * SPI after power-on, answers here and nothing changes). If that gets
+         * no answer, ask again in Octal-DTR before giving up. A chip that
+         * answers there is not broken - it is already configured, and
+         * re-running ConfigFlash on it would be undoing work that is done. */
+        if (MS_XSPI_TRACE("poll in the mode the chip is in..."),
+            MX66UW1G45G_AutoPollingMemReady(&hxspi_nor[Instance], XSPI_Nor_Ctx[Instance].InterfaceMode,
+                                            XSPI_Nor_Ctx[Instance].TransferRate) == MX66UW1G45G_OK)
+        {
+          MS_XSPI_TRACE("chip ready - configuring");
+          if (BSP_XSPI_NOR_ConfigFlash(Instance, Init->InterfaceMode, Init->TransferRate) != BSP_ERROR_NONE)
+          {
+            MS_XSPI_TRACE("ConfigFlash FAILED");
+            ret = BSP_ERROR_COMPONENT_FAILURE;
+          }
+          else
+          {
+            ret = BSP_ERROR_NONE;
+          }
+        }
+        else
+        {
+          MS_XSPI_TRACE("no answer - retrying in OPI/DTR");
+          if (MX66UW1G45G_AutoPollingMemReady(&hxspi_nor[Instance], BSP_XSPI_NOR_OPI_MODE,
+                                              BSP_XSPI_NOR_DTR_TRANSFER) == MX66UW1G45G_OK)
+          {
+            MS_XSPI_TRACE("ready in OPI/DTR - already configured, adopting");
+            XSPI_Nor_Ctx[Instance].InterfaceMode = BSP_XSPI_NOR_OPI_MODE;
+            XSPI_Nor_Ctx[Instance].TransferRate  = BSP_XSPI_NOR_DTR_TRANSFER;
+            ret = BSP_ERROR_NONE;
+          }
+          else
+          {
+            MS_XSPI_TRACE("no answer in OPI/DTR either");
+            ret = BSP_ERROR_COMPONENT_FAILURE;
+          }
+        }
       }
     }
     else
@@ -1645,6 +1699,41 @@ static int32_t XSPI_NOR_ResetMemory(uint32_t Instance)
   uint8_t reg[2] = {0};
   uint8_t ResetRecoTime = 0U;
 
+  /* ── Session 17: ASK BEFORE HITTING IT ────────────────────────────────
+   *
+   * Booting from external flash, the first-stage loader has switched the
+   * MX66UW1G45G into Octal-DTR to read the application out quickly, and hands
+   * it over in that mode. The boot ROM itself does not - UM/community
+   * "FSBL loading and execution" shows it reading the FSBL in "Read mode
+   * Single" - so Octal is the LOADER's doing, and it is a property of the
+   * chip that no controller reset clears.
+   *
+   * Everything below then does the wrong thing in the wrong order: it fires
+   * reset commands in SPI, OPI-STR and OPI-DTR at a device whose mode it has
+   * not established, and only afterwards asks whether anything is alive. A
+   * chip mid-reset answers nothing, in any mode, which is exactly what ten
+   * experiments saw - commands reporting success, every read silent, on a
+   * device that had served 899 KB seconds earlier.
+   *
+   * So ask first. One status read in Octal-DTR, before touching anything. If
+   * it answers, the device is not broken and does not need rescuing - it is
+   * already in the mode we were going to configure it into, and the honest
+   * move is to adopt that and leave it alone.
+   *
+   * Development boot is unaffected: there the chip is in SPI after power-on,
+   * this read gets nothing, and the original sequence runs exactly as it
+   * always has. */
+  if (MX66UW1G45G_ReadStatusRegister(&hxspi_nor[Instance], BSP_XSPI_NOR_OPI_MODE,
+                                     BSP_XSPI_NOR_DTR_TRANSFER, reg) == MX66UW1G45G_OK)
+  {
+    MS_XSPI_TRACE("chip answers in OPI/DTR untouched - adopting, no reset");
+    XSPI_Nor_Ctx[Instance].IsInitialized = XSPI_ACCESS_INDIRECT;
+    XSPI_Nor_Ctx[Instance].InterfaceMode = BSP_XSPI_NOR_OPI_MODE;
+    XSPI_Nor_Ctx[Instance].TransferRate  = BSP_XSPI_NOR_DTR_TRANSFER;
+    return BSP_ERROR_NONE;
+  }
+  MS_XSPI_TRACE("no answer in OPI/DTR untouched - proceeding with reset");
+
   /* Check first the register memory in current mode */
   if (MX66UW1G45G_ReadStatusRegister(&hxspi_nor[Instance], XSPI_Nor_Ctx[Instance].InterfaceMode,
                                           XSPI_Nor_Ctx[Instance].TransferRate, reg) != MX66UW1G45G_OK)
@@ -1720,6 +1809,27 @@ static int32_t XSPI_NOR_ResetMemory(uint32_t Instance)
     {
       /* No thing to do*/
     }
+
+    /* Session 17 FIX: wait for the reset to actually complete.
+     *
+     * The ResetRecoTime branch above waits MX66UW1G45G_RESET_MAX_TIME after
+     * its reset; this branch issued resets in SPI, OPI-STR and OPI-DTR and
+     * then waited for nothing, so the caller polls the status register while
+     * the device is still resetting.
+     *
+     * From a debugger that never showed: the chip is already in SPI mode
+     * after power-on, the resets are effectively no-ops, there is nothing to
+     * recover from and the immediate poll answers. Booting from external
+     * flash the boot ROM and the first-stage loader have genuinely put the
+     * device into Octal-DTR, so the reset is real, recovery time is real, and
+     * polling into it gets no answer - in EITHER mode, because the device is
+     * not yet in one. That produced -5 from BSP_XSPI_NOR_Init() on every
+     * attempt and a bus fault at BFAR=0x71026FC0 on the first weight read.
+     *
+     * Same shape as session_12_notes.md on the GT911: never let a device
+     * reset timing be satisfied by however long the intervening code happens
+     * to take. */
+    HAL_Delay(MX66UW1G45G_RESET_MAX_TIME);
   }
 
   XSPI_Nor_Ctx[Instance].IsInitialized = XSPI_ACCESS_INDIRECT;      /* After reset S/W setting to indirect access  */

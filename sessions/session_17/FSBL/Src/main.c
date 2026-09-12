@@ -1205,8 +1205,59 @@ void PeriphCommonClock_Config(void)
 {
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_CKPER;
-    PeriphClkInitStruct.CkperClockSelection = RCC_CLKPCLKSOURCE_HSI;
+    /* ── Session 17: pin the XSPI kernel clocks, do not inherit them ──────
+     *
+     * This function used to select CKPER and nothing else, leaving the XSPI1
+     * and XSPI2 kernel clocks at whatever the RCC happened to hold. From a
+     * debugger that is harmless: connect_under_reset means the RCC is at its
+     * reset defaults and the BSP's prescaler maths works out.
+     *
+     * Booting from external flash it is not harmless. The boot ROM and the
+     * first-stage loader both reconfigure the XSPI clock to read the
+     * application out of flash quickly, and we inherit whatever they left.
+     * The BSP then applies a prescaler derived from an assumed source, the
+     * real timing is wrong, and the flash stops answering: every command
+     * "succeeds" (nothing verifies a write) while every READ fails, in SPI
+     * and in Octal-DTR alike, on a chip that had served up 899 KB seconds
+     * earlier. That asymmetry - writes fine, reads dead, both modes - is what
+     * points at clocking rather than protocol.
+     *
+     * HCLK is the right source, not CLKP. The BSP states its own assumption
+     * in stm32n6570_discovery_xspi.c - "XSPI clock = 200MHz / ClockPrescaler"
+     * - and on this board SYSCLK is 400 MHz with an AHB prescaler of 2, so
+     * HCLK IS 200 MHz. That is also what the reset default feeds the XSPI,
+     * which is why development boot has always worked. Selecting CLKP (HSI,
+     * 64 MHz) was deterministic but wrong: it made the BSP prescaler maths
+     * produce a frequency the flash could not be read at. Pinning HCLK gives
+     * both boot paths the same 200 MHz the driver was written against, and it
+     * matches the workaround ST give for XSPI trouble in load-and-run mode. */
+    /* Quiesce the XSPIs BEFORE touching their clock source.
+     *
+     * Changing a peripheral kernel clock while that peripheral is enabled is
+     * not allowed, and booting from external flash is exactly the case where
+     * it IS enabled: the first-stage loader has just finished using XSPI2 to
+     * read this application out of flash and hands it over still running.
+     * Selecting a new source underneath it wedges the interface - after which
+     * every command appears to succeed and every read returns nothing, in any
+     * mode, on a chip that worked seconds earlier.
+     *
+     * From the debugger none of this applies, because connect_under_reset
+     * means both XSPIs are already idle at their reset defaults. That is why
+     * development boot never needed this and standalone boot cannot work
+     * without it. XSPIM is the shared I/O manager and goes first. */
+    __HAL_RCC_XSPIM_FORCE_RESET();
+    __HAL_RCC_XSPI1_FORCE_RESET();
+    __HAL_RCC_XSPI2_FORCE_RESET();
+    __HAL_RCC_XSPI2_RELEASE_RESET();
+    __HAL_RCC_XSPI1_RELEASE_RESET();
+    __HAL_RCC_XSPIM_RELEASE_RESET();
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_CKPER
+                                             | RCC_PERIPHCLK_XSPI1
+                                             | RCC_PERIPHCLK_XSPI2;
+    PeriphClkInitStruct.CkperClockSelection  = RCC_CLKPCLKSOURCE_HSI;
+    PeriphClkInitStruct.Xspi1ClockSelection  = RCC_XSPI1CLKSOURCE_HCLK;
+    PeriphClkInitStruct.Xspi2ClockSelection  = RCC_XSPI2CLKSOURCE_HCLK;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         Error_Handler();
     }
