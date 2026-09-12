@@ -574,6 +574,40 @@ added. Two changes did it: the `.rodata` move, and deleting a 76,800-byte
 staging image buffer by having the camera ROI written straight into the
 network's own input.
 
+### Session 17 update — the two ORIGINs traded places, and ROM is now the
+tight one
+
+Session 17 **swapped the ROM and RAM origins** so the loadable image sits where
+ST's two-stage boot loader expects it. Section assignments and region sizes are
+unchanged — `ROM` still holds `.text` and `.rodata`, `RAM` still holds `.data`
+and `.bss`; only the two base addresses traded:
+
+```
+ROM (xrw) : ORIGIN = 0x34000400, LENGTH = 1023K   /* code + .rodata */
+RAM (xrw) : ORIGIN = 0x34100000, LENGTH = 1024K   /* .data + .bss  */
+```
+
+**`CNF_SYSTEMAREA_END` in `mtk3_bsp2/config/config.h` moved with it**, to
+`0x34200000`. These two are **one decision** and must always change together.
+Changing the linker script alone produced a silent hang that looked like a boot
+failure: `.bss` moved up with the RAM region, `_end` landed above the old
+kernel-heap ceiling, the heap had **negative size**, every `tk_cre_*` failed and
+the scheduler started with no tasks — no fault, no `Error_Handler()`, nothing on
+UART. Both files now carry a note saying so.
+
+Measured on the Session 17 Debug build:
+
+| Debug | Used | Region | | Free |
+|---|---|---|---|---|
+| ROM (`.text` 561,324 + `.rodata` 334,456) | 896,632 | 1,047,552 | **85.6%** | 147 KB |
+| RAM (`.data` 684 + `.bss` 656,488) | 660,904 | 1,048,576 | **63.0%** | 378 KB |
+
+**ROM is now the region to watch**, which is a reversal: RAM was the one about
+to fail a link in Session 16, and the `.rodata` move fixed that by spending ROM
+headroom. 147 KB is comfortable but it is no longer the 257 KB the table above
+records, and the next feature that ships a large constant table should check
+this number before assuming room.
+
 **The move does not re-run `AI_LESSONS.md`'s bus fault.** That fault was the
 NPU being unable to read *weights* placed in AXISRAM1. The NPU can reach
 neither AXISRAM1 nor AXISRAM2, so moving ordinary CPU-read constant data

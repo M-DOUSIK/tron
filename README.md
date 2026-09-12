@@ -27,8 +27,7 @@ notes. None of them is an estimate.
 | **CPU idle** | **~89.6%** of wall-clock time asleep in `WFI`, waking ~980×/s | `session_12_notes.md` Part B |
 | **NPU inference latency** | **209 ms** end-to-end — detector + embedder + the RTOS IPC between them — identical to the millisecond across four captures with different faces and confidences | `AI_PIPELINE.md` §5, `session_13_notes.md` Addendum 9 |
 | **Failed capture** | 1111 ms (3 detector passes + two 500 ms waits) | same |
-| **Memory footprint, Debug** | `.text` 933,328 · `.data` 4,036 · `.bss` 663,876 — 47.3% of the code region, 77.6% of the data region | `MEMORY_MAP.md` §4 |
-| **Memory footprint, Release** | `.text` 778,688 · `.data` 4,032 · `.bss` 663,868 — 34.0% / 76.1% | same |
+| **Memory footprint, Debug** | `.text` 561,324 · `.rodata` 334,456 · `.data` 684 · `.bss` 656,488 — **85.6%** of the code region (147 KB free), **63.0%** of the data region (378 KB free) | measured on `session_17`  `MEMORY_MAP.md` §9 |
 | **Free NPU-reachable SRAM** | **220 KB**, claimed as a named linker region and pattern-tested from a cold boot — and **now fully occupied** by the hand landmark model, which also spills ~978 KB of activations into PSRAM. The pill detector was relocated entirely to PSRAM so the two can coexist | `MEMORY_MAP.md` §3, §8 |
 | **INT8 quantisation of the pill detector** | **0/90 detections** with the YOLOv8 head attached; **85/90** with it cut and the decode moved to the CPU, against FP32's 84/90 | `AI_PIPELINE.md` §6 |
 | **µT-Kernel modification surface** | **6 modified files out of ~230**, and **every file implementing a system call is byte-identical to upstream** — verified by recursive diff against pristine mtk3_bsp2 | `THIRD_PARTY_SOFTWARE.md` §4 |
@@ -471,7 +470,7 @@ historical records and this project does not quietly edit those.
 - **External NOR now has four regions**, not three: the pill detector's weights
   are at `0x73000000` (3,049,505 bytes). See `MEMORY_MAP.md` §8.
 - **`.rodata` now links into `ROM`, not `RAM`** (Session 16). Debug sits at
-  ROM 75.5% / RAM 63.8%.
+  ROM 85.6% / RAM 63.0% as of Session 17.
 - NPU weights live in external OSPI NOR and are flashed **separately, once**.
   A normal build never touches them. Check the layout with
   `arm-none-eabi-nm -n <elf> | grep '^71' | head` before blaming code for an
